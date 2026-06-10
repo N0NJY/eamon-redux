@@ -1,0 +1,215 @@
+[
+  {
+    "id": 1,
+    "name": "rusty sword",
+    "description": "A short sword of cheap iron, pitted with orange rust. The edge is notched but it would still do the job in a pinch. A maker's mark \u2014 a crude hammer \u2014 is stamped near the hilt.",
+    "room_id": 3,
+    "artifact_type": "weapon",
+    "weight": 3,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 6,
+    "armor_class": 0,
+    "synonyms": [
+      "sword",
+      "blade",
+      "iron sword"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "iron chest",
+    "description": "A squat chest of riveted iron, barely a foot across. It is unlocked. The hinges have turned to red dust.",
+    "room_id": 5,
+    "artifact_type": "container",
+    "weight": 8,
+    "is_container": true,
+    "is_open": false,
+    "contents": [
+      3,
+      4
+    ],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "synonyms": [
+      "chest",
+      "box",
+      "iron box"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "gold coin pouch",
+    "description": "A small leather pouch, heavy with gold coins. Inside the drawstring is stamped the seal of Thornwall \u2014 a tower with a broken crown.",
+    "room_id": 5,
+    "artifact_type": "generic",
+    "weight": 1,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "synonyms": [
+      "pouch",
+      "coins",
+      "gold",
+      "gold coins"
+    ]
+  },
+  {
+    "id": 4,
+    "name": "old letter",
+    "description": "A folded sheet of heavy vellum, sealed with wax that has long since crumbled. The ink is brown with age but still legible.",
+    "room_id": 5,
+    "artifact_type": "readable",
+    "weight": 0,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": "To whoever holds this letter: I write in haste. The thing beneath the undercroft is awake. We cannot destroy it \u2014 we have only managed to seal it below the flagstones. If you are reading this, the seal has been broken. God help you. \u2014 Steward Aldric, Year of the Crow",
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "synonyms": [
+      "letter",
+      "note",
+      "vellum",
+      "parchment"
+    ]
+  },
+  {
+    "id": 5,
+    "name": "leather satchel",
+    "description": "A worn leather satchel with a brass buckle. Well-made despite its age \u2014 the stitching is still tight.",
+    "room_id": 1,
+    "artifact_type": "container",
+    "weight": 1,
+    "is_container": true,
+    "is_open": true,
+    "contents": [
+      6
+    ],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "synonyms": [
+      "satchel",
+      "bag",
+      "pack"
+    ]
+  },
+  {
+    "id": 6,
+    "name": "strip of dried meat",
+    "description": "A tough strip of salted, dried meat \u2014 venison, maybe. Still edible. Probably.",
+    "room_id": 1,
+    "artifact_type": "generic",
+    "weight": 0,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "synonyms": [
+      "meat",
+      "jerky",
+      "venison",
+      "food"
+    ]
+  },
+  {
+    "id": 7,
+    "name": "carved wooden idol",
+    "description": "A small figurine of dark wood, carved into the rough shape of a hunched figure with too many fingers. The eyes are inlaid chips of yellow amber. It gives you an uneasy feeling.",
+    "room_id": 8,
+    "artifact_type": "generic",
+    "weight": 1,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "synonyms": [
+      "idol",
+      "figurine",
+      "statue",
+      "figure",
+      "carving"
+    ]
+  },
+  {
+    "id": 8,
+    "name": "engraved tablet",
+    "description": "A flat slate tablet, roughly the size of a book. Symbols are engraved in neat rows \u2014 not any alphabet you recognise.",
+    "room_id": 6,
+    "artifact_type": "readable",
+    "weight": 3,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": "The symbols shift as you stare at them. You think \u2014 just for a moment \u2014 that you can read them: 'THAT WHICH SLEEPS BELOW DOES NOT DREAM. IT WAITS.' You set the tablet down quickly.",
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "synonyms": [
+      "tablet",
+      "slate",
+      "stone tablet",
+      "inscription"
+    ]
+  },
+  {
+    "id": 9,
+    "name": "iron key",
+    "description": "A heavy iron key on a loop of old leather cord. The bow is stamped with a tower crest.",
+    "room_id": 8,
+    "artifact_type": "key",
+    "weight": 1,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "synonyms": [
+      "key",
+      "iron key",
+      "tower key"
+    ]
+  },
+  {
+    "id": 10,
+    "name": "chainmail coat",
+    "description": "A coat of interlocking iron rings, heavy but well-made. Old, but the rings are solid. Wearing it will reduce the damage you take in combat.",
+    "room_id": 6,
+    "artifact_type": "armor",
+    "weight": 6,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 3,
+    "synonyms": [
+      "chainmail",
+      "mail",
+      "coat",
+      "armor",
+      "armour"
+    ]
+  }
+]
