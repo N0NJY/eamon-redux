@@ -109,9 +109,9 @@
   {
     "id": 6,
     "name": "strip of dried meat",
-    "description": "A tough strip of salted, dried meat \u2014 venison, maybe. Still edible. Probably.",
+    "description": "A tough strip of salted, dried venison. Still edible. Restores a small amount of health when eaten.",
     "room_id": 1,
-    "artifact_type": "generic",
+    "artifact_type": "food",
     "weight": 0,
     "is_container": false,
     "is_open": false,
@@ -125,7 +125,8 @@
       "jerky",
       "venison",
       "food"
-    ]
+    ],
+    "heal_amount": 4
   },
   {
     "id": 7,
@@ -210,6 +211,50 @@
       "coat",
       "armor",
       "armour"
+    ]
+  },
+  {
+    "id": 11,
+    "name": "healing potion",
+    "description": "A small clay vial stoppered with wax, filled with a warm amber liquid. It smells faintly of pine resin and honey.",
+    "room_id": 6,
+    "artifact_type": "potion",
+    "weight": 1,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "heal_amount": 10,
+    "synonyms": [
+      "potion",
+      "vial",
+      "flask",
+      "healing"
+    ]
+  },
+  {
+    "id": 12,
+    "name": "minor healing potion",
+    "description": "A thumb-sized vial of pale green liquid, corked with a bit of cork. A hand-written label reads: 'For cuts and bruises. Do not drink if green has turned black.'",
+    "room_id": 5,
+    "artifact_type": "potion",
+    "weight": 1,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "heal_amount": 5,
+    "synonyms": [
+      "potion",
+      "vial",
+      "minor potion",
+      "green potion"
     ]
   }
 ]

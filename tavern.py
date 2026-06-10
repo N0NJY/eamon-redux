@@ -334,33 +334,49 @@ def run_tavern() -> None:
         result = subprocess.run([
             sys.executable, "engine.py",
             adv["path"],
-            "--name", character.name,
-            "--hardiness", str(character.hardiness),
-            "--agility", str(character.agility),
-            "--charisma", str(character.charisma),
-            "--hp", str(character.hp),
+            "--name",         character.name,
+            "--class",        character.char_class,
+            "--hardiness",    str(character.hardiness),
+            "--agility",      str(character.agility),
+            "--charisma",     str(character.charisma),
+            "--intelligence", str(character.intelligence),
+            "--strength",     str(character.strength),
+            "--hp",           str(character.hp),
+            "--mana",         str(character.mana),
+            "--gold",         str(character.gold),
+            "--spells",       ",".join(character.spells),
         ])
 
         # Engine exit code: 0 = quit normally, 1 = completed, 2 = died
+        # Any other code (e.g. crash) is treated as an abort — no state change
         completed = (result.returncode == 1)
         died      = (result.returncode == 2)
+        crashed   = result.returncode not in (0, 1, 2)
 
-        if died:
+        if crashed:
             tprint("\n  ════════════════════════════════════════════", "border")
+            tprint("  Something went wrong with that adventure.", "error")
+            tprint("  Your character has not been affected.", "warn")
+            tprint("  ════════════════════════════════════════════", "border")
+        elif died:
+            tprint("\n  ════════════════════════════════════════════", "border")
+            missing = character.hp_max - 1   # revived at 1 HP
+            cost = missing * 2               # 2 gold per HP restored
+            cost = min(cost, character.gold) # can't pay more than they have
+            character.gold -= cost
+            character.hp = character.hp_max  # fully healed after paying
             horace_says(
-                f"They brought your body back, {character.name}. "
-                f"Happens to the best of them. "
-                f"You've been patched up — but it'll cost you."
+                f"They carried you in on a board, {character.name}. "
+                f"The healer patched you up — costs {cost} gold. "
+                f"You have {character.gold} gold remaining. "
+                f"Try not to make a habit of this."
             )
-            # Penalty: lose half gold, restore to half HP
-            character.gold = max(0, character.gold // 2)
-            character.hp   = max(1, character.hp_max // 2)
             character.save()
             tprint("  ════════════════════════════════════════════", "border")
         else:
-            # Restore HP partially between adventures (rest at the tavern)
-            healed = min(character.hp_max, character.hp + character.hardiness)
-            character.hp = healed
+            # Restore HP and mana at the tavern (a good night's rest)
+            character.hp   = character.hp_max
+            character.mana = character.mana_max
             handle_return(character, adv["name"], completed)
 
         # Ask to continue

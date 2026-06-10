@@ -1,0 +1,97 @@
+[
+  {
+    "id": 1,
+    "name": "giant rat",
+    "description": "A rat the size of a dog, with yellow teeth and a scabrous hide. Its eyes catch the light like wet coins.",
+    "room_id": 3,
+    "attitude": "hostile",
+    "hp": 8,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "loot_id": 0,
+    "death_message": "The giant rat shrieks once and goes limp.",
+    "synonyms": [
+      "rat",
+      "rodent"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "skeletal guard",
+    "description": "An ancient soldier, still in rusted plate, animated by something that refuses to let it rest. Its empty sockets track your every move.",
+    "room_id": 4,
+    "attitude": "hostile",
+    "hp": 18,
+    "damage_dice": 1,
+    "damage_sides": 8,
+    "armor_class": 2,
+    "loot_id": 0,
+    "death_message": "The skeletal guard's bones clatter apart and fall to the floor. At last, it is still.",
+    "synonyms": [
+      "skeleton",
+      "guard",
+      "soldier",
+      "bones"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "old hermit",
+    "description": "A wiry old man in a patched cloak, carrying a gnarled staff. His eyes are sharp despite his age. He doesn't seem hostile \u2014 just watchful.",
+    "room_id": 7,
+    "attitude": "friendly",
+    "hp": 15,
+    "damage_dice": 1,
+    "damage_sides": 6,
+    "armor_class": 0,
+    "loot_id": 0,
+    "death_message": "",
+    "synonyms": [
+      "hermit",
+      "man",
+      "old man",
+      "cloaked man"
+    ],
+    "dialogue": "Aye, I know this keep well. Spent twenty years here before the wraith drove me to the wood. Watch yourself in the undercroft \u2014 that thing is old and angry. I can tend your wounds if you have coin.",
+    "heal_amount": 999,
+    "heal_cost": 2
+  },
+  {
+    "id": 4,
+    "name": "cave spider",
+    "description": "A pale spider roughly the size of a dinner plate, clinging to the hollow tree's inner wall. Its movements are quick and deliberate.",
+    "room_id": 8,
+    "attitude": "neutral",
+    "hp": 6,
+    "damage_dice": 1,
+    "damage_sides": 3,
+    "armor_class": 0,
+    "loot_id": 0,
+    "death_message": "The cave spider curls its legs inward and drops from the wall.",
+    "synonyms": [
+      "spider",
+      "arachnid"
+    ]
+  },
+  {
+    "id": 5,
+    "name": "undercroft wraith",
+    "description": "A shape that is more absence than presence \u2014 a cold outline of a person that drifts a few inches above the flagstones. Where it passes, your breath fogs.",
+    "room_id": 6,
+    "attitude": "hostile",
+    "hp": 22,
+    "damage_dice": 2,
+    "damage_sides": 6,
+    "armor_class": 1,
+    "loot_id": 0,
+    "death_message": "The wraith lets out a sound like tearing paper and dissolves into nothing. The cold lifts.",
+    "synonyms": [
+      "wraith",
+      "ghost",
+      "spirit",
+      "shade",
+      "shape"
+    ]
+  }
+]

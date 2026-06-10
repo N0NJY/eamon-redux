@@ -16,7 +16,13 @@ class ArtifactType:
     READABLE  = "readable"
     GENERIC   = "generic"
     LIGHT     = "light"
-    KEY       = "key"       # unlocks a specific locked exit
+    KEY       = "key"
+    FOOD      = "food"      # EAT to restore heal_amount HP
+    POTION    = "potion"    # DRINK to restore heal_amount HP
+    SPELLBOOK = "spellbook" # READ to learn a spell (future)
+    SHIELD    = "shield"    # equippable in shield slot
+    RING      = "ring"      # equippable in ring slot
+    CLOAK     = "cloak"     # equippable in cloak slot
 
 
 class Attitude:
@@ -42,6 +48,7 @@ class Artifact:
     damage_dice: int = 1
     damage_sides: int = 4
     armor_class: int = 0
+    heal_amount: int = 0    # for FOOD and POTION
     synonyms: list[str] = field(default_factory=list)
 
     def matches(self, word: str) -> bool:
@@ -58,7 +65,7 @@ class Artifact:
             "is_open": self.is_open, "contents": self.contents,
             "read_text": self.read_text, "damage_dice": self.damage_dice,
             "damage_sides": self.damage_sides, "armor_class": self.armor_class,
-            "synonyms": self.synonyms,
+            "heal_amount": self.heal_amount, "synonyms": self.synonyms,
         }
 
     @staticmethod
@@ -71,7 +78,9 @@ class Artifact:
             is_open=d.get("is_open", False), contents=d.get("contents", []),
             read_text=d.get("read_text"), damage_dice=d.get("damage_dice", 1),
             damage_sides=d.get("damage_sides", 4),
-            armor_class=d.get("armor_class", 0), synonyms=d.get("synonyms", []),
+            armor_class=d.get("armor_class", 0),
+            heal_amount=d.get("heal_amount", 0),
+            synonyms=d.get("synonyms", []),
         )
 
 
@@ -91,7 +100,11 @@ class Monster:
     armor_class: int = 0
     loot_id: int = 0
     death_message: str = ""
+    dialogue: str = ""       # spoken when player talks to NPC
+    heal_amount: int = 0     # HP the NPC can restore per use (0 = no healing)
+    heal_cost: int = 0       # gold cost per HP healed
     synonyms: list[str] = field(default_factory=list)
+
     is_alive: bool = field(default=True, init=False)
     aggro: bool = field(default=False, init=False)
 
@@ -118,7 +131,9 @@ class Monster:
             "room_id": self.room_id, "attitude": self.attitude, "hp": self.hp_max,
             "damage_dice": self.damage_dice, "damage_sides": self.damage_sides,
             "armor_class": self.armor_class, "loot_id": self.loot_id,
-            "death_message": self.death_message, "synonyms": self.synonyms,
+            "death_message": self.death_message, "dialogue": self.dialogue,
+            "heal_amount": self.heal_amount, "heal_cost": self.heal_cost,
+            "synonyms": self.synonyms,
         }
 
     @staticmethod
@@ -130,7 +145,11 @@ class Monster:
             hp=hp, hp_max=hp, damage_dice=d.get("damage_dice", 1),
             damage_sides=d.get("damage_sides", 6),
             armor_class=d.get("armor_class", 0), loot_id=d.get("loot_id", 0),
-            death_message=d.get("death_message", ""), synonyms=d.get("synonyms", []),
+            death_message=d.get("death_message", ""),
+            dialogue=d.get("dialogue", ""),
+            heal_amount=d.get("heal_amount", 0),
+            heal_cost=d.get("heal_cost", 0),
+            synonyms=d.get("synonyms", []),
         )
 
 
@@ -146,7 +165,7 @@ class Room:
     name: str
     description: str
     exits: dict[str, int] = field(default_factory=dict)
-    locked_exits: dict[str, int] = field(default_factory=dict)  # dir -> key artifact_id
+    locked_exits: dict[str, int] = field(default_factory=dict)
     is_dark: bool = False
     first_visit: bool = True
 
@@ -185,7 +204,7 @@ class World:
         self.rooms: dict[int, Room] = {}
         self.artifacts: dict[int, Artifact] = {}
         self.monsters: dict[int, Monster] = {}
-        self.win_condition: dict = {}   # e.g. {"type":"kill_monster","monster_id":5,"message":"..."}
+        self.win_condition: dict = {}
 
     def get_room(self, room_id: int) -> Optional[Room]:
         return self.rooms.get(room_id)
@@ -196,8 +215,7 @@ class World:
     def artifacts_carried(self) -> list[Artifact]:
         return [a for a in self.artifacts.values() if a.room_id is None]
 
-    def find_artifact_by_name(self, word: str,
-                               candidates=None) -> Optional[Artifact]:
+    def find_artifact_by_name(self, word: str, candidates=None) -> Optional[Artifact]:
         pool = candidates if candidates is not None else list(self.artifacts.values())
         for a in pool:
             if a.matches(word):
@@ -208,8 +226,7 @@ class World:
         return [m for m in self.monsters.values()
                 if m.room_id == room_id and m.is_alive]
 
-    def find_monster_by_name(self, word: str,
-                              candidates=None) -> Optional[Monster]:
+    def find_monster_by_name(self, word: str, candidates=None) -> Optional[Monster]:
         pool = candidates if candidates is not None else list(self.monsters.values())
         for m in pool:
             if m.is_alive and m.matches(word):
@@ -228,14 +245,12 @@ class World:
     def save(self, path: str) -> None:
         import os
         os.makedirs(path, exist_ok=True)
-
         meta = {
             "title": self.title, "intro": self.intro,
             "author": self.author, "start_room": self.start_room,
         }
         if self.win_condition:
             meta["win_condition"] = self.win_condition
-
         with open(os.path.join(path, "adventure.json"), "w") as f:
             json.dump(meta, f, indent=2)
         with open(os.path.join(path, "rooms.json"), "w") as f:
@@ -249,7 +264,6 @@ class World:
     def load(path: str) -> "World":
         import os
         w = World()
-
         meta_path = os.path.join(path, "adventure.json")
         if os.path.exists(meta_path):
             with open(meta_path) as f:
@@ -259,7 +273,6 @@ class World:
             w.author     = meta.get("author", "Unknown")
             w.start_room = meta.get("start_room", 1)
             w.win_condition = meta.get("win_condition", {})
-
         for fname, loader, store in [
             ("rooms.json",     Room.from_dict,     w.rooms),
             ("artifacts.json", Artifact.from_dict, w.artifacts),
@@ -271,5 +284,4 @@ class World:
                     for d in json.load(f):
                         obj = loader(d)
                         store[obj.id] = obj
-
         return w
