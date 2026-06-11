@@ -65,6 +65,147 @@ BANNER = """
 """
 
 
+# ── Item valuation ───────────────────────────────────────────────────────────────
+
+# Default sell price floors by artifact type
+TYPE_VALUE_FLOOR = {
+    "weapon":   10,
+    "armor":    15,
+    "shield":   10,
+    "ring":     20,
+    "cloak":    15,
+    "potion":    5,
+    "food":      2,
+    "readable":  3,
+    "generic":   1,
+    "light":     3,
+    "spellbook": 25,
+}
+UNSELLABLE_TYPES = {"key"}
+
+def sell_value(artifact) -> int:
+    """Return the gold value of an artifact. 0 = unsellable."""
+    if artifact.is_quest_item:
+        return 0
+    if artifact.artifact_type in UNSELLABLE_TYPES:
+        return 0
+    if artifact.value >= 0:
+        return artifact.value
+    return TYPE_VALUE_FLOOR.get(artifact.artifact_type, 1)
+
+def can_sell(artifact) -> bool:
+    return sell_value(artifact) > 0
+
+
+# ── Tavern shop ───────────────────────────────────────────────────────────────
+
+def run_shop(character) -> None:
+    """The tavern shop — sell carried items to Horace."""
+    from world import World
+    import json, os
+
+    # Load carried artifacts from character's last adventure save
+    # Since items persist via the engine exit, we just use what's in the
+    # character object. Items are passed back via a companion save file.
+    shop_file = os.path.join("characters", f"{character.name.lower().replace(' ','_')}_items.json")
+
+    if not os.path.exists(shop_file):
+        horace_says("You don't seem to be carrying anything worth selling.")
+        return
+
+    with open(shop_file) as f:
+        items_data = json.load(f)
+
+    if not items_data:
+        horace_says("Your pack looks empty to me.")
+        return
+
+    # Reconstruct artifact objects for display
+    from world import Artifact
+    carried = [Artifact.from_dict(d) for d in items_data]
+    sellable = [a for a in carried if can_sell(a)]
+    unsellable = [a for a in carried if not can_sell(a)]
+
+    if not sellable:
+        horace_says("Nothing you're carrying is worth coin to me.")
+        if unsellable:
+            tprint(f"  (You have {len(unsellable)} item(s) I can't buy: "
+                   f"{', '.join(a.name for a in unsellable)})", "desc")
+        return
+
+    while True:
+        header = tc('─── Horace\'s Trading Post ───────────────────────────────', 'border')
+        tprint(f"\n  {header}", "desc")
+        horace_says("Let's see what you've got. I pay fair prices.")
+        print()
+        for i, a in enumerate(sellable, 1):
+            price = sell_value(a)
+            equipped_note = ""
+            print(tc(f"  {i:>3}. ", "border") +
+                  tc(f"{a.name:<30}", "title") +
+                  tc(f"  {price:>4} gold", "sys"))
+        total = sum(sell_value(a) for a in sellable)
+        print()
+        print(tc(f"  Total if selling all: {total} gold", "sys"))
+        print(tc(f"  Your gold: {character.gold}", "stat"))
+        print()
+        print(tc("  S <number>  — sell one item  (e.g. S 2)", "desc"))
+        print(tc("  SELL ALL    — sell everything", "desc"))
+        print(tc("  DONE        — leave the shop", "desc"))
+        print()
+
+        raw = tinput("  > ").strip().lower()
+
+        if raw in ("done", "leave", "exit", "0", "quit", "d"):
+            break
+
+        elif raw == "sell all":
+            total_gold = sum(sell_value(a) for a in sellable)
+            names = ", ".join(a.name for a in sellable)
+            confirm = tinput(f"  Sell all {len(sellable)} items for {total_gold} gold? (y/n): ").lower()
+            if confirm == "y":
+                character.gold += total_gold
+                horace_says(f"Pleasure doing business. Here's your {total_gold} gold.")
+                tprint(f"  Gold: {character.gold}", "sys")
+                # Remove sold items from save file
+                remaining = unsellable
+                with open(shop_file, "w") as f:
+                    json.dump([a.to_dict() for a in remaining], f, indent=2)
+                sellable.clear()
+                if not unsellable:
+                    break
+                else:
+                    tprint(f"  Remaining (unsellable): {', '.join(a.name for a in unsellable)}", "desc")
+                    break
+
+        elif raw.startswith("s "):
+            try:
+                idx = int(raw[2:].strip()) - 1
+                if 0 <= idx < len(sellable):
+                    item = sellable[idx]
+                    price = sell_value(item)
+                    confirm = tinput(f"  Sell {item.name} for {price} gold? (y/n): ").lower()
+                    if confirm == "y":
+                        character.gold += price
+                        tprint(f"  Sold {item.name} for {price} gold. (Total: {character.gold})", "sys")
+                        sellable.pop(idx)
+                        # Update save file
+                        remaining = sellable + unsellable
+                        with open(shop_file, "w") as f:
+                            json.dump([a.to_dict() for a in remaining], f, indent=2)
+                        if not sellable:
+                            horace_says("That's the lot. Safe travels.")
+                            break
+                else:
+                    tprint("  Invalid number.", "error")
+            except ValueError:
+                tprint("  Enter 'S' followed by a number, e.g. S 2", "error")
+        else:
+            tprint("  Enter S <number>, SELL ALL, or DONE.", "warn")
+
+    character.save()
+
+
 # ── Guardian dialogue ─────────────────────────────────────────────────────────
 
 def horace_says(text: str) -> None:
@@ -241,6 +382,7 @@ def menu_characters() -> "Character | None":
         if names:
             print(tc("  D. Delete a character", "error"))
             print(tc("  V. View character details", "stat"))
+        print(tc("  M. Read the Adventurer\'s Manual", "desc"))
         print(tc("  0. Quit", "border"))
         print()
 
@@ -253,6 +395,9 @@ def menu_characters() -> "Character | None":
             from character import Character
             ch = Character.create_interactive()
             return ch
+
+        elif choice == "m":
+            _show_manual()
 
         elif choice == "v" and names:
             raw = tinput("  Enter character number to view: ")
@@ -302,6 +447,415 @@ def menu_characters() -> "Character | None":
                 tprint("  Invalid selection.", "error")
 
 
+# ── Shop data ────────────────────────────────────────────────────────────────────
+
+from world import Artifact, ArtifactType
+
+# Spell definitions mirrored here for the wizard shop
+SPELL_CATALOG = {
+    "heal":     {"name": "Heal",     "base_price": 50,  "classes": ["Sorcerer", "Fighter"], "desc": "Restore 1d6+INT HP"},
+    "light":    {"name": "Light",    "base_price": 25,  "classes": ["Sorcerer", "Fighter"], "desc": "Illuminate dark rooms"},
+    "shield":   {"name": "Shield",   "base_price": 75,  "classes": ["Sorcerer"],            "desc": "+3 AC for 3 rounds"},
+    "fireball": {"name": "Fireball", "base_price": 150, "classes": ["Sorcerer"],            "desc": "2d6+INT fire damage"},
+}
+
+def spell_price(spell_key: str, character) -> int:
+    """Price scales with level; Fighters pay double."""
+    base = SPELL_CATALOG[spell_key]["base_price"]
+    level = character.level
+    # Multiplier tiers: 1-2=1x, 3-4=2x, 5-6=4x, 7-8=8x, 9+=16x
+    tiers = [(2,1),(4,2),(6,4),(8,8)]
+    multiplier = 16
+    for threshold, mult in tiers:
+        if level <= threshold:
+            multiplier = mult
+            break
+    price = base * multiplier
+    if character.char_class == "Fighter":
+        price *= 2
+    return price
+
+# Horace's fixed core stock
+HORACE_CORE = [
+    {"name": "healing potion",       "artifact_type": "potion", "weight": 1, "heal_amount": 10, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 25,  "desc": "Restores 10 HP"},
+    {"name": "minor healing potion", "artifact_type": "potion", "weight": 1, "heal_amount": 5,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 12,  "desc": "Restores 5 HP"},
+    {"name": "ration",               "artifact_type": "food",   "weight": 1, "heal_amount": 4,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 5,   "desc": "Restores 4 HP when eaten"},
+    {"name": "dagger",               "artifact_type": "weapon", "weight": 1, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 15,  "desc": "1d4 damage"},
+    {"name": "short sword",          "artifact_type": "weapon", "weight": 2, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 0, "price": 30,  "desc": "1d6 damage"},
+    {"name": "leather armor",        "artifact_type": "armor",  "weight": 3, "heal_amount": 0,  "armor_class": 1, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 40,  "desc": "AC +1"},
+    {"name": "chainmail coat",       "artifact_type": "armor",  "weight": 6, "heal_amount": 0,  "armor_class": 3, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 100, "desc": "AC +3"},
+    {"name": "wooden shield",        "artifact_type": "shield", "weight": 3, "heal_amount": 0,  "armor_class": 1, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 25,  "desc": "AC +1 (shield slot)"},
+]
+
+HORACE_RANDOM_POOL = [
+    {"name": "war axe",     "artifact_type": "weapon", "weight": 4, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 8, "value": 0, "price": 50,  "desc": "1d8 damage"},
+    {"name": "iron mace",   "artifact_type": "weapon", "weight": 3, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 0, "price": 35,  "desc": "1d6 damage"},
+    {"name": "scale armor", "artifact_type": "armor",  "weight": 8, "heal_amount": 0, "armor_class": 4, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 180, "desc": "AC +4"},
+    {"name": "iron shield", "artifact_type": "shield", "weight": 4, "heal_amount": 0, "armor_class": 2, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 55,  "desc": "AC +2 (shield slot)"},
+    {"name": "hunting bow", "artifact_type": "weapon", "weight": 2, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 0, "price": 45,  "desc": "1d6 damage"},
+    {"name": "torch",       "artifact_type": "light",  "weight": 1, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 3,  "price": 8,   "desc": "A light source"},
+]
+
+WIZARD_RANDOM_POOL = [
+    {"name": "greater healing potion", "artifact_type": "potion", "weight": 1, "heal_amount": 20, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 60,  "desc": "Restores 20 HP"},
+    {"name": "mana potion",            "artifact_type": "potion", "weight": 1, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 50,  "desc": "Restores 10 mana (Sorcerer only)", "is_mana_potion": True},
+    {"name": "mystery scroll",         "artifact_type": "readable","weight": 0, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 5,  "price": 20,  "desc": "Faded writing. Hard to read."},
+]
+
+def _make_shop_artifact(template: dict, new_id: int) -> Artifact:
+    return Artifact(
+        id=new_id,
+        name=template["name"],
+        description=template.get("desc", template["name"]),
+        room_id=None,
+        artifact_type=template["artifact_type"],
+        weight=template.get("weight", 1),
+        heal_amount=template.get("heal_amount", 0),
+        armor_class=template.get("armor_class", 0),
+        damage_dice=template.get("damage_dice", 1),
+        damage_sides=template.get("damage_sides", 4),
+        value=template.get("value", -1),
+        synonyms=[],
+    )
+
+MAX_POTIONS = 2
+
+
+def run_horace_shop(character) -> None:
+    """Horace buys and sells weapons, armor, and gear."""
+    import random, json, os
+
+    shop_file = os.path.join("characters",
+        f"{character.name.lower().replace(' ','_')}_items.json")
+
+    # Build stock: core + 2-3 random extras (seeded per visit for consistency)
+    random.seed(len(character.adventures_completed) * 7 + character.level)
+    extras = random.sample(HORACE_RANDOM_POOL, min(3, len(HORACE_RANDOM_POOL)))
+    stock = HORACE_CORE + extras
+    random.seed()  # reset seed
+
+    while True:
+        tprint("\n  " + tc('─── Horace\'s Outfitters ─────────────────────────────────', 'border'), "desc")
+        horace_says("Buy, sell, or just browse. Gold talks.")
+        print()
+        print(tc("  ── For Sale ──────────────────────────────────────", "border"))
+        for i, item in enumerate(stock, 1):
+            print(tc(f"  {i:>3}. ", "border") +
+                  tc(f"{item['name']:<28}", "title") +
+                  tc(f"  {item['price']:>4}g  ", "sys") +
+                  tc(item.get("desc", ""), "desc"))
+        print()
+        print(tc(f"  Your gold: {character.gold}", "stat"))
+        print()
+        print(tc("  B <number>  — buy item", "desc"))
+        print(tc("  S           — sell your items", "desc"))
+        print(tc("  DONE        — leave", "desc"))
+        print()
+
+        raw = tinput("  > ").strip().lower()
+
+        if raw in ("done", "leave", "0", "quit", "d"):
+            break
+
+        elif raw == "s":
+            # Inline sell for Horace (gear only)
+            if not os.path.exists(shop_file):
+                tprint("  You don't have anything to sell.", "warn")
+                continue
+            with open(shop_file) as f:
+                items_data = json.load(f)
+            from world import Artifact
+            carried = [Artifact.from_dict(d) for d in items_data]
+            gear = [a for a in carried
+                    if a.artifact_type in ("weapon","armor","shield","ring","cloak","generic")
+                    and not a.is_quest_item]
+            if not gear:
+                tprint("  Nothing here I'd buy. Try the wizard for magical items.", "warn")
+                continue
+            print(tc("\n  ── Your gear ──────────────────────────────────", "border"))
+            for i, a in enumerate(gear, 1):
+                from tavern import sell_value
+                v = sell_value(a)
+                print(tc(f"  {i:>3}. ", "border") +
+                      tc(f"{a.name:<30}", "title") +
+                      tc(f"  {v:>4}g", "sys"))
+            print(tc("  SELL ALL or S <number>", "desc"))
+            sell_raw = tinput("  > ").strip().lower()
+            _process_sell(sell_raw, gear, carried, character, shop_file,
+                          allowed_types={"weapon","armor","shield","ring","cloak","generic"})
+
+        elif raw.startswith("b "):
+            try:
+                idx = int(raw[2:].strip()) - 1
+                if 0 <= idx < len(stock):
+                    item = stock[idx]
+                    price = item["price"]
+                    # Potion limit check
+                    if item["artifact_type"] == "potion":
+                        current_potions = _count_carried_potions(shop_file)
+                        if current_potions >= MAX_POTIONS:
+                            tprint(f"  You can only carry {MAX_POTIONS} potions at a time.", "error")
+                            continue
+                    if character.gold < price:
+                        tprint(f"  Not enough gold. (Need {price}g, have {character.gold}g)", "error")
+                        continue
+                    confirm = tinput(f"  Buy {item['name']} for {price}g? (y/n): ").lower()
+                    if confirm == "y":
+                        character.gold -= price
+                        _add_to_inventory(item, shop_file)
+                        tprint(f"  Purchased {item['name']}. Gold: {character.gold}g", "sys")
+                        character.save()
+                else:
+                    tprint("  Invalid number.", "error")
+            except ValueError:
+                tprint("  Enter B followed by a number.", "error")
+        else:
+            tprint("  Enter B <number> to buy, S to sell, or DONE.", "warn")
+
+
+def run_wizard_shop(character) -> None:
+    """Wizard Aldric buys and sells magical items and spells."""
+    import random, json, os
+
+    shop_file = os.path.join("characters",
+        f"{character.name.lower().replace(' ','_')}_items.json")
+
+    random.seed(len(character.adventures_completed) * 13 + character.level)
+    extras = random.sample(WIZARD_RANDOM_POOL, min(2, len(WIZARD_RANDOM_POOL)))
+    random.seed()
+
+    while True:
+        tprint("\n  " + tc('─── Aldric\'s Arcane Emporium ────────────────────────────', 'border'), "desc")
+        tprint("  A thin man with ink-stained fingers looks up from a large tome.", "desc")
+        print(tc('  Aldric says: "Knowledge has a price. So does everything else."', "npc"))
+        print()
+
+        # Spells for sale
+        available_spells = [
+            (k, v) for k, v in SPELL_CATALOG.items()
+            if k not in character.spells
+            and (character.char_class in v["classes"])
+        ]
+
+        print(tc("  ── Spells ────────────────────────────────────────", "border"))
+        if available_spells:
+            for i, (key, spell) in enumerate(available_spells, 1):
+                price = spell_price(key, character)
+                can_afford = "✦" if character.gold >= price else "✗"
+                print(tc(f"  {i:>3}. ", "border") +
+                      tc(f"{spell['name']:<15}", "title") +
+                      tc(f"  {price:>5}g  ", "sys") +
+                      tc(spell["desc"], "desc") +
+                      tc(f"  {can_afford}", "sys"))
+        else:
+            tprint("  You know all available spells.", "sys")
+
+        # Magical items
+        print(tc("\n  ── Magical Items ─────────────────────────────────", "border"))
+        item_offset = len(available_spells)
+        for i, item in enumerate(extras, item_offset + 1):
+            print(tc(f"  {i:>3}. ", "border") +
+                  tc(f"{item['name']:<28}", "title") +
+                  tc(f"  {item['price']:>4}g  ", "sys") +
+                  tc(item.get("desc", ""), "desc"))
+
+        print()
+        print(tc(f"  Your gold: {character.gold}  |  Level: {character.level}  |  XP: {character.xp}", "stat"))
+        if character.char_class == "Sorcerer":
+            print(tc(f"  Known spells: {', '.join(character.spells) or 'none'}", "desc"))
+        print()
+        print(tc("  B <number>  — buy spell or item", "desc"))
+        print(tc("  S           — sell magical items", "desc"))
+        print(tc("  DONE        — leave", "desc"))
+        print()
+
+        raw = tinput("  > ").strip().lower()
+
+        if raw in ("done", "leave", "0", "d"):
+            break
+
+        elif raw == "s":
+            if not os.path.exists(shop_file):
+                tprint("  Nothing to sell.", "warn")
+                continue
+            with open(shop_file) as f:
+                items_data = json.load(f)
+            from world import Artifact
+            carried = [Artifact.from_dict(d) for d in items_data]
+            magic = [a for a in carried
+                     if a.artifact_type in ("potion", "readable", "spellbook")
+                     and not a.is_quest_item]
+            if not magic:
+                tprint("  Nothing magical I'd buy. Try Horace for weapons.", "warn")
+                continue
+            print(tc("\n  ── Your magical items ─────────────────────────", "border"))
+            for i, a in enumerate(magic, 1):
+                from tavern import sell_value
+                v = sell_value(a)
+                print(tc(f"  {i:>3}. ", "border") +
+                      tc(f"{a.name:<30}", "title") +
+                      tc(f"  {v:>4}g", "sys"))
+            sell_raw = tinput("  SELL ALL or S <number>: ").strip().lower()
+            _process_sell(sell_raw, magic, carried, character, shop_file,
+                          allowed_types={"potion","readable","spellbook"})
+
+        elif raw.startswith("b "):
+            try:
+                idx = int(raw[2:].strip()) - 1
+                all_items = [(k, v, "spell") for k, v in available_spells] +                             [(i, i, "item") for i in extras]
+                if 0 <= idx < len(all_items):
+                    key, val, kind = all_items[idx]
+                    if kind == "spell":
+                        price = spell_price(key, character)
+                        if character.gold < price:
+                            tprint(f"  Not enough gold. (Need {price}g, have {character.gold}g)", "error")
+                            continue
+                        confirm = tinput(f"  Learn {val['name']} for {price}g? (y/n): ").lower()
+                        if confirm == "y":
+                            character.gold -= price
+                            character.spells.append(key)
+                            character.save()
+                            tprint(f"  You have learned {val['name']}!", "sys")
+                            print(tc('  Aldric says: "Use it wisely. Or don\'t. I don\'t care."', "npc"))
+                    else:
+                        item = val
+                        price = item["price"]
+                        if item["artifact_type"] == "potion":
+                            current = _count_carried_potions(shop_file)
+                            if current >= MAX_POTIONS:
+                                tprint(f"  You can only carry {MAX_POTIONS} potions.", "error")
+                                continue
+                        if character.gold < price:
+                            tprint(f"  Not enough gold. (Need {price}g, have {character.gold}g)", "error")
+                            continue
+                        confirm = tinput(f"  Buy {item['name']} for {price}g? (y/n): ").lower()
+                        if confirm == "y":
+                            character.gold -= price
+                            _add_to_inventory(item, shop_file)
+                            tprint(f"  Purchased {item['name']}. Gold: {character.gold}g", "sys")
+                            character.save()
+                else:
+                    tprint("  Invalid number.", "error")
+            except (ValueError, IndexError):
+                tprint("  Enter B followed by a number.", "error")
+        else:
+            tprint("  Enter B <number>, S to sell, or DONE.", "warn")
+
+
+def _count_carried_potions(shop_file: str) -> int:
+    import json, os
+    if not os.path.exists(shop_file):
+        return 0
+    with open(shop_file) as f:
+        items = json.load(f)
+    return sum(1 for d in items if d.get("artifact_type") == "potion")
+
+
+def _add_to_inventory(template: dict, shop_file: str) -> None:
+    """Add a shop item to the player's item save file."""
+    import json, os
+    items = []
+    if os.path.exists(shop_file):
+        with open(shop_file) as f:
+            items = json.load(f)
+    # Generate a new temp id
+    new_id = max((d["id"] for d in items), default=100) + 1
+    artifact = _make_shop_artifact(template, new_id)
+    items.append(artifact.to_dict())
+    with open(shop_file, "w") as f:
+        json.dump(items, f, indent=2)
+
+
+def _process_sell(raw: str, sellable: list, all_carried: list,
+                  character, shop_file: str, allowed_types: set) -> None:
+    """Shared sell logic for both shops."""
+    import json
+    from tavern import sell_value
+    if raw == "sell all":
+        total = sum(sell_value(a) for a in sellable)
+        confirm = tinput(f"  Sell all for {total}g? (y/n): ").lower()
+        if confirm == "y":
+            character.gold += total
+            remaining = [a for a in all_carried if a not in sellable]
+            with open(shop_file, "w") as f:
+                json.dump([a.to_dict() for a in remaining], f, indent=2)
+            character.save()
+            tprint(f"  Sold for {total}g. Gold: {character.gold}g", "sys")
+    elif raw.startswith("s "):
+        try:
+            idx = int(raw[2:].strip()) - 1
+            if 0 <= idx < len(sellable):
+                item = sellable[idx]
+                price = sell_value(item)
+                confirm = tinput(f"  Sell {item.name} for {price}g? (y/n): ").lower()
+                if confirm == "y":
+                    character.gold += price
+                    remaining = [a for a in all_carried if a.id != item.id]
+                    with open(shop_file, "w") as f:
+                        json.dump([a.to_dict() for a in remaining], f, indent=2)
+                    character.save()
+                    tprint(f"  Sold for {price}g. Gold: {character.gold}g", "sys")
+        except ValueError:
+            tprint("  Enter S <number>.", "error")
+
+
+# ── Manual viewer ────────────────────────────────────────────────────────────────
+
+def _show_manual() -> None:
+    """Display the manual page by page."""
+    import os
+    manual_path = "MANUAL.md"
+    if not os.path.exists(manual_path):
+        tprint("  Manual file not found (MANUAL.md).", "error")
+        return
+
+    with open(manual_path) as f:
+        lines = f.readlines()
+
+    # Strip markdown formatting for terminal display
+    import re
+    terminal_lines = []
+    for line in lines:
+        line = line.rstrip()
+        # Headers
+        if line.startswith("### "):
+            terminal_lines.append(tc("  " + line[4:].upper(), "title"))
+        elif line.startswith("## "):
+            terminal_lines.append("")
+            terminal_lines.append(tc("  ── " + line[3:] + " ──", "border"))
+        elif line.startswith("# "):
+            terminal_lines.append(tc("  " + line[2:], "title"))
+        # Code blocks — pass through as-is
+        elif line.startswith("```"):
+            pass
+        # Table rows — simplify
+        elif line.startswith("|"):
+            terminal_lines.append(tc("  " + line, "stat"))
+        # Bold
+        else:
+            line = re.sub(r'\*\*(.+?)\*\*', r'', line)
+            line = re.sub(r'`(.+?)`', r'', line)
+            if line.strip():
+                terminal_lines.append("  " + line)
+            else:
+                terminal_lines.append("")
+
+    # Page through output
+    PAGE = 24
+    i = 0
+    while i < len(terminal_lines):
+        page = terminal_lines[i:i+PAGE]
+        for ln in page:
+            print(ln)
+        i += PAGE
+        if i < len(terminal_lines):
+            raw = tinput("\n  -- press Enter for more, Q to quit -- ").lower()
+            if raw == "q":
+                break
+
+    tinput("\n  Press Enter to return to the Guild...")
+
+
 # ── Main tavern loop ──────────────────────────────────────────────────────────
 
 def run_tavern() -> None:
@@ -344,7 +898,9 @@ def run_tavern() -> None:
             "--hp",           str(character.hp),
             "--mana",         str(character.mana),
             "--gold",         str(character.gold),
-            "--spells",       ",".join(character.spells),
+            "--spells",  ",".join(character.spells),
+            "--xp",      str(character.xp),
+            "--level",   str(character.level),
         ])
 
         # Engine exit code: 0 = quit normally, 1 = completed, 2 = died
@@ -378,6 +934,17 @@ def run_tavern() -> None:
             character.hp   = character.hp_max
             character.mana = character.mana_max
             handle_return(character, adv["name"], completed)
+
+        # Offer the shops
+        print(tc("\n  ─── What would you like to do? ───────────────────", "border"))
+        print(tc("  1. Visit Horace's Outfitters (weapons, armor, gear)", "desc"))
+        print(tc("  2. Visit Aldric's Arcane Emporium (spells, potions)", "desc"))
+        print(tc("  3. Skip", "desc"))
+        shop_choice = tinput("  > ").strip()
+        if shop_choice == "1":
+            run_horace_shop(character)
+        elif shop_choice == "2":
+            run_wizard_shop(character)
 
         # Ask to continue
         again = tinput("\n  Return to the adventure board? (y/n): ").lower()

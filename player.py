@@ -52,6 +52,14 @@ class Player:
         "cloak":  None,
     })
 
+    # XP and level (mirrors character.json, updated on exit)
+    xp: int = 0
+    level: int = 1
+    xp_gained: int = 0   # XP earned this adventure session
+
+    # Combat tracking for stat advancement
+    took_damage_this_fight: bool = False
+
     # Shield spell rounds remaining
     shield_rounds: int = 0
 

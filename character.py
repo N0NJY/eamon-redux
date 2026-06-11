@@ -52,6 +52,8 @@ class Character:
     spells: list[str] = field(default_factory=list)
 
     # ── Progression ───────────────────────────────────────────────────────────
+    xp: int = 0
+    level: int = 1
     is_beginner: bool = True
     adventures_completed: list[str] = field(default_factory=list)
 
@@ -112,6 +114,7 @@ class Character:
                 spell_names = ", ".join(SPELL_DEFS[s]["name"] for s in self.spells
                                         if s in SPELL_DEFS)
                 lines.append(f"  Spells       : {spell_names}")
+        lines.append(f"  Level        : {self.level}  (XP: {self.xp})")
         lines.append(f"  Status       : {'Beginner' if self.is_beginner else 'Veteran'}")
         if self.adventures_completed:
             lines.append(f"  Completed    : {', '.join(self.adventures_completed)}")
@@ -137,6 +140,8 @@ class Character:
             "mana": self.mana,
             "gold": self.gold,
             "spells": self.spells,
+            "xp": self.xp,
+            "level": self.level,
             "is_beginner": self.is_beginner,
             "adventures_completed": self.adventures_completed,
         }
@@ -155,6 +160,8 @@ class Character:
             mana=d.get("mana", 0),
             gold=d.get("gold", 100),
             spells=d.get("spells", []),
+            xp=d.get("xp", 0),
+            level=d.get("level", 1),
             is_beginner=d.get("is_beginner", True),
             adventures_completed=d.get("adventures_completed", []),
         )

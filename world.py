@@ -49,6 +49,8 @@ class Artifact:
     damage_sides: int = 4
     armor_class: int = 0
     heal_amount: int = 0    # for FOOD and POTION
+    value: int = -1         # sell price (-1 = use type default)
+    is_quest_item: bool = False  # quest items and keys cannot be sold
     synonyms: list[str] = field(default_factory=list)
 
     def matches(self, word: str) -> bool:
@@ -65,7 +67,8 @@ class Artifact:
             "is_open": self.is_open, "contents": self.contents,
             "read_text": self.read_text, "damage_dice": self.damage_dice,
             "damage_sides": self.damage_sides, "armor_class": self.armor_class,
-            "heal_amount": self.heal_amount, "synonyms": self.synonyms,
+            "heal_amount": self.heal_amount, "value": self.value,
+            "is_quest_item": self.is_quest_item, "synonyms": self.synonyms,
         }
 
     @staticmethod
@@ -80,6 +83,8 @@ class Artifact:
             damage_sides=d.get("damage_sides", 4),
             armor_class=d.get("armor_class", 0),
             heal_amount=d.get("heal_amount", 0),
+            value=d.get("value", -1),
+            is_quest_item=d.get("is_quest_item", False),
             synonyms=d.get("synonyms", []),
         )
 
@@ -99,6 +104,7 @@ class Monster:
     damage_sides: int = 6
     armor_class: int = 0
     loot_id: int = 0
+    xp_value: int = 0       # XP awarded on kill (0 = auto-calculated)
     death_message: str = ""
     dialogue: str = ""       # spoken when player talks to NPC
     heal_amount: int = 0     # HP the NPC can restore per use (0 = no healing)

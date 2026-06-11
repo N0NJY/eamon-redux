@@ -45,6 +45,13 @@ class C:
 def c(color: str, text: str) -> str:
     return f"{color}{text}{C.RESET}"
 
+MAX_POTIONS = 2  # maximum potions player may carry at once
+
+def potion_count(world) -> int:
+    return sum(1 for a in world.artifacts_carried()
+               if a.artifact_type == "potion")
+
+
 def wrap(text: str, width: int = 72) -> str:
     words = text.split()
     lines, line = [], []
@@ -72,6 +79,29 @@ SPELL_DEFS = {
     "shield":   {"name": "Shield",   "cost": 3},
     "light":    {"name": "Light",    "cost": 2},
 }
+
+# ── XP and leveling ──────────────────────────────────────────────────────────────
+
+XP_LEVELS = [0, 500, 695, 1000, 1500, 1900, 2500, 3800, 5000, 9000, 15000]
+MAX_LEVEL = len(XP_LEVELS)
+
+def level_for_xp(xp: int) -> int:
+    level = 1
+    for i, threshold in enumerate(XP_LEVELS, 1):
+        if xp >= threshold:
+            level = i
+    return min(level, MAX_LEVEL)
+
+def xp_for_next_level(level: int) -> int:
+    if level >= MAX_LEVEL:
+        return XP_LEVELS[-1]
+    return XP_LEVELS[level]  # index = next level threshold
+
+def monster_xp(monster) -> int:
+    if monster.xp_value > 0:
+        return monster.xp_value
+    return monster.hp_max + (monster.damage_dice * monster.damage_sides * 2)
+
 
 # ── Engine ────────────────────────────────────────────────────────────────────
 
@@ -278,6 +308,7 @@ class Engine:
                 return
             del room.locked_exits[direction]
             print(c(C.SYS, f"You use the {key.name} to unlock the door."))
+            self._award_xp(10)   # puzzle XP
         dest = self.world.get_room(dest_id)
         if dest is None:
             print(c(C.ERROR, "That passage leads nowhere."))
@@ -346,6 +377,9 @@ class Engine:
         if not self.player.can_carry(target, self.world):
             print(c(C.ERROR, f"The {target.name} is too heavy."))
             return
+        if target.artifact_type == "potion" and potion_count(self.world) >= MAX_POTIONS:
+            print(c(C.ERROR, f"You can only carry {MAX_POTIONS} potions at a time."))
+            return
         self._do_pickup(target)
         print(c(C.SYS, f"You pick up the {target.name}."))
         self._tick_shield()
@@ -385,11 +419,13 @@ class Engine:
         picked = []
         skipped = []
         for a in pool:
-            if self.player.can_carry(a, self.world):
+            if not self.player.can_carry(a, self.world):
+                skipped.append(a.name)
+            elif a.artifact_type == "potion" and potion_count(self.world) >= MAX_POTIONS:
+                skipped.append(f"{a.name} (potion limit reached)")
+            else:
                 self._do_pickup(a)
                 picked.append(a.name)
-            else:
-                skipped.append(a.name)
 
         if picked:
             print(c(C.SYS, f"You pick up: {', '.join(picked)}."))
@@ -559,6 +595,7 @@ class Engine:
             print(c(C.ITEM_LABEL, "Inside you see:"))
             for cont in contents:
                 print(c(C.ITEM, f"  {cont.name}"))
+            self._award_xp(10)   # puzzle XP for finding contents
         else:
             print(c(C.ITEM_LABEL, "It is empty."))
         self._tick_shield()
@@ -767,6 +804,8 @@ class Engine:
                 loot = self.world.artifacts[target.loot_id]
                 loot.room_id = self.player.room_id
                 print(c(C.ITEM, f"  {loot.name} falls to the ground."))
+            self._award_xp(monster_xp(target))
+            self._check_stat_advance(took_damage=False)
             self._check_win()
         else:
             print(c(C.WARN, f"  {target.name} {target.health_desc()}."))
@@ -840,9 +879,13 @@ class Engine:
                 loot = self.world.artifacts[target.loot_id]
                 loot.room_id = self.player.room_id
                 print(c(C.ITEM, f"  {loot.name} falls to the ground."))
+            self._award_xp(monster_xp(target))
+            self._check_stat_advance(took_damage=self.player.took_damage_this_fight)
+            self.player.took_damage_this_fight = False
             self._check_win()
             return
 
+        self.player.took_damage_this_fight = True
         print(c(C.WARN, f"  {target.name} {target.health_desc()}."))
         self._monster_attack(target)
         self._tick_shield()
@@ -857,6 +900,7 @@ class Engine:
                   - self.player.armor_class(self.world))
         if dmg > 0:
             self.player.hp -= dmg
+            self.player.took_damage_this_fight = True
             print(c(C.COMBAT_HIT,
                     f"  {c(C.WARN, monster.name)} hits you for "
                     f"{c(C.COMBAT_DMG, str(dmg))} damage!"))
@@ -899,6 +943,73 @@ class Engine:
         print(c(C.EXITS, f"  Dodge  : {max(0,self.player.agility_bonus)*5}%"))
         print(c(C.EXITS, f"  Gold   : {self.player.gold}"))
 
+    # ── XP and leveling ──────────────────────────────────────────────────────────
+
+    def _award_xp(self, amount: int) -> None:
+        if amount <= 0:
+            return
+        self.player.xp += amount
+        self.player.xp_gained += amount
+        print(c(C.MANA_COLOR, f"  +{amount} XP  (total: {self.player.xp})"))
+        new_level = level_for_xp(self.player.xp)
+        if new_level > self.player.level:
+            self.player.level = new_level
+            self._level_up(new_level)
+
+    def _level_up(self, new_level: int) -> None:
+        print("\n" + c(C.COMBAT_WIN, chr(9733) * 50))
+        print(c(C.COMBAT_WIN, f"  LEVEL UP! You are now level {new_level}!"))
+        if new_level < MAX_LEVEL:
+            print(c(C.EXITS, f"  Next level at {xp_for_next_level(new_level)} XP"))
+        print(c(C.COMBAT_WIN, chr(9733) * 50))
+        self._choose_stat_boost()
+
+    def _choose_stat_boost(self) -> None:
+        import random
+        stats = ["hardiness", "agility", "strength", "intelligence", "charisma"]
+        if self.player.char_class == "Fighter":
+            pool = ["strength", "strength", "agility", "agility",
+                    "hardiness", "hardiness", "charisma", "intelligence"]
+        else:
+            pool = ["intelligence", "intelligence", "agility", "agility",
+                    "hardiness", "hardiness", "charisma", "strength"]
+        choices = random.sample(pool, 2)
+        if choices[0] == choices[1]:
+            others = [s for s in stats if s != choices[0]]
+            choices[1] = random.choice(others)
+        print(c(C.ROOM_NAME, "\n  Choose a stat to increase by 1:"))
+        for i, stat in enumerate(choices, 1):
+            current = getattr(self.player, stat)
+            print(c(C.ITEM, f"  {i}. {stat.capitalize():<15} (currently {current})"))
+        while True:
+            raw = input(c(C.EXITS, "  > ")).strip()
+            if raw in ("1", "2"):
+                chosen = choices[int(raw) - 1]
+                old_val = getattr(self.player, chosen)
+                setattr(self.player, chosen, old_val + 1)
+                print(c(C.COMBAT_WIN, f"  {chosen.capitalize()} increased to {old_val + 1}!"))
+                if chosen == "hardiness":
+                    self.player.hp = min(self.player.hp + 2, self.player.hp_max)
+                    print(c(C.HEAL_COLOR, f"  Max HP is now {self.player.hp_max}."))
+                break
+
+    def _check_stat_advance(self, took_damage: bool = False) -> None:
+        import random
+        if random.randint(1, 10) != 1:
+            return
+        if self.player.char_class == "Fighter":
+            candidates = ["strength", "agility"]
+        else:
+            candidates = ["intelligence", "agility"]
+        if took_damage:
+            candidates.append("hardiness")
+        stat = random.choice(candidates)
+        old_val = getattr(self.player, stat)
+        setattr(self.player, stat, old_val + 1)
+        print(c(C.COMBAT_WIN, f"  {chr(10022)} Your {stat.capitalize()} increased to {old_val + 1}!"))
+        if stat == "hardiness":
+            print(c(C.HEAL_COLOR, f"  Max HP is now {self.player.hp_max}."))
+
     # ── Win condition ─────────────────────────────────────────────────────────
 
     def _check_win(self) -> None:
@@ -926,6 +1037,7 @@ class Engine:
         print(f"\n{c(C.COMBAT_WIN, '═' * 72)}")
         print(c(C.COMBAT_WIN, f"  {msg}"))
         print(c(C.COMBAT_WIN, '═' * 72))
+        self._award_xp(100)   # adventure completion bonus
         self.exit_code = 1
         self.running = False
 
@@ -1003,7 +1115,38 @@ class Engine:
                 if self.running:
                     self._check_win()
 
+        # Save carried items so the tavern shop can access them
+        self._save_carried_items()
         return self.exit_code
+
+    def _save_carried_items(self) -> None:
+        """Write carried artifacts and updated stats to companion files."""
+        import json, os
+        safe_name = self.player.name.lower().replace(" ", "_")
+        os.makedirs("characters", exist_ok=True)
+        # Save inventory
+        carried = self.world.artifacts_carried()
+        items_path = os.path.join("characters", f"{safe_name}_items.json")
+        with open(items_path, "w") as f:
+            json.dump([a.to_dict() for a in carried], f, indent=2)
+        # Save updated stats back to character file
+        char_path = os.path.join("characters", f"{safe_name}.json")
+        if os.path.exists(char_path):
+            with open(char_path) as f:
+                char_data = json.load(f)
+            # Update mutable fields
+            char_data["hp"]           = self.player.hp
+            char_data["mana"]         = self.player.mana
+            char_data["gold"]         = self.player.gold
+            char_data["xp"]           = self.player.xp
+            char_data["level"]        = self.player.level
+            char_data["hardiness"]    = self.player.hardiness
+            char_data["agility"]      = self.player.agility
+            char_data["strength"]     = self.player.strength
+            char_data["intelligence"] = self.player.intelligence
+            char_data["charisma"]     = self.player.charisma
+            with open(char_path, "w") as f:
+                json.dump(char_data, f, indent=2)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
@@ -1022,7 +1165,9 @@ def main():
     parser.add_argument("--hp",           type=int, default=0)
     parser.add_argument("--mana",         type=int, default=0)
     parser.add_argument("--gold",         type=int, default=100)
-    parser.add_argument("--spells",       default="")
+    parser.add_argument("--spells",  default="")
+    parser.add_argument("--xp",      type=int, default=0)
+    parser.add_argument("--level",   type=int, default=1)
     args = parser.parse_args()
 
     if not os.path.isdir(args.adventure):
@@ -1047,6 +1192,8 @@ def main():
     player.hp   = args.hp   if args.hp   > 0 else player.hp_max
     player.mana = args.mana if args.mana > 0 else player.mana_max
     player.max_carry_weight = args.hardiness * 10
+    player.xp    = args.xp
+    player.level = args.level
 
     engine = Engine(world, player)
     sys.exit(engine.run())
