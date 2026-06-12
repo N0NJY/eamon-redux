@@ -17,7 +17,7 @@ try:
     import readline
     readline.parse_and_bind("tab: complete")
 except ImportError:
-    pass  # Windows fallback — no history, but game still works
+    pass  # Windows fallback
 
 from world import World, DIRECTIONS, DIR_ABBREV, Attitude, ArtifactType
 from player import Player, slot_for_type, EQUIP_SLOTS
@@ -32,7 +32,7 @@ class C:
     EXITS      = "\033[2;32m"
     ITEM       = "\033[0;33m"
     ITEM_LABEL = "\033[2;33m"
-    EQUIPPED   = "\033[1;33m"   # bold yellow — equipped item indicator
+    EQUIPPED   = "\033[1;33m"
     SYS        = "\033[0;36m"
     ERROR      = "\033[0;31m"
     WARN       = "\033[0;35m"
@@ -50,7 +50,7 @@ class C:
 def c(color: str, text: str) -> str:
     return f"{color}{text}{C.RESET}"
 
-MAX_POTIONS = 2  # maximum potions player may carry at once
+MAX_POTIONS = 2
 
 def potion_count(world) -> int:
     return sum(1 for a in world.artifacts_carried()
@@ -113,7 +113,6 @@ SAVE_DIR = "stored_games"
 def save_game(engine: "Engine", adv_path: str, save_name: str) -> bool:
     """Serialise full mid-game state to stored_games/<save_name>.json."""
     os.makedirs(SAVE_DIR, exist_ok=True)
-
     p = engine.player
     player_data = {
         "name":          p.name,
@@ -134,29 +133,15 @@ def save_game(engine: "Engine", adv_path: str, save_name: str) -> bool:
         "xp_gained":     p.xp_gained,
         "shield_rounds": p.shield_rounds,
     }
-
-    artifacts_state = {
-        str(aid): a.room_id
-        for aid, a in engine.world.artifacts.items()
-    }
-
-    monsters_state = {
-        str(mid): {
-            "hp":       m.hp,
-            "is_alive": m.is_alive,
-            "aggro":    m.aggro,
-        }
+    artifacts_state = {str(aid): a.room_id for aid, a in engine.world.artifacts.items()}
+    monsters_state  = {
+        str(mid): {"hp": m.hp, "is_alive": m.is_alive, "aggro": m.aggro}
         for mid, m in engine.world.monsters.items()
     }
-
     rooms_state = {
-        str(rid): {
-            "first_visit":  r.first_visit,
-            "locked_exits": r.locked_exits,
-        }
+        str(rid): {"first_visit": r.first_visit, "locked_exits": r.locked_exits}
         for rid, r in engine.world.rooms.items()
     }
-
     save_data = {
         "save_name":    save_name,
         "adv_path":     adv_path,
@@ -166,15 +151,12 @@ def save_game(engine: "Engine", adv_path: str, save_name: str) -> bool:
         "monsters":     monsters_state,
         "rooms":        rooms_state,
     }
-
     safe = save_name.lower().replace(" ", "_")
-    path = os.path.join(SAVE_DIR, f"{safe}.json")
-    with open(path, "w") as f:
+    with open(os.path.join(SAVE_DIR, f"{safe}.json"), "w") as f:
         json.dump(save_data, f, indent=2)
     return True
 
 def load_game(save_name: str) -> dict | None:
-    """Load a save file dict, or None if not found."""
     safe = save_name.lower().replace(" ", "_")
     path = os.path.join(SAVE_DIR, f"{safe}.json")
     if not os.path.exists(path):
@@ -186,7 +168,6 @@ def apply_save_state(engine: "Engine", save_data: dict) -> None:
     """Restore mutable world/player state from a loaded save dict."""
     p  = engine.player
     pd = save_data["player"]
-
     p.room_id       = pd["room_id"]
     p.hp            = pd["hp"]
     p.mana          = pd["mana"]
@@ -199,14 +180,11 @@ def apply_save_state(engine: "Engine", save_data: dict) -> None:
     for slot in p.equipped:
         v = p.equipped[slot]
         p.equipped[slot] = int(v) if v is not None else None
-
     engine.light_active = save_data.get("light_active", False)
-
     for aid_str, room_id in save_data["artifacts"].items():
         aid = int(aid_str)
         if aid in engine.world.artifacts:
             engine.world.artifacts[aid].room_id = room_id
-
     for mid_str, mstate in save_data["monsters"].items():
         mid = int(mid_str)
         if mid in engine.world.monsters:
@@ -214,7 +192,6 @@ def apply_save_state(engine: "Engine", save_data: dict) -> None:
             m.hp       = mstate["hp"]
             m.is_alive = mstate["is_alive"]
             m.aggro    = mstate["aggro"]
-
     for rid_str, rstate in save_data["rooms"].items():
         rid = int(rid_str)
         if rid in engine.world.rooms:
@@ -227,12 +204,12 @@ def apply_save_state(engine: "Engine", save_data: dict) -> None:
 class Engine:
 
     def __init__(self, world: World, player: Player):
-        self.world       = world
-        self.player      = player
-        self.running     = True
-        self.exit_code   = 0
+        self.world        = world
+        self.player       = player
+        self.running      = True
+        self.exit_code    = 0
         self.light_active = False
-        self._adv_path   = ""   # set by __main__ after construction
+        self._adv_path    = ""
 
     # ── Room display ──────────────────────────────────────────────────────────
 
@@ -241,21 +218,17 @@ class Engine:
         if room is None:
             print(c(C.ERROR, "You are in the void."))
             return
-
         print(f"\n{hr()}")
         print(c(C.ROOM_NAME, f" {room.name.upper()}"))
         print(hr())
-
         if room.is_dark and not self.light_active:
             print(c(C.ROOM_DESC, "It is pitch dark. You can't see a thing."))
             print(c(C.EXITS, "\nExits: unknown"))
             print()
             return
-
         if not brief or room.first_visit:
             print(c(C.ROOM_DESC, wrap(room.description)))
             room.first_visit = False
-
         exit_parts = []
         for direction in room.exits:
             if room.locked_exits.get(direction):
@@ -263,7 +236,6 @@ class Engine:
             else:
                 exit_parts.append(direction)
         print(c(C.EXITS, "\nExits: ") + (", ".join(exit_parts) or "none"))
-
         monsters = self.world.monsters_in_room(room.id)
         if monsters:
             print()
@@ -272,7 +244,6 @@ class Engine:
                        else c(C.EXITS, " (neutral)") if m.attitude == Attitude.NEUTRAL
                        else "")
                 print(c(C.WARN, f" {m.name}") + tag)
-
         artifacts = self.world.artifacts_in_room(room.id)
         if artifacts:
             print(c(C.ITEM_LABEL, "\nYou see:"))
@@ -348,7 +319,6 @@ class Engine:
         if not verb:
             return
         noun = " ".join(args)
-
         dispatch = {
             **{d: lambda d=d: self.cmd_go(d) for d in DIRECTIONS},
             "go":        lambda: self.cmd_go(DIR_ABBREV.get(args[0], args[0])) if args else print(c(C.ERROR, "Go where?")),
@@ -403,7 +373,6 @@ class Engine:
             "exit":      lambda: self.cmd_quit(),
             "bye":       lambda: self.cmd_quit(),
         }
-
         action = dispatch.get(verb)
         if action:
             action()
@@ -416,13 +385,11 @@ class Engine:
         if [m for m in self.world.monsters_in_room(self.player.room_id) if m.aggro]:
             print(c(C.ERROR, "You can't leave while in combat! (Try FLEE)"))
             return
-
         room    = self.world.get_room(self.player.room_id)
         dest_id = room.exits.get(direction)
         if dest_id is None:
             print(c(C.ERROR, "You can't go that way."))
             return
-
         lock_id = room.locked_exits.get(direction)
         if lock_id:
             key = next((a for a in self.world.artifacts_carried() if a.id == lock_id), None)
@@ -433,12 +400,10 @@ class Engine:
             del room.locked_exits[direction]
             print(c(C.SYS, f"You use the {key.name} to unlock the door."))
             self._award_xp(10)
-
         dest = self.world.get_room(dest_id)
         if dest is None:
             print(c(C.ERROR, "That passage leads nowhere."))
             return
-
         self._tick_shield()
         self.player.room_id = dest_id
         self.describe_room()
@@ -455,8 +420,7 @@ class Engine:
             for a in carried:
                 equipped_tag = ""
                 if self.player.is_equipped(a.id):
-                    slot = next(s for s, aid in self.player.equipped.items()
-                                if aid == a.id)
+                    slot = next(s for s, aid in self.player.equipped.items() if aid == a.id)
                     equipped_tag = c(C.EQUIPPED, f" [equipped: {slot}]")
                 print(c(C.ITEM, f"  {a.name}") + equipped_tag)
                 if a.is_container and a.is_open:
@@ -519,9 +483,8 @@ class Engine:
                 "weapon": "weapon", "weapons": "weapon", "sword": "weapon",
                 "armor":  "armor",  "armour":  "armor",
                 "potion": "potion", "potions": "potion",
-                "food":   "food",
-                "key":    "key",    "keys":    "key",
-                "shield": "shield",
+                "food":   "food",   "key":     "key",
+                "keys":   "key",    "shield":  "shield",
                 "ring":   "ring",   "rings":   "ring",
                 "cloak":  "cloak",
             }
@@ -625,7 +588,6 @@ class Engine:
             if a.is_container and a.is_open:
                 pool += [self.world.artifacts[cid] for cid in a.contents
                          if cid in self.world.artifacts]
-
         monster = self.world.find_monster_by_name(noun, self.world.monsters_in_room(room.id))
         if monster:
             print(f"\n{c(C.WARN, monster.name.upper())}")
@@ -633,15 +595,12 @@ class Engine:
             if monster.is_alive:
                 print(c(C.WARN, f"{monster.name} {monster.health_desc()}."))
             return
-
         target = self.world.find_artifact_by_name(noun, pool)
         if target is None:
             print(c(C.ERROR, f"You don't see any {noun} here."))
             return
-
         print(f"\n{c(C.ROOM_NAME, target.name.upper())}")
         print(c(C.ROOM_DESC, wrap(target.description)))
-
         if target.artifact_type in (ArtifactType.FOOD, ArtifactType.POTION):
             print(c(C.HEAL_COLOR, f"  Restores {target.heal_amount} HP when consumed."))
         if target.artifact_type == "weapon":
@@ -649,15 +608,14 @@ class Engine:
             print(c(C.EXITS, f"  Damage: {target.damage_dice}d{target.damage_sides}+{bonus}"))
         if target.artifact_type in ("armor", "shield"):
             print(c(C.EXITS, f"  Armor class: +{target.armor_class}"))
-
         equip_slot = slot_for_type(target.artifact_type)
         if equip_slot:
             equipped_here = self.player.equipped.get(equip_slot) == target.id
-            status = c(C.EQUIPPED, "[equipped]") if equipped_here else c(C.EXITS, f"[equippable: {equip_slot}]")
+            status = (c(C.EQUIPPED, "[equipped]") if equipped_here
+                      else c(C.EXITS, f"[equippable: {equip_slot}]"))
             print(f"  {status}")
-
         if target.is_container:
-            state    = "open" if target.is_open else "closed"
+            state = "open" if target.is_open else "closed"
             print(c(C.SYS, f"It is {state}."))
             if target.is_open:
                 contents = [self.world.artifacts[cid] for cid in target.contents
@@ -790,10 +748,9 @@ class Engine:
             return
         healed = min(target.heal_amount, self.player.hp_max - self.player.hp)
         self.player.hp += healed
-        target.room_id  = -999  # consumed
+        target.room_id  = -999
         if healed > 0:
-            print(c(C.HEAL_COLOR,
-                    f"You {verb} the {target.name} and recover {healed} HP."))
+            print(c(C.HEAL_COLOR, f"You {verb} the {target.name} and recover {healed} HP."))
             print(c(C.SYS, f"  {self.player.health_bar()}"))
         else:
             print(c(C.SYS, f"You {verb} the {target.name}. (Already at full health)"))
@@ -908,8 +865,8 @@ class Engine:
             target.is_alive = False
             print(f"\n{c(C.COMBAT_WIN, target.death_message or f'The {target.name} collapses, scorched.')}")
             if target.loot_id and target.loot_id in self.world.artifacts:
-                loot          = self.world.artifacts[target.loot_id]
-                loot.room_id  = self.player.room_id
+                loot         = self.world.artifacts[target.loot_id]
+                loot.room_id = self.player.room_id
                 print(c(C.ITEM, f"  {loot.name} falls to the ground."))
             self._award_xp(monster_xp(target))
             self._check_stat_advance(took_damage=False)
@@ -952,14 +909,12 @@ class Engine:
             if target is None:
                 print(c(C.ERROR, f"You don't see any {noun} here."))
                 return
-
         if not target.is_alive:
             print(c(C.ERROR, f"The {target.name} is already dead."))
             return
         if target.attitude == Attitude.FRIENDLY:
             print(c(C.WARN, f"You can't bring yourself to strike {target.name}."))
             return
-
         target.aggro = True
         weapon = self.player.equipped_weapon(self.world)
         if weapon:
@@ -968,18 +923,15 @@ class Engine:
         else:
             p_dice, p_sides = self.player.damage_dice, self.player.damage_sides
             weapon_name     = "your fists"
-
         bonus = max(0, self.player.agility_bonus) + self.player.strength_bonus
         p_dmg = max(0, roll(p_dice, p_sides) + bonus - target.armor_class)
         target.hp -= p_dmg
-
         if p_dmg > 0:
             print(c(C.COMBAT_HIT,
                     f"  You hit {c(C.WARN, target.name)} with {weapon_name} "
                     f"for {c(C.COMBAT_DMG, str(p_dmg))} damage!"))
         else:
             print(c(C.EXITS, f"  You swing at {c(C.WARN, target.name)} but deal no damage."))
-
         if target.hp <= 0:
             target.is_alive = False
             print(f"\n{c(C.COMBAT_WIN, target.death_message or f'The {target.name} collapses, dead.')}")
@@ -992,7 +944,6 @@ class Engine:
             self.player.took_damage_this_fight = False
             self._check_win()
             return
-
         self.player.took_damage_this_fight = True
         print(c(C.WARN, f"  {target.name} {target.health_desc()}."))
         self._monster_attack(target)
@@ -1056,7 +1007,7 @@ class Engine:
     def _award_xp(self, amount: int) -> None:
         if amount <= 0:
             return
-        self.player.xp       += amount
+        self.player.xp        += amount
         self.player.xp_gained += amount
         print(c(C.MANA_COLOR, f"  +{amount} XP (total: {self.player.xp})"))
         new_level = level_for_xp(self.player.xp)
@@ -1082,7 +1033,7 @@ class Engine:
                     "hardiness", "hardiness", "charisma", "strength"]
         choices = random.sample(pool, 2)
         if choices[0] == choices[1]:
-            others    = [s for s in stats if s != choices[0]]
+            others     = [s for s in stats if s != choices[0]]
             choices[1] = random.choice(others)
         print(c(C.ROOM_NAME, "\n  Choose a stat to increase by 1:"))
         for i, stat in enumerate(choices, 1):
@@ -1091,8 +1042,8 @@ class Engine:
         while True:
             raw = input(c(C.EXITS, "  > ")).strip()
             if raw in ("1", "2"):
-                chosen    = choices[int(raw) - 1]
-                old_val   = getattr(self.player, chosen)
+                chosen  = choices[int(raw) - 1]
+                old_val = getattr(self.player, chosen)
                 setattr(self.player, chosen, old_val + 1)
                 print(c(C.COMBAT_WIN, f"  {chosen.capitalize()} increased to {old_val + 1}!"))
                 if chosen == "hardiness":
@@ -1123,23 +1074,18 @@ class Engine:
             return
         wc_type = wc.get("type")
         won     = False
-
         if wc_type == "kill_monster":
             mid = wc.get("monster_id")
             m   = self.world.monsters.get(mid)
             won = m is not None and not m.is_alive
-
         elif wc_type == "kill_all":
             won = all(not m.is_alive for m in self.world.monsters.values())
-
         elif wc_type == "reach_room":
             won = self.player.room_id == wc.get("room_id")
-
         elif wc_type == "carry_artifact":
             aid = wc.get("artifact_id")
             a   = self.world.artifacts.get(aid)
-            won = a is not None and a.room_id is None  # None = carried
-
+            won = a is not None and a.room_id is None
         if won:
             self._win(wc.get("message", "You have won!"))
 
@@ -1150,7 +1096,7 @@ class Engine:
         self.exit_code = 1
         self.running   = False
 
-    # ── Save ──────────────────────────────────────────────────────────────────
+    # ── Save command ──────────────────────────────────────────────────────────
 
     def cmd_save(self, noun: str) -> None:
         name = noun.strip()
@@ -1232,20 +1178,20 @@ if __name__ == "__main__":
         sys.exit(3)
 
     player = Player(
-        name            = args.name,
-        char_class      = args.char_class,
-        room_id         = world.start_room,
-        hardiness       = args.hardiness,
-        agility         = args.agility,
-        charisma        = args.charisma,
-        intelligence    = args.intelligence,
-        strength        = args.strength,
-        hp              = args.hp,
-        mana            = args.mana,
-        gold            = args.gold,
-        spells          = [s for s in args.spells.split(",") if s],
-        xp              = args.xp,
-        level           = args.level,
+        name             = args.name,
+        char_class       = args.char_class,
+        room_id          = world.start_room,
+        hardiness        = args.hardiness,
+        agility          = args.agility,
+        charisma         = args.charisma,
+        intelligence     = args.intelligence,
+        strength         = args.strength,
+        hp               = args.hp,
+        mana             = args.mana,
+        gold             = args.gold,
+        spells           = [s for s in args.spells.split(",") if s],
+        xp               = args.xp,
+        level            = args.level,
         max_carry_weight = args.hardiness * 10,
     )
 
@@ -1286,7 +1232,7 @@ if __name__ == "__main__":
         if raw:
             engine.handle(raw)
 
-    # ── Write carried items back for tavern to read ───────────────
+    # ── Write carried items back for tavern ───────────────────────
     carried    = world.artifacts_carried()
     items_file = os.path.join("characters",
                               f"{player.name.lower().replace(' ', '_')}_items.json")

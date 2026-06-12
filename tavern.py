@@ -106,18 +106,18 @@ TAVERN_ROOMS = {
 BANNER = """
 ╔══════════════════════════════════════════════════════════════════════╗
 ║                                                                      ║
-║ ███████╗ █████╗ ███╗ ███╗ ██████╗ ███╗ ██╗                          ║
-║ ██╔════╝ ██╔══██╗ ████╗ ████║ ██╔═══██╗ ████╗ ██║                  ║
-║ █████╗ ███████║ ██╔████╔██║ ██║ ██║ ██╔██╗ ██║                  ║
-║ ██╔══╝ ██╔══██║ ██║╚██╔╝██║ ██║ ██║ ██║╚██╗██║                  ║
-║ ███████╗ ██║ ██║ ██║ ╚═╝ ██║ ╚██████╔╝ ██║ ╚████║                 ║
-║ ╚══════╝ ╚═╝ ╚═╝ ╚═╝ ╚═╝ ╚═════╝ ╚═╝ ╚═══╝                 ║
+║ ███████╗  █████╗   ███╗ ███╗   ██████╗  ██╗    ██╗                   ║
+║ ██╔════╝ ██╔══██╗ ████╗ ████║ ██╔═══██╗ ████╗  ██║                   ║
+║ █████╗   ███████║ ██╔████╔██║ ██║   ██║ ██╔██╗ ██║                   ║
+║ ██╔══╝   ██╔══██║ ██║╚██╔╝██║ ██║   ██║ ██║╚██╗██║                   ║
+║ ███████╗ ██║  ██║ ██║ ╚═╝ ██║ ╚██████╔╝ ██║ ╚████║                   ║
+║ ╚══════╝  ╚═╝ ╚═╝ ╚═╝     ╚═╝  ╚═════╝  ╚═╝  ╚═══╝                   ║
 ║                                                                      ║
-║ R E D U X  A D V E N T U R E  E N G I N E                           ║
+║     R E D U X  A D V E N T U R E  E N G I N E                        ║
 ║                                                                      ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║ ~ Saunter Inn and Tavern ~                                          ║
-║ Where adventurers gather between quests                             ║
+║        ~ Saunter Inn and Tavern ~                                    ║
+║    Where adventurers gather between quests                           ║
 ╚══════════════════════════════════════════════════════════════════════╝
 """
 
@@ -147,10 +147,7 @@ def can_sell(artifact) -> bool:
 SAVE_DIR = "stored_games"
 
 def list_saves(character_name: str = "") -> list[dict]:
-    """
-    Return save-file metadata sorted by modification time (newest first).
-    If character_name given, filter to that character only.
-    """
+    """Return save-file metadata sorted by modification time (newest first)."""
     if not os.path.isdir(SAVE_DIR):
         return []
     saves = []
@@ -189,10 +186,7 @@ def _adv_title(adv_path: str) -> str:
         return adv_path
 
 def menu_load_save(character) -> bool:
-    """
-    List saved games for this character and offer to resume one.
-    Returns True if a game was launched (so the caller can loop back).
-    """
+    """List saved games and offer to resume one. Returns True if launched."""
     saves = list_saves(character.name)
     if not saves:
         tprint("\n No saved games found for this character.", "warn")
@@ -222,26 +216,7 @@ def menu_load_save(character) -> bool:
         tprint(" Invalid choice.", "error")
 
     tprint(f"\n Resuming '{chosen['name']}' — {chosen['adv_title']}...", "sys")
-
-    result = subprocess.run([
-        sys.executable, "engine.py",
-        chosen["adv_path"],
-        "--name",         character.name,
-        "--class",        character.char_class,
-        "--hardiness",    str(character.hardiness),
-        "--agility",      str(character.agility),
-        "--charisma",     str(character.charisma),
-        "--intelligence", str(character.intelligence),
-        "--strength",     str(character.strength),
-        "--hp",           str(character.hp),
-        "--mana",         str(character.mana),
-        "--gold",         str(character.gold),
-        "--spells",       ",".join(character.spells),
-        "--xp",           str(character.xp),
-        "--level",        str(character.level),
-        "--savefile",     chosen["name"],
-    ])
-
+    result = _launch_engine(character, chosen["adv_path"], savefile=chosen["name"])
     _handle_engine_return(character, result, chosen["adv_path"])
     return True
 
@@ -340,8 +315,7 @@ def handle_tavern_command(cmd: str, character, room_id: str) -> Optional[str]:
     cmd  = raw.upper()
     room = TAVERN_ROOMS[room_id]
 
-    # ── Movement ─────────────────────────────────────────────────
-    # Resolve abbreviations and full direction names
+    # ── Movement ──────────────────────────────────────────────────
     direction = DIR_ABBREV_TAVERN.get(raw.lower(), raw.lower())
     if direction in room.exits:
         return room.exits[direction]
@@ -360,13 +334,13 @@ def handle_tavern_command(cmd: str, character, room_id: str) -> Optional[str]:
         talk_target = cmd[5:].strip()
 
     if talk_target:
-        if talk_target in ("HORACE",) or (room.npc == "horace" and not talk_target):
+        if talk_target in ("HORACE",):
             if room.npc == "horace":
                 run_horace_shop(character)
             else:
                 tprint(" Horace is at the bar. Head north from the entrance.", "desc")
             return None
-        if talk_target in ("ALDRIC", "WIZARD") or (room.npc == "aldric" and not talk_target):
+        if talk_target in ("ALDRIC", "WIZARD"):
             if room.npc == "aldric":
                 run_wizard_shop(character)
             else:
@@ -421,26 +395,24 @@ def handle_tavern_command(cmd: str, character, room_id: str) -> Optional[str]:
 def show_tavern_help() -> None:
     print()
     print(tc(" ─── Tavern Commands ──────────────────────────────────", "border"))
-    print(tc(" NORTH/SOUTH/EAST/WEST (N/S/E/W) — Move between rooms", "desc"))
-    print(tc(" GO <direction>                  — Move explicitly", "desc"))
-    print(tc(" CHARACTER, CHAR, C, STATUS      — View character sheet", "desc"))
-    print(tc(" INVENTORY, I                    — View carried items", "desc"))
-    print(tc(" SPELLS                          — View known spells", "desc"))
-    print(tc(" LOOK, L                         — Describe current room", "desc"))
-    print(tc(" HORACE, SHOP                    — Trade with Horace (bar)", "desc"))
-    print(tc(" ALDRIC, WIZARD                  — Visit Aldric (back room)", "desc"))
-    print(tc(" RESUME, LOAD, SAVES             — Resume a saved adventure", "desc"))
-    print(tc(" QUIT, Q, EXIT                   — Go to adventure board", "desc"))
-    print(tc(" HELP, H, ?                      — This message", "desc"))
+    print(tc(" N/S/E/W or NORTH/SOUTH/EAST/WEST — Move between rooms", "desc"))
+    print(tc(" GO <direction>                    — Move explicitly", "desc"))
+    print(tc(" CHARACTER, CHAR, C, STATUS        — View character sheet", "desc"))
+    print(tc(" INVENTORY, I                      — View carried items", "desc"))
+    print(tc(" SPELLS                            — View known spells", "desc"))
+    print(tc(" LOOK, L                           — Describe current room", "desc"))
+    print(tc(" HORACE, SHOP  (at the bar)        — Trade with Horace", "desc"))
+    print(tc(" ALDRIC, WIZARD  (in back room)    — Visit Aldric", "desc"))
+    print(tc(" TALK TO <name>                    — Speak to an NPC", "desc"))
+    print(tc(" RESUME, LOAD, SAVES               — Resume a saved adventure", "desc"))
+    print(tc(" QUIT, Q, EXIT                     — Go to adventure board", "desc"))
+    print(tc(" HELP, H, ?                        — This message", "desc"))
     print()
 
 # ── Tavern exploration loop ───────────────────────────────────────────────────
 
 def run_tavern_exploration(character) -> bool:
-    """
-    Walk around the tavern until the player QUITs to the adventure board.
-    Returns True (always — QUIT means go to board, not exit the game).
-    """
+    """Walk around the tavern until QUIT sends player to adventure board."""
     current_room = "entrance"
     show_room(TAVERN_ROOMS[current_room])
     tprint(" Type HELP for commands, QUIT to go to the adventure board.", "sys")
@@ -627,11 +599,11 @@ def find_adventures(adventures_dir: str = "adventures") -> list[dict]:
             with open(meta_path) as f:
                 meta = json.load(f)
             adventures.append({
-                "name":       entry,
-                "path":       adv_path,
-                "title":      meta.get("title", entry),
-                "author":     meta.get("author", "Unknown"),
-                "is_beginner":meta.get("is_beginner_adventure", False),
+                "name":        entry,
+                "path":        adv_path,
+                "title":       meta.get("title", entry),
+                "author":      meta.get("author", "Unknown"),
+                "is_beginner": meta.get("is_beginner_adventure", False),
             })
     return adventures
 
@@ -648,7 +620,7 @@ def choose_adventure(character, adventures: list[dict]):
 
     print(tc("\n ─── Available Adventures ────────────────────────────", "border"))
     for i, adv in enumerate(adventures, 1):
-        done   = tc(" [completed]", "sys") if adv["name"] in character.adventures_completed else ""
+        done = tc(" [completed]", "sys") if adv["name"] in character.adventures_completed else ""
         print(tc(f" {i}.", "border") + tc(f" {adv['title']}", "title") + done)
     print(tc(" R. Resume a saved game", "sys"))
     print(tc(" 0. Return to tavern", "border"))
@@ -660,7 +632,7 @@ def choose_adventure(character, adventures: list[dict]):
             return None
         if raw == "r":
             menu_load_save(character)
-            return None   # redisplay board via loop
+            return None
         try:
             n = int(raw)
             if 1 <= n <= len(adventures):
@@ -671,7 +643,7 @@ def choose_adventure(character, adventures: list[dict]):
 
 # ── Engine launch helpers ─────────────────────────────────────────────────────
 
-def _launch_engine(character, adv_path: str, savefile: str = "") -> "subprocess.CompletedProcess":
+def _launch_engine(character, adv_path: str, savefile: str = ""):
     cmd = [
         sys.executable, "engine.py", adv_path,
         "--name",         character.name,
@@ -732,7 +704,7 @@ def run_tavern() -> None:
         print()
         tprint(" Welcome to the Saunter Inn and Tavern.", "sys")
 
-        run_tavern_exploration(character)   # always returns True (QUIT = go to board)
+        run_tavern_exploration(character)
 
         adventures = find_adventures()
         if not adventures:
@@ -741,8 +713,7 @@ def run_tavern() -> None:
 
         adv = choose_adventure(character, adventures)
         if adv is None:
-            # Player chose 0 (return to tavern) — loop back to exploration
-            continue
+            continue   # back to tavern exploration
 
         tprint(f"\n You set out for: {adv['title']}\n", "sys")
         result = _launch_engine(character, adv["path"])
