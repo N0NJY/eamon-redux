@@ -16,6 +16,7 @@ import random
 import time
 from dataclasses import dataclass
 from typing import Optional
+from save_system import list_resumable_games, load_game as load_game_slotted
 
 # ── Colors ────────────────────────────────────────────────────────────────────
 
@@ -304,35 +305,6 @@ def list_saves(character) -> list:
             continue
     saves.sort(key=lambda s: s["mtime"], reverse=True)
     return saves
-
-def menu_load_save(character) -> bool:
-    saves = list_saves(character)
-    if not saves:
-        tprint("\n No saved games found for this character.", "warn")
-        tinput(" Press Enter to continue...")
-        return False
-    print(tc("\n ─── Saved Games ────────────────────────────────────────", "border"))
-    for i, s in enumerate(saves, 1):
-        print(tc(f" {i}. ", "border") +
-              tc(f"{s['name']:<22}", "title") +
-              tc(f" {s['adv_title']:<22}", "desc") +
-              tc(f" {s['mtime_str']}", "sys"))
-    print(tc(" 0. Cancel", "border"))
-    print()
-    while True:
-        raw = tinput(" Choose save: ")
-        try:
-            n = int(raw)
-            if n == 0: return False
-            if 1 <= n <= len(saves):
-                chosen = saves[n - 1]; break
-        except ValueError:
-            pass
-        tprint(" Invalid choice.", "error")
-    tprint(f"\n Resuming '{chosen['name']}' — {chosen['adv_title']}...", "sys")
-    result = _launch_engine(character, chosen["adv_path"], savefile=chosen["name"])
-    _handle_engine_return(character, result, chosen["adv_path"])
-    return True
 
 # ── Room display & character commands ─────────────────────────────────────────
 
@@ -663,6 +635,101 @@ def show_tavern_help() -> None:
     for cmd, desc in cmds:
         print(tc(f" {cmd:<22}", "title") + tc(desc, "desc"))
     print()
+
+def menu_load_save(character) -> None:
+    """Browse and resume saved games by adventure."""
+    games = list_resumable_games(character.name)
+    
+    if not games:
+        tprint("\n ❌ No saved games found.", "error")
+        tinput(" Press Enter to continue...")
+        return
+    
+    print(tc("\n ─── Saved Games ──────────────────────────────────", "border"))
+    
+    adv_list = sorted(games.keys())
+    for i, adv_name in enumerate(adv_list, 1):
+        saves = games[adv_name]
+        print(tc(f" {i}. {adv_name} ({len(saves)} save(s))", "title"))
+        for slot, filename, meta in saves:
+            print(tc(f"    └─ Slot {slot}: {meta['room']} (HP: {meta['hp']}, {meta['timestamp'][:10]})", "desc"))
+    
+    print(tc(f"\n {len(adv_list) + 1}. Cancel", "border"))
+    
+    choice = tinput("\n Resume which adventure? (# or name): ").strip()
+    
+    if choice == str(len(adv_list) + 1) or choice.lower() == 'cancel':
+        return
+    
+    adventure = None
+    try:
+        adv_idx = int(choice) - 1
+        if 0 <= adv_idx < len(adv_list):
+            adventure = adv_list[adv_idx]
+    except ValueError:
+        # Try matching by name substring
+        for adv in adv_list:
+            if choice.lower() in adv.lower():
+                adventure = adv
+                break
+    
+    if not adventure:
+        tprint(" ❌ Adventure not found.", "error")
+        return
+    
+    saves = games[adventure]
+    
+    # Prompt for slot if multiple saves
+    if len(saves) == 1:
+        slot = saves[0][0]
+    else:
+        slot_nums = ", ".join(str(s[0]) for s in saves)
+        try:
+            slot = int(tinput(f"\n Which save slot? ({slot_nums}): ").strip())
+            if not any(s[0] == slot for s in saves):
+                tprint(" ❌ Invalid slot.", "error")
+                return
+        except ValueError:
+            tprint(" ❌ Invalid input.", "error")
+            return
+    
+    # Load and launch adventure
+    save_data = load_game_slotted(character.name, adventure, slot, interactive=False)
+    if not save_data:
+        tprint(" ❌ Load failed.", "error")
+        return
+    
+    # Find adventure path
+    adv_path = None
+    adventures = find_adventures()
+    
+    # First try exact match
+    for adv in adventures:
+        if adv["name"] == adventure:
+            adv_path = adv["path"]
+            break
+    
+    # If not found, try substring match (case-insensitive)
+    if not adv_path:
+        for adv in adventures:
+            if adventure.lower() in adv["name"].lower() or adv["name"].lower() in adventure.lower():
+                adv_path = adv["path"]
+                break
+    
+    if not adv_path:
+        tprint(f" ❌ Adventure path not found for: {adventure}", "error")
+        return
+    
+    # Launch engine with savefile
+    safe_name = character.name.lower().replace(" ", "_")
+    safe_adv = adventure.lower().replace(" ", "_")
+    savefile = f"{safe_name}_{safe_adv}_slot{slot}"
+    
+    tprint(f"\n Resuming: {adventure}\n", "sys")
+    result = _launch_engine(character, adv_path, savefile)
+    _handle_engine_return(character, result, adv_path,
+                          adv_name=adventure,
+                          is_beginner_adv=False)
 
 def run_tavern_exploration(character) -> bool:
     """Walk the tavern until QUIT. Returns True to proceed to adventure board."""

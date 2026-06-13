@@ -21,6 +21,11 @@ except ImportError:
 
 from world import World, DIRECTIONS, DIR_ABBREV, Attitude, ArtifactType
 from player import Player, slot_for_type, EQUIP_SLOTS
+from save_system import (
+    save_game as save_game_slotted,
+    load_game as load_game_slotted,
+    get_existing_saves,
+)
 
 # ── Colors ────────────────────────────────────────────────────────────────────
 
@@ -365,6 +370,7 @@ class Engine:
             "spell":     lambda: self.cmd_cast(noun),
             "spells":    lambda: self.cmd_spellbook(),
             "save":      lambda: self.cmd_save(noun),
+            "load":      lambda: self.cmd_load(noun),
             "help":      lambda: self.cmd_help(),
             "?":         lambda: self.cmd_help(),
             "h":         lambda: self.cmd_help(),
@@ -1099,18 +1105,131 @@ class Engine:
     # ── Save command ──────────────────────────────────────────────────────────
 
     def cmd_save(self, noun: str) -> None:
-        name = noun.strip()
-        if not name:
-            print(c(C.ERROR, "Usage:  SAVE <filename>  (e.g. SAVE checkpoint1)"))
+        """Save game with 3-slot system and combat check."""
+        # Check for combat: look for alive monsters in current room
+        monsters_here = [m for m in self.world.monsters.values() 
+                        if m.room_id == self.player.room_id and m.is_alive]
+        if monsters_here:
+            print(c(C.ERROR, "  ❌ Cannot save during combat!"))
             return
-        bad = set('/\\:*?"<>|')
-        if any(ch in bad for ch in name):
-            print(c(C.ERROR, "Save name contains invalid characters."))
+        
+        # Get character name and adventure name for save slot management
+        char_name = self.player.name
+        # Extract adventure name from path (e.g., "adventures/sample" -> "sample")
+        adv_name = os.path.basename(self._adv_path.rstrip("/"))
+        
+        # Show existing saves and prompt for slot
+        existing = get_existing_saves(char_name, adv_name)
+        print(c(C.SYS, f"\n  ═══ SAVE GAME ({len(existing)}/3 slots used) ═══"))
+        
+        for slot, filename, meta in existing:
+            print(c(C.SYS, f"    Slot {slot}: {meta['room']} (HP: {meta['hp']}, {meta['timestamp']})"))
+        
+        for slot in range(1, 4):
+            if not any(s[0] == slot for s in existing):
+                print(c(C.SYS, f"    Slot {slot}: [EMPTY]"))
+        
+        print(c(C.SYS, "\n  Save to which slot? (1-3, or 'cancel'): "), end='')
+        choice = input().strip()
+        
+        if choice.lower() == 'cancel':
+            print(c(C.SYS, "  ⊘ Save cancelled."))
             return
-        if save_game(self, self._adv_path, name):
-            print(c(C.SYS, f"  Game saved as '{name}' in {SAVE_DIR}/."))
+        
+        try:
+            slot = int(choice)
+            if not (1 <= slot <= 3):
+                print(c(C.ERROR, "  ❌ Invalid slot."))
+                return
+        except ValueError:
+            print(c(C.ERROR, "  ❌ Invalid input."))
+            return
+        
+        # Build save data in format expected by apply_save_state
+        player_state = {
+            "name":          self.player.name,
+            "char_class":    self.player.char_class,
+            "room_id":       self.player.room_id,
+            "hardiness":     self.player.hardiness,
+            "agility":       self.player.agility,
+            "charisma":      self.player.charisma,
+            "intelligence":  self.player.intelligence,
+            "strength":      self.player.strength,
+            "hp":            self.player.hp,
+            "mana":          self.player.mana,
+            "gold":          self.player.gold,
+            "spells":        self.player.spells,
+            "equipped":      self.player.equipped,
+            "xp":            self.player.xp,
+            "level":         self.player.level,
+            "xp_gained":     getattr(self.player, "xp_gained", 0),
+            "shield_rounds": getattr(self.player, "shield_rounds", 0),
+        }
+        
+        world_state = {
+            'artifacts': {str(aid): a.room_id for aid, a in self.world.artifacts.items()},
+            'monsters': {
+                str(mid): {"hp": m.hp, "is_alive": m.is_alive, "aggro": m.aggro}
+                for mid, m in self.world.monsters.items()
+            },
+            'rooms': {
+                str(rid): {"first_visit": r.first_visit, "locked_exits": r.locked_exits}
+                for rid, r in self.world.rooms.items()
+            },
+            'light_active': self.light_active,
+        }
+        
+        if save_game_slotted(char_name, adv_name, player_state, world_state, slot, interactive=False):
+            print(c(C.COMBAT_WIN, f"  ✅ Game saved to slot {slot}"))
         else:
-            print(c(C.ERROR, "  Save failed."))
+            print(c(C.ERROR, "  ❌ Save failed."))
+
+    def cmd_load(self, noun: str) -> None:
+        """Load a previously saved game (mid-adventure)."""
+        char_name = self.player.name
+        adv_name = os.path.basename(self._adv_path.rstrip("/"))
+        
+        # Get list of saves
+        existing = get_existing_saves(char_name, adv_name)
+        if not existing:
+            print(c(C.ERROR, "  ❌ No saves found for this adventure."))
+            return
+        
+        # Show saves
+        print(c(C.SYS, f"\n  ═══ LOAD GAME ({len(existing)} save(s)) ═══"))
+        for slot, filename, meta in existing:
+            print(c(C.SYS, f"    Slot {slot}: {meta['room']} (HP: {meta['hp']}, {meta['timestamp']})"))
+        print(c(C.SYS, f"    {len(existing) + 1}. Cancel"))
+        
+        print(c(C.SYS, "\n  Load from which slot? (1-3, or 'cancel'): "), end='')
+        choice = input().strip()
+        
+        if choice.lower() == 'cancel':
+            print(c(C.SYS, "  ⊘ Load cancelled."))
+            return
+        
+        try:
+            slot = int(choice)
+            if not any(s[0] == slot for s in existing):
+                print(c(C.ERROR, "  ❌ Invalid slot."))
+                return
+        except ValueError:
+            print(c(C.ERROR, "  ❌ Invalid input."))
+            return
+        
+        # Load the save
+        save_data = load_game_slotted(char_name, adv_name, slot, interactive=False)
+        if not save_data:
+            print(c(C.ERROR, "  ❌ Load failed."))
+            return
+        
+        # Apply save state
+        apply_save_state(self, save_data)
+        print(c(C.COMBAT_WIN, f"  ✅ Loaded from slot {slot}\n"))
+        
+        # Show new room
+        self.describe_room()
+
 
     # ── Help / Quit ───────────────────────────────────────────────────────────
 
@@ -1137,7 +1256,8 @@ class Engine:
         print(c(C.HELP, "  TALK TO <npc>                    Speak with an NPC"))
         print(c(C.HELP, "  CAST <spell>  (Sorcerer only)    Cast a spell"))
         print(c(C.HELP, "  SPELLS                           List known spells"))
-        print(c(C.HELP, "  SAVE <name>                      Save game to stored_games/"))
+        print(c(C.HELP, "  SAVE                             Save game (up to 3 slots)"))
+        print(c(C.HELP, "  LOAD                             Load a saved game"))
         print(c(C.HELP, "  QUIT / Q                         Quit to tavern"))
         print()
 
@@ -1170,6 +1290,8 @@ if __name__ == "__main__":
     ap.add_argument("--level",        type=int, default=1)
     ap.add_argument("--savefile",     default="",
                     help="Resume from stored_games/<savefile>.json")
+    ap.add_argument("--items-file",   default="",
+                    help="Path to character items file (from tavern)")
     args = ap.parse_args()
 
     world = World.load(args.adv_path)
