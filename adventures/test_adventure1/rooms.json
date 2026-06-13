@@ -1,0 +1,9 @@
+[
+  {
+    "id": 1,
+    "name": "Cave Entrance",
+    "description": "This is a barely lit cave entrance.",
+    "exits": {},
+    "is_dark": false
+  }
+]
