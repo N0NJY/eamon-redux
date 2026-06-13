@@ -113,6 +113,7 @@ BANNER = """
 ║                                                                      ║
 ║     R E D U X  A D V E N T U R E  E N G I N E                        ║
 ║                                                                      ║
+║        (C) 2026, Rick Donaldson                                      ║
 ╠══════════════════════════════════════════════════════════════════════╣
 ║        ~ Saunter Inn and Tavern ~                                    ║
 ║    Where adventurers gather between quests                           ║
