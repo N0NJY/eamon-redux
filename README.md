@@ -24,27 +24,79 @@ Eamon/
 ├── character.py       # Persistent character data (stats, class, spells, gold)
 ├── designer.py        # CLI adventure designer tool
 ├── README.md          # This file
+├── MANUAL.md          # Player-facing in-game manual
 ├── characters/        # One JSON file per character (auto-created)
 └── adventures/
     └── sample/        # "The Ruins of Thornwall Keep" — beginner adventure
-        ├── adventure.json   # Title, author, intro, starting room, win condition
-        ├── rooms.json       # All rooms and their exits
-        ├── artifacts.json   # All objects (weapons, armor, food, potions, etc.)
-        └── monsters.json    # All monsters and NPCs
+        ├── adventure.json
+        ├── rooms.json
+        ├── artifacts.json
+        └── monsters.json
 ```
 
 ---
 
 ## Starting the Game
 
-```bash
+```
 cd Eamon
 python3 tavern.py
 ```
 
-This opens the **Saunter Inn and Tavern** — the main hub where you create and manage
-characters, choose adventures, and sell loot between runs. Do not run `engine.py`
-directly for normal play.
+Do not run `engine.py` directly for normal play.
+
+---
+
+## The Tavern
+
+The **Saunter Inn and Tavern** is a fully navigable space between adventures.
+
+### Rooms
+
+```
+[Guild Hall] ── west/east ── [Entrance] ── north/south ── [Bar] ── east/west ── [Back Room]
+```
+
+| Room | Who's here |
+| ---- | ---------- |
+| Entrance | Starting point |
+| The Tavern Bar | Horace — buy/sell weapons, armor, gear |
+| The Back Room | Aldric — buy spells and magical items |
+| Adventurers' Guild Hall | Character management, adventure board |
+
+### Tavern commands
+
+| Command | Description |
+| ------- | ----------- |
+| `N / S / E / W` | Move between rooms |
+| `GO <direction>` | Move |
+| `CHARACTER` / `SHEET` | Full character stat sheet |
+| `INVENTORY` / `I` | Items you are carrying with weights and sell values |
+| `SPELLS` | Known spells, mana cost, and affordability |
+| `LOOK` / `L` | Describe current room |
+| `TALK TO HORACE` | Open Horace's shop (also: `HORACE`, `SHOP`) |
+| `TALK TO ALDRIC` | Open Aldric's shop (also: `ALDRIC`, `WIZARD`) |
+| `RESUME` / `SAVES` | Load a saved mid-adventure game |
+| `QUIT` / `Q` | Go to the adventure board |
+| `HELP` / `?` | Command list |
+
+### Horace's Outfitters (bar)
+
+Buy and sell weapons, armor, shields, food, and potions. Stock is fixed core items
+plus 3 random extras that rotate based on your level and adventures completed.
+
+- `B <number>` — buy an item
+- `S <number>` or `SELL ALL` — sell gear (weapons, armor, shields, etc.)
+- `DONE` — leave
+
+### Aldric's Arcane Emporium (back room)
+
+Buy spells and magical items; sell potions and readables back.
+Spell prices scale with character level. Fighters pay double and can only learn Heal and Light.
+
+- `B <number>` — buy a spell or item
+- `S <number>` or `SELL ALL` — sell magical items
+- `DONE` — leave
 
 ---
 
@@ -53,34 +105,28 @@ directly for normal play.
 ### Classes
 
 | Class | Strengths | Notes |
-|---|---|---|
+| ----- | --------- | ----- |
 | Fighter | STR bonus to melee damage, all weapons usable | No spellcasting |
 | Sorcerer | INT bonus to spell power, mana pool | Chooses one starting spell; limited melee |
 
-### Stats (all rolled 3d6 at creation, reroll freely until satisfied)
+### Stats (3d6, reroll freely at creation)
 
 | Stat | Effect |
-|---|---|
+| ---- | ------ |
 | Hardiness | HP = Hardiness × 2; carry capacity = Hardiness × 10 gronds |
 | Agility | Hit/dodge bonus: (Agility − 10) ÷ 2 |
 | Strength | Fighter melee damage bonus: (Strength − 10) ÷ 2 |
 | Intelligence | Sorcerer spell bonus and mana pool: INT × 2 |
-| Charisma | NPC reactions (implemented, full effects coming) |
-
-### Character files
-
-Characters are saved in `characters/<name>.json`. The file tracks current HP, mana,
-gold, completed adventures, and whether the character is still a beginner.
-Delete the file to remove a character, or use option D in the Guild menu.
+| Charisma | NPC reactions (stat tracked; merchant effects coming) |
 
 ---
 
-## Commands
+## Adventure Commands
 
 ### Movement
 
 | Command | Description |
-|---|---|
+| ------- | ----------- |
 | `NORTH / SOUTH / EAST / WEST / UP / DOWN` | Move (N/S/E/W/U/D also work) |
 | `GO <direction>` | Move |
 | `FLEE` | Escape combat in a random direction (monsters get a free hit) |
@@ -89,103 +135,67 @@ Delete the file to remove a character, or use option D in the Guild menu.
 ### Actions
 
 | Command | Description |
-|---|---|
-| `LOOK` or `L` | Describe current room |
-| `INVENTORY` or `I` | List carried items, health, and mana |
+| ------- | ----------- |
+| `LOOK` / `L` | Describe current room |
+| `INVENTORY` / `I` | List carried items, health, and mana |
 | `GET <item>` | Pick up an item |
-| `GET ALL` | Pick up everything in the room |
-| `GET ALL <type>` | e.g. `GET ALL POTIONS`, `GET ALL WEAPONS` |
-| `DROP <item>` | Drop an item (must unequip first) |
-| `EXAMINE <thing>` or `X` | Inspect an item or monster |
+| `GET ALL` | Pick up everything |
+| `GET ALL <type>` | e.g. `GET ALL POTIONS` |
+| `DROP <item>` | Drop an item (unequip first) |
+| `EXAMINE <thing>` / `X` | Inspect an item or monster |
 | `READ <item>` | Read a readable item |
 | `OPEN / CLOSE <item>` | Open or close a container |
 | `EAT <food>` | Eat food to restore HP |
 | `DRINK <potion>` | Drink a potion to restore HP |
 | `REST` | Recover 25% HP and mana (blocked by hostile monsters) |
-| `TALK TO <npc>` | Speak with a friendly NPC (some offer healing for gold) |
-| `HEALTH` or `HP` | Show health, mana, weapon, armor, and gold |
+| `TALK TO <npc>` | Speak with a friendly NPC |
+| `HEALTH` / `HP` | Show health, mana, weapon, armor, and gold |
 
 ### Equipment
 
 | Command | Description |
-|---|---|
-| `EQUIP <item>` | Equip a weapon, armor, or accessory (also: WEAR, WIELD) |
-| `UNEQUIP <item>` | Remove an item from its slot (also: REMOVE) |
-| `EQUIPMENT` or `EQ` | Show all equipment slots and stats |
+| ------- | ----------- |
+| `EQUIP <item>` | Equip a weapon, armor, or accessory (also: `WEAR`, `WIELD`) |
+| `UNEQUIP <item>` | Remove an item from its slot (also: `REMOVE`) |
+| `EQUIPMENT` / `EQ` | Show all equipment slots and stats |
 
-Equipment slots: `weapon`, `armor`, `shield`, `ring`, `cloak`.
-Only the equipped weapon is used in combat. Unequipped weapons do nothing.
-Arrow UP/DOWN cycles through command history (like bash).
+Slots: `weapon`, `armor`, `shield`, `ring`, `cloak`. Arrow UP/DOWN cycles command history.
 
 ### Combat
 
 | Command | Description |
-|---|---|
-| `ATTACK <monster>` | Attack a monster (also: KILL, FIGHT, HIT, STAB) |
-
-Each attack is one full round — you hit, then the monster hits back.
-Hostile monsters attack automatically when you enter their room and after most actions.
-Neutral monsters only fight back if you attack them first.
-Friendly NPCs cannot be attacked.
+| ------- | ----------- |
+| `ATTACK <monster>` | Attack a monster (also: `KILL`, `FIGHT`, `HIT`, `STAB`) |
 
 ### Magic (Sorcerer only)
 
 | Command | Description |
-|---|---|
+| ------- | ----------- |
 | `CAST <spell>` | Cast a known spell |
-| `CAST FIREBALL <monster>` | Target a fireball at a specific monster |
+| `CAST FIREBALL <monster>` | Target a specific monster |
 | `SPELLS` | List known spells and mana costs |
 
-**Starting spells (choose one at character creation):**
+**Spells:**
 
-| Spell | Mana cost | Effect |
-|---|---|---|
+| Spell | Mana | Effect |
+| ----- | ---- | ------ |
 | Heal | 4 | Restore 1d6 + INT bonus HP |
-| Fireball | 6 | Deal 2d6 + INT bonus fire damage to one enemy |
+| Fireball | 6 | 2d6 + INT bonus fire damage to one enemy |
 | Shield | 3 | +3 armor class for 3 combat rounds |
 | Light | 2 | Illuminate dark rooms for the adventure |
-
-Mana refills 25% on REST and fully on return to the tavern.
-
----
-
-## The Tavern
-
-Between adventures, the **Saunter Inn and Tavern** offers:
-
-- **Character management** — create, view, or delete characters
-- **Adventure selection** — veterans see all available adventures with stat requirements
-- **Horace's Trading Post** — sell carried loot for gold after each adventure
-- **Healing** — full HP and mana restored on return (alive or dead)
-- **Death penalty** — revival costs 2 gold per missing HP
-
-Guardian Horace directs new characters to the beginner's adventure. Once completed,
-the full adventure list opens up.
-
-### Selling items
-
-After returning from an adventure, if you have sellable items Horace will offer
-to buy them. Prices are set per item in the JSON (`value` field), or fall back
-to type defaults. Keys and quest items cannot be sold.
-
-**Type price floors:** weapon 10g, armor 15g, shield 10g, ring 20g, cloak 15g,
-potion 5g, food 2g, readable 3g, generic 1g.
 
 ---
 
 ## Building an Adventure
 
-```bash
+```
 python3 designer.py adventures/my_adventure
 ```
-
-The designer starts a new adventure if the folder doesn't exist, or loads an
-existing one. Option 6 saves and immediately launches the engine for test play.
 
 ### Designer menu
 
 ```
-1. Adventure settings   — title, author, intro, starting room
+1. Adventure settings   — title, author, intro, starting room, win condition
 2. Rooms                — add, edit, delete; set exits and locked exits
 3. Artifacts            — add, edit, delete; place in rooms
 4. View map             — ASCII map of room connections
@@ -193,6 +203,8 @@ existing one. Option 6 saves and immediately launches the engine for test play.
 6. Test play
 0. Quit
 ```
+
+Monsters must currently be edited in `monsters.json` directly.
 
 ---
 
@@ -207,8 +219,6 @@ existing one. Option 6 saves and immediately launches the engine for test play.
   "intro": "Text shown before the game starts.",
   "start_room": 1,
   "is_beginner_adventure": false,
-  "min_hardiness": 0,
-  "min_agility": 0,
   "win_condition": {
     "type": "kill_monster",
     "monster_id": 5,
@@ -217,8 +227,7 @@ existing one. Option 6 saves and immediately launches the engine for test play.
 }
 ```
 
-**Win condition types:** `kill_monster` (monster_id), `kill_all`, `reach_room` (room_id),
-`carry_artifact` (artifact_id).
+Win condition types: `kill_monster` (monster_id), `kill_all`, `reach_room` (room_id), `carry_artifact` (artifact_id).
 
 ### rooms.json
 
@@ -235,7 +244,7 @@ existing one. Option 6 saves and immediately launches the engine for test play.
 ]
 ```
 
-`locked_exits` maps a direction to the artifact ID of the key that unlocks it.
+`locked_exits` maps direction → artifact ID of the key that unlocks it.
 
 ### artifacts.json
 
@@ -257,26 +266,9 @@ existing one. Option 6 saves and immediately launches the engine for test play.
 ]
 ```
 
-**Artifact types:**
+Set `room_id` to `null` for starting inventory. Set `is_quest_item: true` to prevent selling.
 
-| Type | Extra fields | Notes |
-|---|---|---|
-| `generic` | — | Any ordinary object |
-| `weapon` | `damage_dice`, `damage_sides` | Must be EQUIPped to use in combat |
-| `armor` | `armor_class` | Must be EQUIPped; reduces incoming damage |
-| `shield` | `armor_class` | Equips in shield slot |
-| `ring` | — | Equips in ring slot (effects coming) |
-| `cloak` | — | Equips in cloak slot (effects coming) |
-| `container` | `is_open`, `contents` | `contents` is a list of artifact IDs |
-| `readable` | `read_text` | Player can READ this item |
-| `food` | `heal_amount` | EAT to restore HP |
-| `potion` | `heal_amount` | DRINK to restore HP |
-| `key` | — | Unlocks a locked exit; cannot be sold |
-| `light` | — | Reserved for darkness mechanic |
-| `spellbook` | — | Reserved for learning spells |
-
-Set `room_id` to `null` to place an artifact in the player's starting inventory.
-Set `is_quest_item: true` to prevent selling.
+**Artifact types:** `generic`, `weapon`, `armor`, `shield`, `ring`, `cloak`, `container`, `readable`, `food`, `potion`, `key`, `light`, `spellbook`
 
 ### monsters.json
 
@@ -297,61 +289,26 @@ Set `is_quest_item: true` to prevent selling.
     "dialogue": "",
     "heal_amount": 0,
     "heal_cost": 0,
-    "synonyms": ["rat", "rodent"]
+    "synonyms": ["rat"]
   }
 ]
 ```
 
-**Attitudes:** `hostile` (attacks on sight), `neutral` (passive until attacked),
-`friendly` (never attacks, can TALK TO).
-
-Set `dialogue` for NPC speech. Set `heal_amount` and `heal_cost` (gold per HP)
-for a healing NPC.
-
----
-
-## Color Scheme
-
-All colors are defined in the `C` class at the top of `engine.py`.
-
-| Color | Used for |
-|---|---|
-| Bold green | Room names, command prompt |
-| Green | Room descriptions, intro text |
-| Dim green | Borders, exits, carry weight |
-| Yellow | Artifact names |
-| Bold yellow | Equipped item tags, victory messages |
-| Magenta | Monster names, NPC speech |
-| Cyan | Action confirmations, health bar |
-| Dim cyan | Mana bar, spell info |
-| Bold cyan | Spell effects |
-| Red | Errors, combat hit messages |
-| Bold red | Player death screen |
-
----
-
-## Extending the Engine
-
-The codebase is intentionally small and readable.
-
-- **New commands** — add an entry to the `dispatch` dict in `Engine.handle()` and a `cmd_*` method.
-- **New artifact types** — add a constant to `ArtifactType` in `world.py`; add a slot in `EQUIP_SLOTS` in `player.py` if equippable.
-- **New spells** — add an entry to `SPELL_DEFS` in `engine.py` and a `_cast_*` method.
-- **New monster behaviors** — extend the `Monster` dataclass in `world.py`; combat logic is in `Engine.cmd_attack()` and `Engine.monster_round()`.
-- **New adventures** — run `python3 designer.py adventures/your_name`.
+Attitudes: `hostile` (attacks on sight), `neutral` (passive until attacked), `friendly` (TALK TO).
 
 ---
 
 ## Still To Complete
 
-- **Save / load mid-game** — progress is lost if you quit mid-adventure
+- **Mid-game save / load** — engine side not yet implemented; tavern UI is ready
 - **Monster editor in designer** — monsters must be edited in JSON directly
 - **Exit validation in designer** — no warning for broken exit links
-- **Adventure linter** — a check option to catch data errors before play
-- **Charisma effects** — stat exists but merchant prices and NPC reactions not yet wired
-- **Ring / cloak effects** — equipment slots exist, enchantment effects not yet implemented
-- **NPC shop** — Horace buys items; selling back to player not yet implemented
-- **More spells** — only four spells in v1
+- **Adventure linter** — pre-play check for data errors
+- **Charisma effects** — merchant price modifiers and NPC reactions not yet wired
+- **Ring / cloak enchantments** — equipment slots exist; effects not yet implemented
+- **Ranged weapon mechanic** — bow/crossbow sold by Horace; engine treats them as melee
+- **More spells** — only four in v1
+- **Second adventure** — engine and designer are ready; only the sample exists
 
 ---
 
