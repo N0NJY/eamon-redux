@@ -1,0 +1,114 @@
+{
+  "character": "Thoran",
+  "adventure": "sample",
+  "timestamp": "2026-06-13T12:57:16.891296",
+  "player": {
+    "name": "Thoran",
+    "char_class": "Sorcerer",
+    "room_id": 3,
+    "hardiness": 10,
+    "agility": 10,
+    "charisma": 11,
+    "intelligence": 15,
+    "strength": 7,
+    "hp": 13,
+    "mana": 15,
+    "gold": 0,
+    "spells": [
+      "fireball",
+      "heal",
+      "shield"
+    ],
+    "equipped": {
+      "weapon": null,
+      "armor": null,
+      "shield": null,
+      "ring": null,
+      "cloak": null
+    },
+    "xp": 16,
+    "level": 1,
+    "xp_gained": 16,
+    "shield_rounds": 0
+  },
+  "world": {
+    "artifacts": {
+      "1": null,
+      "2": 5,
+      "3": 5,
+      "4": 5,
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": 6,
+      "9": null,
+      "10": 6,
+      "11": 6,
+      "12": 5
+    },
+    "monsters": {
+      "1": {
+        "hp": -5,
+        "is_alive": false,
+        "aggro": true
+      },
+      "2": {
+        "hp": 18,
+        "is_alive": true,
+        "aggro": true
+      },
+      "3": {
+        "hp": 15,
+        "is_alive": true,
+        "aggro": false
+      },
+      "4": {
+        "hp": 6,
+        "is_alive": true,
+        "aggro": false
+      },
+      "5": {
+        "hp": 22,
+        "is_alive": true,
+        "aggro": true
+      }
+    },
+    "rooms": {
+      "1": {
+        "first_visit": false,
+        "locked_exits": {}
+      },
+      "2": {
+        "first_visit": false,
+        "locked_exits": {}
+      },
+      "3": {
+        "first_visit": false,
+        "locked_exits": {
+          "north": 9
+        }
+      },
+      "4": {
+        "first_visit": true,
+        "locked_exits": {}
+      },
+      "5": {
+        "first_visit": true,
+        "locked_exits": {}
+      },
+      "6": {
+        "first_visit": true,
+        "locked_exits": {}
+      },
+      "7": {
+        "first_visit": false,
+        "locked_exits": {}
+      },
+      "8": {
+        "first_visit": false,
+        "locked_exits": {}
+      }
+    },
+    "light_active": false
+  }
+}
