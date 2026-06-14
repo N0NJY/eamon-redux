@@ -28,6 +28,7 @@ from save_system import (
     get_existing_saves,
     prompt_save_slot,
 )
+from command_parser import parse_command
 
 # ── Colors ────────────────────────────────────────────────────────────────────
 
@@ -319,73 +320,116 @@ class Engine:
         verb = DIR_ABBREV.get(tokens[0], tokens[0])
         return verb, tokens[1:]
 
-    # ── Dispatch ──────────────────────────────────────────────────────────────
+    # ── Dispatch with Fuzzy Command Matching ──────────────────────────────────
 
     def handle(self, raw: str) -> None:
-        verb, args = self.parse(raw)
-        if not verb:
+        """Handle user input with fuzzy command matching."""
+        if not raw.strip():
             return
-        noun = " ".join(args)
+        
+        # Parse command with fuzzy matching
+        cmd, status, suggestions = parse_command(raw, "engine")
+        
+        # Extract noun (everything after the first word)
+        parts = raw.strip().lower().split(maxsplit=1)
+        noun = parts[1] if len(parts) > 1 else ""
+        
+        # Handle special "talk to" and "get all" syntax
+        if len(parts) >= 3 and parts[0] == "talk" and parts[1] == "to":
+            cmd = "talk"
+            noun = " ".join(parts[2:])
+        elif len(parts) >= 3 and parts[0] == "get" and parts[1] == "all":
+            cmd = "getall"
+            noun = " ".join(parts[2:])
+        elif len(parts) >= 2 and parts[0] == "pick" and parts[1] == "up":
+            cmd = "get"
+            noun = " ".join(parts[2:]) if len(parts) > 2 else ""
+        
+        # ────────────────────────────────────────────────────────────────────────
+        # Process parsing results
+        # ────────────────────────────────────────────────────────────────────────
+        
+        if status == "exact" or status == "partial":
+            # Valid command found - execute it
+            self._execute_command(cmd, noun, raw)
+        
+        elif status == "ambiguous":
+            # Multiple matches - ask user to be more specific
+            print(c(C.ERROR, f"\n  ❌ Ambiguous command: '{parts[0].upper()}'"))
+            print(c(C.SYS, f"  Did you mean one of these?"))
+            for suggestion in suggestions:
+                print(c(C.SYS, f"    • {suggestion.upper()}"))
+            print(c(C.SYS, f"  Please use at least 3 letters to be more specific.\n"))
+        
+        elif status == "not_found":
+            # Command not found
+            print(c(C.ERROR, f"\n  ❌ I don't know how to \"{parts[0].upper()}\"."))
+            if suggestions:
+                print(c(C.SYS, f"  Did you mean: {', '.join(s.upper() for s in suggestions[:3])}?"))
+            print(c(C.SYS, f"  Type HELP for a list of commands.\n"))
+    
+    def _execute_command(self, cmd: str, noun: str, raw_input: str) -> None:
+        """Execute a validated command."""
+        # Command dispatch - maps canonical command names to handlers
         dispatch = {
-            **{d: lambda d=d: self.cmd_go(d) for d in DIRECTIONS},
-            "go":        lambda: self.cmd_go(DIR_ABBREV.get(args[0], args[0])) if args else print(c(C.ERROR, "Go where?")),
-            "look":      lambda: self.describe_room(),
-            "l":         lambda: self.describe_room(),
+            # Movement
+            "north": lambda: self.cmd_go("north"),
+            "south": lambda: self.cmd_go("south"),
+            "east": lambda: self.cmd_go("east"),
+            "west": lambda: self.cmd_go("west"),
+            "go": lambda: self._handle_go(noun),
+            
+            # Examination & Interaction
+            "look": lambda: self.describe_room(),
+            "examine": lambda: self.cmd_examine(noun),
+            "read": lambda: self.cmd_read(noun),
+            "talk": lambda: self.cmd_talk(noun),
+            
+            # Inventory
             "inventory": lambda: self.cmd_inventory(),
-            "inv":       lambda: self.cmd_inventory(),
-            "i":         lambda: self.cmd_inventory(),
-            "get":       lambda: self.cmd_get(noun),
-            "take":      lambda: self.cmd_get(noun),
-            "getall":    lambda: self.cmd_get_all(noun),
-            "drop":      lambda: self.cmd_drop(noun),
-            "examine":   lambda: self.cmd_examine(noun),
-            "exam":      lambda: self.cmd_examine(noun),
-            "x":         lambda: self.cmd_examine(noun),
-            "read":      lambda: self.cmd_read(noun),
-            "open":      lambda: self.cmd_open(noun),
-            "close":     lambda: self.cmd_close(noun),
-            "unlock":    lambda: self.cmd_unlock(noun),
-            "equip":     lambda: self.cmd_equip(noun),
-            "wear":      lambda: self.cmd_equip(noun),
-            "wield":     lambda: self.cmd_equip(noun),
-            "unequip":   lambda: self.cmd_unequip(noun),
-            "remove":    lambda: self.cmd_unequip(noun),
+            "get": lambda: self.cmd_get(noun),
+            "getall": lambda: self.cmd_get_all(noun),
+            "drop": lambda: self.cmd_drop(noun),
+            "open": lambda: self.cmd_open(noun),
+            "close": lambda: self.cmd_close(noun),
+            
+            # Equipment
+            "equip": lambda: self.cmd_equip(noun),
+            "unequip": lambda: self.cmd_unequip(noun),
             "equipment": lambda: self.cmd_equipment(),
-            "eq":        lambda: self.cmd_equipment(),
-            "attack":    lambda: self.cmd_attack(noun),
-            "kill":      lambda: self.cmd_attack(noun),
-            "fight":     lambda: self.cmd_attack(noun),
-            "hit":       lambda: self.cmd_attack(noun),
-            "stab":      lambda: self.cmd_attack(noun),
-            "health":    lambda: self.cmd_health(),
-            "hp":        lambda: self.cmd_health(),
-            "status":    lambda: self.cmd_health(),
-            "flee":      lambda: self.cmd_flee(),
-            "run":       lambda: self.cmd_flee(),
-            "rest":      lambda: self.cmd_rest(),
-            "eat":       lambda: self.cmd_eat(noun),
-            "consume":   lambda: self.cmd_eat(noun),
-            "drink":     lambda: self.cmd_drink(noun),
-            "quaff":     lambda: self.cmd_drink(noun),
-            "talk":      lambda: self.cmd_talk(noun),
-            "cast":      lambda: self.cmd_cast(noun),
-            "spell":     lambda: self.cmd_cast(noun),
-            "spells":    lambda: self.cmd_spellbook(),
-            "save":      lambda: self.cmd_save(noun),
-            "load":      lambda: self.cmd_load(noun),
-            "help":      lambda: self.cmd_help(),
-            "?":         lambda: self.cmd_help(),
-            "h":         lambda: self.cmd_help(),
-            "quit":      lambda: self.cmd_quit(),
-            "q":         lambda: self.cmd_quit(),
-            "exit":      lambda: self.cmd_quit(),
-            "bye":       lambda: self.cmd_quit(),
+            
+            # Combat
+            "attack": lambda: self.cmd_attack(noun),
+            "flee": lambda: self.cmd_flee(),
+            "cast": lambda: self.cmd_cast(noun),
+            
+            # Status & Items
+            "health": lambda: self.cmd_health(),
+            "rest": lambda: self.cmd_rest(),
+            "spells": lambda: self.cmd_spellbook(),
+            "eat": lambda: self.cmd_eat(noun),
+            "drink": lambda: self.cmd_drink(noun),
+            "unlock": lambda: self.cmd_unlock(noun),
+            
+            # Game Control
+            "save": lambda: self.cmd_save(noun),
+            "load": lambda: self.cmd_load(noun),
+            "help": lambda: self.cmd_help(),
+            "quit": lambda: self.cmd_quit_with_confirm(),
         }
-        action = dispatch.get(verb)
+        
+        action = dispatch.get(cmd)
         if action:
             action()
         else:
-            print(c(C.ERROR, f"I don't know how to \"{verb}\"."))
+            print(c(C.ERROR, f"  ❌ Command not implemented: {cmd}"))
+    
+    def _handle_go(self, direction: str) -> None:
+        """Handle GO command with direction."""
+        if not direction:
+            print(c(C.ERROR, "  ❌ Go where?"))
+            return
+        self.cmd_go(direction)
 
     # ── Movement ──────────────────────────────────────────────────────────────
 
@@ -1269,10 +1313,53 @@ class Engine:
         print()
 
     def cmd_quit(self) -> None:
-        answer = input(c(C.EXITS, "  Really quit? (y/n): ")).strip().lower()
-        if answer == "y":
+        """Legacy quit method - now calls improved version."""
+        self.cmd_quit_with_confirm()
+    
+    def cmd_quit_with_confirm(self) -> None:
+        """Quit to tavern with confirmation and optional save."""
+        print(c(C.SYS, "\n  ──────────────────────────────────────────────────────────"))
+        print(c(C.SYS, "  You are about to return to the tavern."))
+        print(c(C.SYS, "  ──────────────────────────────────────────────────────────"))
+        print()
+        
+        # Ask what player wants to do
+        print(c(C.SYS, "  Would you like to:"))
+        print(c(C.SYS, "    1. Save and return to tavern"))
+        print(c(C.SYS, "    2. Return to tavern without saving"))
+        print(c(C.SYS, "    3. Continue adventure"))
+        print()
+        
+        choice = input(c(C.SYS, "  Choice (1-3): ")).strip()
+        
+        if choice == "1":
+            # Save and quit
+            print(c(C.SYS, "  💾 Saving game..."))
+            self.cmd_save("")  # Save (prompts for slot)
+            print()
+            print(c(C.COMBAT_WIN, "  ✅ Game saved. Returning to tavern..."))
             self.exit_code = 0
-            self.running   = False
+            self.running = False
+            return
+        
+        elif choice == "2":
+            # Quit without saving
+            print(c(C.WARN, "  ⚠️  Returning to tavern without saving..."))
+            print()
+            self.exit_code = 0
+            self.running = False
+            return
+        
+        elif choice == "3":
+            # Continue adventure
+            print(c(C.SYS, "  Continuing adventure..."))
+            print()
+            return
+        
+        else:
+            print(c(C.ERROR, "  ❌ Invalid choice. Continuing adventure..."))
+            print()
+            return
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
