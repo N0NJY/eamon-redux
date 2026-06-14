@@ -24,7 +24,9 @@ from player import Player, slot_for_type, EQUIP_SLOTS
 from save_system import (
     save_game as save_game_slotted,
     load_game as load_game_slotted,
+    ensure_saves_dir,
     get_existing_saves,
+    prompt_save_slot,
 )
 
 # ── Colors ────────────────────────────────────────────────────────────────────
@@ -1223,6 +1225,11 @@ class Engine:
             print(c(C.ERROR, "  ❌ Load failed."))
             return
         
+        # Flatten save_data: world state was nested, but apply_save_state expects top-level
+        if 'world' in save_data:
+            world_state = save_data.pop('world')
+            save_data.update(world_state)
+        
         # Apply save state
         apply_save_state(self, save_data)
         print(c(C.COMBAT_WIN, f"  ✅ Loaded from slot {slot}\n"))
@@ -1326,6 +1333,12 @@ if __name__ == "__main__":
         if save_data is None:
             print(c(C.ERROR, f"  Save file '{args.savefile}' not found."))
             sys.exit(3)
+        
+        # Flatten save_data: world state was nested, but apply_save_state expects top-level
+        if 'world' in save_data:
+            world_state = save_data.pop('world')
+            save_data.update(world_state)
+        
         apply_save_state(engine, save_data)
         print(c(C.SYS, f"\n  Resumed from save: {args.savefile}\n"))
 

@@ -46,7 +46,7 @@ def get_existing_saves(character_name: str, adventure_name: str) -> List[Tuple[i
                     data = json.load(f)
                 meta = {
                     'timestamp': data.get('timestamp'),
-                    'room': data.get('player', {}).get('current_room'),
+                    'room': data.get('player', {}).get('room_id'),  # Use room_id, not current_room
                     'hp': data.get('player', {}).get('hp'),
                 }
                 saves.append((slot, filename, meta))
