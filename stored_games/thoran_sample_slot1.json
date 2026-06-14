@@ -1,7 +1,7 @@
 {
   "character": "Thoran",
   "adventure": "sample",
-  "timestamp": "2026-06-14T17:01:22.131150",
+  "timestamp": "2026-06-14T17:28:42.903756",
   "player": {
     "name": "Thoran",
     "char_class": "Sorcerer",
@@ -29,7 +29,7 @@
     "xp": 60,
     "level": 1,
     "xp_gained": 60,
-    "shield_rounds": 1
+    "shield_rounds": 0
   },
   "world": {
     "artifacts": {
@@ -48,12 +48,12 @@
     },
     "monsters": {
       "1": {
-        "hp": -6,
+        "hp": -4,
         "is_alive": false,
         "aggro": true
       },
       "2": {
-        "hp": -6,
+        "hp": -7,
         "is_alive": false,
         "aggro": true
       },
