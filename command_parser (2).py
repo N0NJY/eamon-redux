@@ -82,8 +82,6 @@ TAVERN_COMMANDS = {
     "talk": {"aliases": [], "min_chars": 3, "category": "explore"},
     "buy": {"aliases": ["b"], "min_chars": 1, "category": "shop"},
     "sell": {"aliases": ["s"], "min_chars": 1, "category": "shop"},
-    "horace": {"aliases": ["shop"], "min_chars": 1, "category": "shop"},
-    "wizard": {"aliases": ["aldric", "magic"], "min_chars": 1, "category": "shop"},
     
     # Adventures
     "adventure": {"aliases": ["a", "adv"], "min_chars": 1, "category": "adventure"},

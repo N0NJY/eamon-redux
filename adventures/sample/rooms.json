@@ -2,10 +2,11 @@
   {
     "id": 1,
     "name": "Clearing",
-    "description": "A mossy clearing ringed by gnarled oaks. A crumbling stone gatehouse stands to the north. A narrow path winds east into the trees.",
+    "description": "A mossy clearing ringed by gnarled oaks. A crumbling stone gatehouse stands to the north. A narrow path winds east into the trees. To the south, you notice a faint trail leading back toward civilization.",
     "exits": {
       "north": 2,
-      "east": 7
+      "east": 7,
+      "south": 9
     },
     "is_dark": false
   },
@@ -22,7 +23,7 @@
   {
     "id": 3,
     "name": "Outer Courtyard",
-    "description": "A broad courtyard choked with weeds. A collapsed well sits at the centre. The keep's main door is set into the north wall \u2014 heavy oak banded with iron, sealed with a heavy lock. A narrow stair climbs the east wall. The gatehouse arch is to the south.",
+    "description": "A broad courtyard choked with weeds. A collapsed well sits at the centre. The keep's main door is set into the north wall — heavy oak banded with iron, sealed with a heavy lock. A narrow stair climbs the east wall. The gatehouse arch is to the south.",
     "exits": {
       "south": 2,
       "north": 4,
@@ -46,7 +47,7 @@
   {
     "id": 5,
     "name": "Wall Walk",
-    "description": "A narrow battlement running along the east wall. You can see for miles \u2014 farmland, a distant river, the dark smudge of Hallow Forest. The stair back down is to the west. An old iron chest sits wedged in a crenel.",
+    "description": "A narrow battlement running along the east wall. You can see for miles — farmland, a distant river, the dark smudge of Hallow Forest. The stair back down is to the west. An old iron chest sits wedged in a crenel.",
     "exits": {
       "west": 3
     },
@@ -77,6 +78,16 @@
     "description": "The interior of an enormous oak, hollowed by decades of rot. It smells of earth and something faintly sweet. Light filters through a gap overhead. A narrow opening leads back west.",
     "exits": {
       "west": 7
+    },
+    "is_dark": false
+  },
+  {
+    "id": 9,
+    "name": "Town Gate",
+    "description": "You stand at the weathered gate marking the boundary of the keep's lands. Stone pillars rise on either side, carved with the faded tower crest of Thornwall. The overgrown path back into the keep and its clearing lies to the north. Ahead to the south, the familiar warmth of civilization and the welcoming lights of the town beckon.",
+    "exits": {
+      "north": 1,
+      "south": "EXIT_TAVERN"
     },
     "is_dark": false
   }

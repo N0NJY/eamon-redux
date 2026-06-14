@@ -434,18 +434,27 @@ class Designer:
         room = self.world.rooms[rid]
         print(f"\n  EXITS for #{rid} '{room.name}'")
         print(f"  Current exits: {room.exit_list()}")
+        print(f"  Special codes: EXIT_TAVERN, RETURN_TO_TAVERN, BACK_TO_TAVERN")
         print()
         for direction in DIRECTIONS:
             current = room.exits.get(direction)
-            cur_label = f"#{current} {self.world.rooms[current].name}" if current and current in self.world.rooms else "none"
+            # Format current exit label (room ID or special code)
+            if current is None:
+                cur_label = "none"
+            elif isinstance(current, str):
+                cur_label = current
+            else:
+                cur_label = f"#{current} {self.world.rooms[current].name}" if current in self.world.rooms else f"#{current} (missing)"
+            
             raw = input(f"  {direction.capitalize():<8} [{cur_label}]  "
-                        "Enter room # or blank to keep, 'x' to remove: ").strip().lower()
+                        "Enter room #, special code, or 'x' to remove: ").strip()
             if raw == "":
                 continue
-            elif raw == "x":
+            elif raw.lower() == "x":
                 room.exits.pop(direction, None)
                 print(f"    {direction} exit removed.")
             else:
+                # Try to parse as room ID first
                 try:
                     dest_id = int(raw)
                     if dest_id in self.world.rooms:
@@ -454,7 +463,13 @@ class Designer:
                     else:
                         print(f"    Room #{dest_id} not found, skipping.")
                 except ValueError:
-                    print("    Not a number, skipping.")
+                    # Not a number, treat as special code
+                    special_codes = ("EXIT_TAVERN", "RETURN_TO_TAVERN", "BACK_TO_TAVERN")
+                    if raw.upper() in special_codes:
+                        room.exits[direction] = raw.upper()
+                        print(f"    {direction} → {raw.upper()} (special exit)")
+                    else:
+                        print(f"    Unknown: '{raw}'. Enter a room # or special code (EXIT_TAVERN, etc).")
         print("  Exits updated.")
 
     # ── Artifacts ─────────────────────────────────────────────────────────────

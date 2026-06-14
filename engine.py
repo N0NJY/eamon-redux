@@ -327,23 +327,44 @@ class Engine:
         if not raw.strip():
             return
         
+        # Extract parts for special syntax handling
+        parts = raw.strip().lower().split(maxsplit=2)
+        
+        # ────────────────────────────────────────────────────────────────────────
+        # Handle special multi-word syntax FIRST
+        # ────────────────────────────────────────────────────────────────────────
+        
+        # "get all [item]" → "getall [item]"
+        if len(parts) >= 2 and parts[0] == "get" and parts[1] == "all":
+            cmd = "getall"
+            noun = parts[2] if len(parts) > 2 else ""
+            self._execute_command(cmd, noun, raw)
+            return
+        
+        # "talk to <npc>" → "talk <npc>"
+        if len(parts) >= 3 and parts[0] == "talk" and parts[1] == "to":
+            cmd = "talk"
+            noun = " ".join(parts[2:])
+            self._execute_command(cmd, noun, raw)
+            return
+        
+        # "pick up <item>" → "get <item>"
+        if len(parts) >= 3 and parts[0] == "pick" and parts[1] == "up":
+            cmd = "get"
+            noun = " ".join(parts[2:])
+            self._execute_command(cmd, noun, raw)
+            return
+        
+        # ────────────────────────────────────────────────────────────────────────
+        # Regular command parsing with fuzzy matching
+        # ────────────────────────────────────────────────────────────────────────
+        
         # Parse command with fuzzy matching
         cmd, status, suggestions = parse_command(raw, "engine")
         
         # Extract noun (everything after the first word)
-        parts = raw.strip().lower().split(maxsplit=1)
-        noun = parts[1] if len(parts) > 1 else ""
-        
-        # Handle special "talk to" and "get all" syntax
-        if len(parts) >= 3 and parts[0] == "talk" and parts[1] == "to":
-            cmd = "talk"
-            noun = " ".join(parts[2:])
-        elif len(parts) >= 3 and parts[0] == "get" and parts[1] == "all":
-            cmd = "getall"
-            noun = " ".join(parts[2:])
-        elif len(parts) >= 2 and parts[0] == "pick" and parts[1] == "up":
-            cmd = "get"
-            noun = " ".join(parts[2:]) if len(parts) > 2 else ""
+        raw_parts = raw.strip().lower().split(maxsplit=1)
+        noun = raw_parts[1] if len(raw_parts) > 1 else ""
         
         # ────────────────────────────────────────────────────────────────────────
         # Process parsing results
@@ -355,7 +376,7 @@ class Engine:
         
         elif status == "ambiguous":
             # Multiple matches - ask user to be more specific
-            print(c(C.ERROR, f"\n  ❌ Ambiguous command: '{parts[0].upper()}'"))
+            print(c(C.ERROR, f"\n  ❌ Ambiguous command: '{raw_parts[0].upper()}'"))
             print(c(C.SYS, f"  Did you mean one of these?"))
             for suggestion in suggestions:
                 print(c(C.SYS, f"    • {suggestion.upper()}"))
@@ -363,10 +384,11 @@ class Engine:
         
         elif status == "not_found":
             # Command not found
-            print(c(C.ERROR, f"\n  ❌ I don't know how to \"{parts[0].upper()}\"."))
+            print(c(C.ERROR, f"\n  ❌ I don't know how to \"{raw_parts[0].upper()}\"."))
             if suggestions:
                 print(c(C.SYS, f"  Did you mean: {', '.join(s.upper() for s in suggestions[:3])}?"))
             print(c(C.SYS, f"  Type HELP for a list of commands.\n"))
+
     
     def _execute_command(self, cmd: str, noun: str, raw_input: str) -> None:
         """Execute a validated command."""
@@ -377,6 +399,8 @@ class Engine:
             "south": lambda: self.cmd_go("south"),
             "east": lambda: self.cmd_go("east"),
             "west": lambda: self.cmd_go("west"),
+            "up": lambda: self.cmd_go("up"),
+            "down": lambda: self.cmd_go("down"),
             "go": lambda: self._handle_go(noun),
             
             # Examination & Interaction
@@ -442,6 +466,24 @@ class Engine:
         if dest_id is None:
             print(c(C.ERROR, "You can't go that way."))
             return
+        
+        # ────────────────────────────────────────────────────────────────────────
+        # Handle special exits (string codes instead of room IDs)
+        # ────────────────────────────────────────────────────────────────────────
+        if isinstance(dest_id, str):
+            if dest_id.upper() in ("EXIT_TAVERN", "RETURN_TO_TAVERN", "BACK_TO_TAVERN"):
+                print()
+                print(c(C.SYS, "  ──────────────────────────────────────────────────────────"))
+                print(c(C.COMBAT_WIN, "  🏛️  You return to the town and the warmth of the Inn..."))
+                print(c(C.SYS, "  ──────────────────────────────────────────────────────────"))
+                print()
+                self.exit_code = 1  # Adventure completed
+                self.running = False
+                return
+            else:
+                print(c(C.ERROR, f"Invalid exit: {dest_id}"))
+                return
+        
         lock_id = room.locked_exits.get(direction)
         if lock_id:
             key = next((a for a in self.world.artifacts_carried() if a.id == lock_id), None)

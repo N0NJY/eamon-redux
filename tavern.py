@@ -241,6 +241,7 @@ def _process_sell(raw: str, sellable: list, all_carried: list,
             return
         ids_to_sell = {id(a) for a in sellable}
     elif raw.startswith("s "):
+        # Format: "S 1"
         try:
             idx = int(raw[2:]) - 1
             if not (0 <= idx < len(sellable)):
@@ -254,7 +255,19 @@ def _process_sell(raw: str, sellable: list, all_carried: list,
         except ValueError:
             tprint(" Usage: S <number> or SELL ALL", "error"); return
     else:
-        tprint(" Usage: S <number> or SELL ALL", "error"); return
+        # Try plain number format: "1"
+        try:
+            idx = int(raw) - 1
+            if not (0 <= idx < len(sellable)):
+                tprint(" Invalid number.", "error"); return
+            item  = sellable[idx]
+            price = sell_value(item)
+            if tinput(f" Sell {item.name} for {price}g? (y/n): ").lower() != "y":
+                return
+            ids_to_sell = {id(item)}
+            total = price
+        except ValueError:
+            tprint(" Usage: S <number> or SELL ALL", "error"); return
 
     if raw == "sell all":
         pass  # total already set

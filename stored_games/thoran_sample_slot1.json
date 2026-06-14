@@ -1,7 +1,7 @@
 {
   "character": "Thoran",
   "adventure": "sample",
-  "timestamp": "2026-06-14T17:28:42.903756",
+  "timestamp": "2026-06-14T18:51:42.871736",
   "player": {
     "name": "Thoran",
     "char_class": "Sorcerer",
@@ -11,8 +11,8 @@
     "charisma": 11,
     "intelligence": 15,
     "strength": 7,
-    "hp": 20,
-    "mana": 30,
+    "hp": 8,
+    "mana": 12,
     "gold": 0,
     "spells": [
       "fireball",
@@ -20,7 +20,7 @@
       "shield"
     ],
     "equipped": {
-      "weapon": 1,
+      "weapon": null,
       "armor": null,
       "shield": null,
       "ring": null,
@@ -33,7 +33,7 @@
   },
   "world": {
     "artifacts": {
-      "1": null,
+      "1": 3,
       "2": 5,
       "3": 5,
       "4": 5,
@@ -48,12 +48,12 @@
     },
     "monsters": {
       "1": {
-        "hp": -4,
+        "hp": -2,
         "is_alive": false,
         "aggro": true
       },
       "2": {
-        "hp": -7,
+        "hp": -3,
         "is_alive": false,
         "aggro": true
       },
@@ -104,6 +104,10 @@
       },
       "8": {
         "first_visit": false,
+        "locked_exits": {}
+      },
+      "9": {
+        "first_visit": true,
         "locked_exits": {}
       }
     },
