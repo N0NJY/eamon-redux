@@ -17,6 +17,7 @@ import time
 from dataclasses import dataclass
 from typing import Optional
 from save_system import list_resumable_games, load_game as load_game_slotted
+from command_parser import parse_command
 
 # ── Colors ────────────────────────────────────────────────────────────────────
 
@@ -306,6 +307,35 @@ def list_saves(character) -> list:
     saves.sort(key=lambda s: s["mtime"], reverse=True)
     return saves
 
+def menu_load_save(character) -> bool:
+    saves = list_saves(character)
+    if not saves:
+        tprint("\n No saved games found for this character.", "warn")
+        tinput(" Press Enter to continue...")
+        return False
+    print(tc("\n ─── Saved Games ────────────────────────────────────────", "border"))
+    for i, s in enumerate(saves, 1):
+        print(tc(f" {i}. ", "border") +
+              tc(f"{s['name']:<22}", "title") +
+              tc(f" {s['adv_title']:<22}", "desc") +
+              tc(f" {s['mtime_str']}", "sys"))
+    print(tc(" 0. Cancel", "border"))
+    print()
+    while True:
+        raw = tinput(" Choose save: ")
+        try:
+            n = int(raw)
+            if n == 0: return False
+            if 1 <= n <= len(saves):
+                chosen = saves[n - 1]; break
+        except ValueError:
+            pass
+        tprint(" Invalid choice.", "error")
+    tprint(f"\n Resuming '{chosen['name']}' — {chosen['adv_title']}...", "sys")
+    result = _launch_engine(character, chosen["adv_path"], savefile=chosen["name"])
+    _handle_engine_return(character, result, chosen["adv_path"])
+    return True
+
 # ── Room display & character commands ─────────────────────────────────────────
 
 def show_room(room: TavernRoom) -> None:
@@ -551,67 +581,139 @@ def run_wizard_shop(character) -> None:
 DIR_ABBREV = {"n":"north","s":"south","e":"east","w":"west","u":"up","d":"down"}
 
 def handle_tavern_command(raw: str, character, room_id: str) -> Optional[str]:
-    """Returns new room_id, 'QUIT', or None to stay."""
+    """Handle tavern commands with fuzzy matching. Returns new room_id, 'QUIT', or None."""
     room = TAVERN_ROOMS[room_id]
-    cmd  = raw.strip().upper()
-    low  = raw.strip().lower()
+    
+    # Parse command with fuzzy matching
+    cmd, status, suggestions = parse_command(raw, "tavern")
+    
+    # Extract noun (everything after the first word)
+    parts = raw.strip().lower().split(maxsplit=1)
+    noun = parts[1] if len(parts) > 1 else ""
+    
+    # Handle special "talk to" syntax
+    if len(parts) >= 3 and parts[0] == "talk" and parts[1] == "to":
+        cmd = "talk"
+        noun = " ".join(parts[2:])
+    
+    # ────────────────────────────────────────────────────────────────────────────
+    # Handle parsing results
+    # ────────────────────────────────────────────────────────────────────────────
+    
+    if status == "exact" or status == "partial":
+        return _execute_tavern_command(cmd, noun, character, room)
+    
+    elif status == "ambiguous":
+        tprint(f"\n Ambiguous command: '{parts[0].upper()}'", "error")
+        tprint(f" Did you mean: {', '.join(s.upper() for s in suggestions)}?", "sys")
+        tprint(f" Type HELP for a list of commands.\n", "sys")
+        return None
+    
+    elif status == "not_found":
+        tprint(f" You don't understand that. (Type HELP for commands)", "error")
+        if suggestions:
+            tprint(f" Did you mean: {', '.join(s.upper() for s in suggestions[:3])}?", "sys")
+        return None
+    
+    return None
 
+
+def _execute_tavern_command(cmd: str, noun: str, character, room) -> Optional[str]:
+    """Execute a validated tavern command."""
+    
+    # ────────────────────────────────────────────────────────────────────────────
     # Movement
-    direction = DIR_ABBREV.get(low, low)
-    if direction in room.exits:
-        return room.exits[direction]
-    if cmd.startswith("GO "):
-        direction = DIR_ABBREV.get(cmd[3:].strip().lower(), cmd[3:].strip().lower())
+    # ────────────────────────────────────────────────────────────────────────────
+    if cmd in ("north", "south", "east", "west"):
+        if cmd in room.exits:
+            return room.exits[cmd]
+        else:
+            tprint(" You can't go that way.", "error")
+            return None
+    
+    if cmd == "go":
+        if not noun:
+            tprint(" Go where?", "error")
+            return None
+        direction = DIR_ABBREV.get(noun, noun)
         if direction in room.exits:
             return room.exits[direction]
-        tprint(" You can't go that way.", "error"); return None
-
-    # TALK TO
-    talk_target = ""
-    if cmd.startswith("TALK TO "): talk_target = cmd[8:].strip()
-    elif cmd.startswith("TALK "):  talk_target = cmd[5:].strip()
-    if talk_target:
-        if talk_target in ("HORACE",):
-            if room.npc == "horace": run_horace_shop(character)
-            else: tprint(" Horace is at the bar. Head north from the entrance.", "desc")
+        tprint(" You can't go that way.", "error")
+        return None
+    
+    # ────────────────────────────────────────────────────────────────────────────
+    # NPC Interaction
+    # ────────────────────────────────────────────────────────────────────────────
+    if cmd == "talk":
+        if not noun:
+            tprint(" Talk to whom?", "error")
             return None
-        if talk_target in ("ALDRIC","WIZARD"):
-            if room.npc == "aldric": run_wizard_shop(character)
-            else: tprint(" Aldric is in the back room. Bar, then east.", "desc")
+        
+        talk_target = noun.strip().lower()
+        
+        # Handle Horace
+        if "horace" in talk_target or "shop" in talk_target:
+            if room.npc == "horace":
+                run_horace_shop(character)
+            else:
+                tprint(" Horace is at the bar. Head north from the entrance.", "desc")
             return None
-        tprint(f" There is no one called '{raw.strip().split()[-1].lower()}' here.", "error")
+        
+        # Handle Aldric
+        if "aldric" in talk_target or "wizard" in talk_target or "magic" in talk_target:
+            if room.npc == "aldric":
+                run_wizard_shop(character)
+            else:
+                tprint(" Aldric is in the back room. Bar, then east.", "desc")
+            return None
+        
+        tprint(f" There is no one called '{noun}' here.", "error")
         return None
-
-    # Character info
-    if cmd in ("CHARACTER","CHAR","C","STATUS","SHEET"):
-        show_character_sheet(character); return None
-    if cmd in ("INVENTORY","I","INV"):
-        show_inventory(character); return None
-    if cmd in ("SPELLS","SPELL"):
-        show_spells(character); return None
-
-    # Direct NPC keywords
-    if cmd in ("HORACE","SHOP","BUY","SELL"):
-        if room.npc == "horace": run_horace_shop(character)
-        else: tprint(" Horace is at the bar. Head north from the entrance.", "desc")
+    
+    # ────────────────────────────────────────────────────────────────────────────
+    # Shop (direct command)
+    # ────────────────────────────────────────────────────────────────────────────
+    if cmd == "buy" or cmd == "sell":
+        if room.npc == "horace":
+            run_horace_shop(character)
+        else:
+            tprint(" Horace is at the bar. Head north from the entrance.", "desc")
         return None
-    if cmd in ("ALDRIC","WIZARD","MAGIC"):
-        if room.npc == "aldric": run_wizard_shop(character)
-        else: tprint(" Aldric is in the back room. Bar, then east.", "desc")
+    
+    # ────────────────────────────────────────────────────────────────────────────
+    # Character Management
+    # ────────────────────────────────────────────────────────────────────────────
+    if cmd == "character":
+        show_character_sheet(character)
         return None
-
-    # Save/load
-    if cmd in ("RESUME","LOAD","SAVES"):
-        menu_load_save(character); return None
-
-    # Meta
-    if cmd in ("LOOK","L"):
-        show_room(room); return None
-    if cmd in ("HELP","H","?"):
-        show_tavern_help(); return None
-    if cmd in ("QUIT","Q","EXIT","LEAVE","ADVENTURE","BOARD"):
+    
+    if cmd == "inventory":
+        show_inventory(character)
+        return None
+    
+    if cmd == "spells":
+        show_spells(character)
+        return None
+    
+    # ────────────────────────────────────────────────────────────────────────────
+    # Game Control
+    # ────────────────────────────────────────────────────────────────────────────
+    if cmd == "look":
+        show_room(room)
+        return None
+    
+    if cmd == "help":
+        show_tavern_help()
+        return None
+    
+    if cmd == "resume":
+        menu_load_save(character)
+        return None
+    
+    if cmd == "quit":
         return "QUIT"
-
+    
+    # Should not reach here (parser already validated command)
     tprint(" You don't understand that. (Type HELP for commands)", "error")
     return None
 
@@ -638,6 +740,8 @@ def show_tavern_help() -> None:
 
 def menu_load_save(character) -> None:
     """Browse and resume saved games by adventure."""
+    from character import Character
+    
     games = list_resumable_games(character.name)
     
     if not games:
