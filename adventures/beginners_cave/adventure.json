@@ -1,0 +1,12 @@
+{
+  "title": "The Beginner's Cave",
+  "author": "Donald Brown",
+  "intro": "The Beginner's Cave has been set up by the Warlord as a service to all Free Adventurers, giving them a chance to try their skills in a not-too-dangerous setting.\n\nLet us all toast the Warlord for restocking the cave daily!\n\nOnly beginners are supposed to enter the cave (but any character can). Knight Marshall William Misslefire is on duty to prevent inexperienced adventurers from doing anything really foolish (like entering the cave with no weapon at all!).\n\nTo return to the Main Hall, just leave the cave (by getting to the cave entrance and moving north). Once you have done so, Sam Slicker, the local dealer for treasures and booty, will pay you in gold for any items that you have collected (with the price adjusted slightly depending upon your charisma).",
+  "start_room": 1,
+  "is_beginner_adventure": true,
+  "win_condition": {
+    "type": "reach_room",
+    "room_id": 1,
+    "message": "You have escaped the Beginner's Cave and returned to town!"
+  }
+}

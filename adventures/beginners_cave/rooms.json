@@ -1,0 +1,184 @@
+[
+  {
+    "id": 1,
+    "name": "You are at the cave entrance. (N/S)",
+    "description": "The entrance is to the south with a sign over it reading, \"Beginners Only!\". To the north is the road back to town.",
+    "exits": {"north": "EXIT_TAVERN", "south": 2},
+    "is_dark": false
+  },
+  {
+    "id": 2,
+    "name": "You are in a dark north/south tunnel.",
+    "description": "To the north you see bright light streaming in from the outside. To the south you see flickering torch light, but you cannot make out any details.",
+    "exits": {"north": 1, "south": 4},
+    "is_dark": false
+  },
+  {
+    "id": 3,
+    "name": "You are in the west side chamber. (E)",
+    "description": "It is very cold here and the only light comes in dimly from the large chamber to the east.",
+    "exits": {"east": 4},
+    "is_dark": false
+  },
+  {
+    "id": 4,
+    "name": "You are in a large chamber. (N/S/E/W)",
+    "description": "You are in a huge chamber where the roof rises out of sight. Burning torches line the walls making it easy to see. Tunnels lead north and south, and there are small chambers to the east and west.",
+    "exits": {"north": 2, "south": 7, "east": 5, "west": 3},
+    "is_dark": false
+  },
+  {
+    "id": 5,
+    "name": "You are in the east side chamber. (W)",
+    "description": "It is very cold here and the only light comes in dimly from the large chamber to the west.",
+    "exits": {"west": 4},
+    "is_dark": false
+  },
+  {
+    "id": 6,
+    "name": "You are in a west cell. (E)",
+    "description": "You are in a small stark cell with a door on the east side of the room.",
+    "exits": {"east": 7},
+    "is_dark": false
+  },
+  {
+    "id": 7,
+    "name": "You are at the north end of a long passage. (N/S/E/W)",
+    "description": "A tunnel goes north and east and west are doors that are bolted shut. (Locking something in?). In the dim light you can see that the hall goes south but you cannot make out any details.",
+    "exits": {"north": 4, "south": 10, "east": 8, "west": 6},
+    "is_dark": false
+  },
+  {
+    "id": 8,
+    "name": "You are in an east cell. (W)",
+    "description": "You are in a small stark cell with a door on the west side of the room.",
+    "exits": {"west": 7},
+    "is_dark": false
+  },
+  {
+    "id": 9,
+    "name": "You are in a west cell. (E)",
+    "description": "You are in a small stark cell with a door on the east side.",
+    "exits": {"east": 10},
+    "is_dark": false
+  },
+  {
+    "id": 10,
+    "name": "You are at the middle of a long passage. (N/S/E/W)",
+    "description": "Doors are bolted on both sides of you (east and west). The hall extends north and south.",
+    "exits": {"north": 7, "south": 13, "east": 11, "west": 9},
+    "is_dark": false
+  },
+  {
+    "id": 11,
+    "name": "You are in an east cell. (W)",
+    "description": "You are in a small stark cell with a door on the west side.",
+    "exits": {"west": 10},
+    "is_dark": false
+  },
+  {
+    "id": 12,
+    "name": "You are in a west cell. (E)",
+    "description": "You are in a small stark cell with a door on the east side.",
+    "exits": {"east": 13},
+    "is_dark": false
+  },
+  {
+    "id": 13,
+    "name": "You are at the south end of a long passage. (N/S/E/W)",
+    "description": "To your great shock there are doors to the east and west. The hall goes north from here and a broken tunnel goes south.",
+    "exits": {"north": 10, "south": 15, "east": 14, "west": 12},
+    "is_dark": false
+  },
+  {
+    "id": 14,
+    "name": "You are in an east cell. (W)",
+    "description": "You are in a small stark cell with a door on the west side.",
+    "exits": {"west": 13},
+    "is_dark": false
+  },
+  {
+    "id": 15,
+    "name": "You are in a broken north/south tunnel.",
+    "description": "The sides of the tunnel are very broken and rough. You see torch light to the south. The east wall has a smooth shape in the center, about the size of a door.",
+    "exits": {"north": 13, "south": 20, "east": 16},
+    "is_dark": false
+  },
+  {
+    "id": 16,
+    "name": "You are in an east/west tunnel with faint music.",
+    "description": "You are in a secret east/west passage. You hear a faint melody coming from the east.",
+    "exits": {"east": 17, "west": 15},
+    "is_dark": false
+  },
+  {
+    "id": 17,
+    "name": "You are in an east/west tunnel with loud music.",
+    "description": "You can very clearly hear religious music being played and can smell incense from the east.",
+    "exits": {"east": 18, "west": 16},
+    "is_dark": false
+  },
+  {
+    "id": 18,
+    "name": "You are at the temple. (W)",
+    "description": "You are in a temple that has paintings of great deeds covering the walls. There are two altars here, one covered with gold paint and the other stained with blood. The only exit leads to the west.",
+    "exits": {"west": 17},
+    "is_dark": false
+  },
+  {
+    "id": 19,
+    "name": "You are in the library. (E)",
+    "description": "You are in what was obviously once a library. Most of the books have been destroyed, with the scraps left lying on the ground. A door, torn from its hinges, also lies on the floor. The exit is to the east.",
+    "exits": {"east": 20},
+    "is_dark": false
+  },
+  {
+    "id": 20,
+    "name": "You are at a T-intersection; North by E/W.",
+    "description": "A brightly burning torch is bolted to the south wall. Dark tunnels lead north and east. To the west is a place where once a door stood, but it has been torn from its hinges.",
+    "exits": {"north": 15, "east": 21, "west": 19},
+    "is_dark": false
+  },
+  {
+    "id": 21,
+    "name": "You are in an east/west tunnel.",
+    "description": "You are in an unremarkable tunnel. You can see torch light in both directions.",
+    "exits": {"east": 22, "west": 20},
+    "is_dark": false
+  },
+  {
+    "id": 22,
+    "name": "You are at the top of a stairway. (W/D)",
+    "description": "You are at an unremarkable stone landing at the top of a flight of stairs. A single torch is bolted to the wall. A tunnel heads back west. It looks very dark down there...",
+    "exits": {"west": 21, "down": 23},
+    "is_dark": false
+  },
+  {
+    "id": 23,
+    "name": "You are at the bottom of a stairway. (E/U)",
+    "description": "You are at an unremarkable stone landing at the bottom of a flight of stairs. A light can be seen at the top and a very dim light can be seen down the tunnel to the east.",
+    "exits": {"east": 24, "up": 22},
+    "is_dark": false
+  },
+  {
+    "id": 24,
+    "name": "You are in an east/west tunnel.",
+    "description": "You are in a very rough tunnel carved out of a series of natural caverns. Dim light can be seen in both directions.",
+    "exits": {"east": 25, "west": 23},
+    "is_dark": false
+  },
+  {
+    "id": 25,
+    "name": "You are in an east/west tunnel smelling of salt.",
+    "description": "You see light to the east, and feel a cool wind coming from there. In the wind you smell a hint of salt.",
+    "exits": {"east": 26, "west": 24},
+    "is_dark": false
+  },
+  {
+    "id": 26,
+    "name": "You are in the Pirate's Cove. (E/W)",
+    "description": "You are at a small bay. Cliffs rise on either side of you so that the only exit is back in the tunnel to the west. A broken old boat is resting on the bank of the rough and stormy sea. All around you is salt water, as far as the eye can see.",
+    "exits": {"west": 25},
+    "is_dark": false
+  }
+]
