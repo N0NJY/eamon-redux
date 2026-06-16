@@ -1,7 +1,5 @@
 """
-player.py - Runtime player state (REWRITTEN).
-Mirrors character proficiencies. Adds fatigue tracking for spells and weapons.
-Adds speed spell state tracking.
+player.py - Runtime player state derived from Character stats.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -27,6 +25,7 @@ def slot_for_type(artifact_type: str) -> Optional[str]:
 @dataclass
 class Player:
     name: str = "Adventurer"
+    char_class: str = "Fighter"
     room_id: int = 1
 
     # Stats
@@ -38,54 +37,11 @@ class Player:
 
     # Runtime pools
     hp:   int = 0
-    gold: int = 200
+    mana: int = 0
+    gold: int = 100
 
-    # Spell proficiencies (None = not learned, int = proficiency %)
-    spell_proficiencies: dict[str, Optional[int]] = field(
-        default_factory=lambda: {
-            "blast": None,
-            "heal": None,
-            "speed": None,
-            "power": None,
-        }
-    )
-
-    # Weapon proficiencies
-    weapon_proficiencies: dict[str, int] = field(
-        default_factory=lambda: {
-            "axe": 5,
-            "bow": -10,
-            "club": 20,
-            "spear": 10,
-            "sword": 0,
-        }
-    )
-
-    # ── Fatigue Tracking (for spell proficiency reduction) ─────────────────────
-    # spell_fatigue_multiplier tracks current effective proficiency multiplier
-    # 1.0 = 100%, 0.5 = 50%, 0.25 = 25%, etc.
-    spell_fatigue_multiplier: dict[str, float] = field(
-        default_factory=lambda: {
-            "blast": 1.0,
-            "heal": 1.0,
-            "speed": 1.0,
-            "power": 1.0,
-        }
-    )
-
-    # Spells locked due to critical failure (1% overload chance)
-    spell_locked: dict[str, bool] = field(
-        default_factory=lambda: {
-            "blast": False,
-            "heal": False,
-            "speed": False,
-            "power": False,
-        }
-    )
-
-    # ── Speed Spell State ─────────────────────────────────────────────────────
-    speed_active: bool = False
-    speed_rounds_remaining: int = 0
+    # Spells known
+    spells: list[str] = field(default_factory=list)
 
     # Equipment slots: slot_name -> artifact_id (or None)
     equipped: dict[str, Optional[int]] = field(default_factory=lambda: {
@@ -101,8 +57,11 @@ class Player:
     level: int = 1
     xp_gained: int = 0   # XP earned this adventure session
 
-    # Combat tracking
+    # Combat tracking for stat advancement
     took_damage_this_fight: bool = False
+
+    # Shield spell rounds remaining
+    shield_rounds: int = 0
 
     # Base unarmed attack
     damage_dice:  int = 1
@@ -113,7 +72,9 @@ class Player:
     def __post_init__(self):
         if self.hp <= 0:
             self.hp = self.hp_max
-        # Ensure all slots exist
+        if self.mana <= 0:
+            self.mana = self.mana_max
+        # Ensure all slots exist (handles old saves missing new slots)
         for slot in EQUIP_SLOTS:
             if slot not in self.equipped:
                 self.equipped[slot] = None
@@ -125,84 +86,24 @@ class Player:
         return self.hardiness * 2
 
     @property
+    def mana_max(self) -> int:
+        return self.intelligence * 2
+
+    @property
     def agility_bonus(self) -> int:
         return (self.agility - 10) // 2
 
     @property
-    def agility_effective(self) -> int:
-        """Current agility including speed spell bonus."""
-        base = self.agility
-        if self.speed_active:
-            base *= 2
-        return base
+    def strength_bonus(self) -> int:
+        return (self.strength - 10) // 2 if self.char_class == "Fighter" else 0
 
     @property
-    def strength_bonus(self) -> int:
-        return (self.strength - 10) // 2
+    def spell_bonus(self) -> int:
+        return (self.intelligence - 10) // 2 if self.char_class == "Sorcerer" else 0
 
     @property
     def is_alive(self) -> bool:
         return self.hp > 0
-
-    # ── Spell Fatigue Methods ─────────────────────────────────────────────────
-
-    def get_effective_spell_proficiency(self, spell_key: str) -> int:
-        """Get current effective proficiency including fatigue."""
-        base_prof = self.spell_proficiencies.get(spell_key)
-        if base_prof is None:
-            return 0
-        
-        multiplier = self.spell_fatigue_multiplier.get(spell_key, 1.0)
-        effective = int(base_prof * multiplier)
-        
-        # Hard minimum 5%
-        if effective < 5:
-            effective = 5
-        
-        return effective
-
-    def apply_spell_fatigue(self, spell_key: str) -> None:
-        """Halve spell fatigue multiplier after a cast (50%, 25%, 12.5%, etc.)."""
-        current = self.spell_fatigue_multiplier.get(spell_key, 1.0)
-        self.spell_fatigue_multiplier[spell_key] = current * 0.5
-
-    def recover_spell_fatigue(self, spell_key: str, recovery_pct: int) -> None:
-        """Recover spell fatigue by recovery_pct (5-10% random per action)."""
-        current = self.spell_fatigue_multiplier.get(spell_key, 1.0)
-        # Don't go above 1.0
-        self.spell_fatigue_multiplier[spell_key] = min(1.0, current + (recovery_pct / 100.0))
-
-    def recover_all_spell_fatigue(self, recovery_pct: int) -> None:
-        """Recover fatigue for all spells."""
-        for spell_key in self.spell_proficiencies:
-            self.recover_spell_fatigue(spell_key, recovery_pct)
-
-    def lock_spell(self, spell_key: str) -> None:
-        """Lock a spell due to 1% critical failure (overload)."""
-        self.spell_locked[spell_key] = True
-
-    def is_spell_locked(self, spell_key: str) -> bool:
-        """Check if spell is locked for rest of adventure."""
-        return self.spell_locked.get(spell_key, False)
-
-    # ── Speed Spell Methods ───────────────────────────────────────────────────
-
-    def activate_speed(self, duration: int) -> None:
-        """Activate speed spell for N rounds."""
-        self.speed_active = True
-        self.speed_rounds_remaining = duration
-
-    def deactivate_speed(self) -> None:
-        """Deactivate speed spell."""
-        self.speed_active = False
-        self.speed_rounds_remaining = 0
-
-    def tick_speed_duration(self) -> None:
-        """Decrement speed duration (call at end of combat round)."""
-        if self.speed_active:
-            self.speed_rounds_remaining -= 1
-            if self.speed_rounds_remaining <= 0:
-                self.deactivate_speed()
 
     # ── Equipment helpers ─────────────────────────────────────────────────────
 
@@ -214,7 +115,7 @@ class Player:
         return world.artifacts.get(wid)
 
     def armor_class(self, world) -> int:
-        """Sum AC from equipped armor and shield."""
+        """Sum AC from equipped armor and shield, plus shield spell."""
         ac = 0
         for slot in ("armor", "shield"):
             aid = self.equipped.get(slot)
@@ -222,6 +123,8 @@ class Player:
                 a = world.artifacts.get(aid)
                 if a:
                     ac += a.armor_class
+        if self.shield_rounds > 0:
+            ac += 3
         return ac
 
     def is_equipped(self, artifact_id: int) -> bool:
@@ -287,3 +190,11 @@ class Player:
         filled = int(pct * 20)
         bar = "█" * filled + "░" * (20 - filled)
         return f"HP [{bar}] {self.hp}/{self.hp_max}"
+
+    def mana_bar(self) -> str:
+        if self.char_class != "Sorcerer":
+            return ""
+        pct = max(0, self.mana) / self.mana_max if self.mana_max > 0 else 0
+        filled = int(pct * 20)
+        bar = "█" * filled + "░" * (20 - filled)
+        return f"MP [{bar}] {self.mana}/{self.mana_max}"

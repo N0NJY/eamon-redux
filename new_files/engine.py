@@ -289,6 +289,8 @@ class Engine:
         if not self.player.is_alive:
             return 2
         
+        return 0
+
     def _check_win(self) -> bool:
         """Check if player has achieved win condition."""
         wc = self.world.win_condition
@@ -331,13 +333,6 @@ class Engine:
         if direction not in room.exits:
             print(self.tc("You can't go that way.", "error"))
             return
-            
-        # ✅ ADD THIS SECTION:
-        next_exit = room.exits[direction]
-        if next_exit == "EXIT_TAVERN":
-            print(self.tc("You escape to the surface and return to town!", "spell"))
-            self.player.room_id = "EXIT_TAVERN"
-            return
         
         # Check for locked exit
         if direction in room.locked_exits:
@@ -348,13 +343,10 @@ class Engine:
                 return
         
         # Move
-        # Move
         new_room_id = room.exits[direction]
-        print(f"[DEBUG] Moving from {self.player.room_id} to {new_room_id}")  # ADD THIS
         self.player.room_id = new_room_id
-
-        new_room = self.world.get_room(new_room_id)
         
+        new_room = self.world.get_room(new_room_id)
         if new_room and new_room.first_visit:
             new_room.first_visit = False
             self.look()
@@ -1296,7 +1288,7 @@ def run_adventure(character, adventure_path: str) -> int:
             
             return 2
         elif result == 0:
-            # Quit confirmed - ask to save
+            # Quit
             response = input(engine.tc("Save progress? (y/n): ", "warn"))
             if response.lower() == 'y':
                 character.spell_proficiencies = engine.player.spell_proficiencies.copy()
@@ -1305,9 +1297,9 @@ def run_adventure(character, adventure_path: str) -> int:
                 character.xp = engine.player.xp
                 character.save()
                 print(engine.tc("Progress saved.", "sys"))
+            
             return 0
-        elif result == -1:    # Don't quit - continue playing
-            continue
+
 
 if __name__ == "__main__":
     print(engine.tc("Run via tavern.py", "error"))

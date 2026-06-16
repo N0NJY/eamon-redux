@@ -1,6 +1,6 @@
 """
-world.py - Data classes for the adventure world (UPDATED).
-Added weapon type constants for the proficiency system.
+world.py - Data classes for the adventure world.
+Rooms, Artifacts, Monsters, World loader, locked exits, win conditions.
 """
 
 from __future__ import annotations
@@ -8,18 +8,6 @@ import json
 from dataclasses import dataclass, field
 from typing import Optional
 
-
-# ── Weapon Types ──────────────────────────────────────────────────────────────
-
-class WeaponType:
-    AXE    = "axe"
-    BOW    = "bow"
-    CLUB   = "club"
-    SPEAR  = "spear"
-    SWORD  = "sword"
-
-
-# ── Artifact Types ────────────────────────────────────────────────────────────
 
 class ArtifactType:
     WEAPON    = "weapon"
@@ -31,7 +19,7 @@ class ArtifactType:
     KEY       = "key"
     FOOD      = "food"      # EAT to restore heal_amount HP
     POTION    = "potion"    # DRINK to restore heal_amount HP
-    SPELLBOOK = "spellbook" # READ to learn a spell
+    SPELLBOOK = "spellbook" # READ to learn a spell (future)
     SHIELD    = "shield"    # equippable in shield slot
     RING      = "ring"      # equippable in ring slot
     CLOAK     = "cloak"     # equippable in cloak slot
@@ -64,7 +52,6 @@ class Artifact:
     value: int = -1         # sell price (-1 = use type default)
     is_quest_item: bool = False  # quest items and keys cannot be sold
     synonyms: list[str] = field(default_factory=list)
-    weapon_type: Optional[str] = None  # for weapons: axe, bow, club, spear, sword
 
     def matches(self, word: str) -> bool:
         word = word.lower()
@@ -73,7 +60,7 @@ class Artifact:
         return any(word in s.lower() for s in self.synonyms)
 
     def to_dict(self) -> dict:
-        d = {
+        return {
             "id": self.id, "name": self.name, "description": self.description,
             "room_id": self.room_id, "artifact_type": self.artifact_type,
             "weight": self.weight, "is_container": self.is_container,
@@ -83,9 +70,6 @@ class Artifact:
             "heal_amount": self.heal_amount, "value": self.value,
             "is_quest_item": self.is_quest_item, "synonyms": self.synonyms,
         }
-        if self.weapon_type:
-            d["weapon_type"] = self.weapon_type
-        return d
 
     @staticmethod
     def from_dict(d: dict) -> "Artifact":
@@ -102,7 +86,6 @@ class Artifact:
             value=d.get("value", -1),
             is_quest_item=d.get("is_quest_item", False),
             synonyms=d.get("synonyms", []),
-            weapon_type=d.get("weapon_type"),
         )
 
 

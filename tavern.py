@@ -361,24 +361,8 @@ def show_room(room: TavernRoom) -> None:
     print()
 
 def show_character_sheet(character) -> None:
-    print()
-    print(tc(" ┌────────────────────────────────────────────────┐", "border"))
-    print(tc(f" │ {character.name:<{45}}│", "title"))
-    print(tc(" ├────────────────────────────────────────────────┤", "border"))
-    print(tc(f" │ Class:  {character.char_class:<{36}}│", "stat"))
-    print(tc(f" │ Level:  {character.level}  (XP: {character.xp}){' '*28}│", "stat"))
-    print(tc(f" │ Status: {'Veteran' if not character.is_beginner else 'Beginner':<{36}}│", "stat"))
-    print(tc(" ├────────────────────────────────────────────────┤", "border"))
-    print(tc(f" │ Hardiness:    {character.hardiness:<5} HP:  {character.hp:>3}/{character.hp_max:<{14}}│", "stat"))
-    print(tc(f" │ Agility:      {character.agility:<5} (bonus: {character.agility_bonus:+d}){' '*18}│", "stat"))
-    print(tc(f" │ Strength:     {character.strength:<5} (bonus: {character.strength_bonus:+d}){' '*18}│", "stat"))
-    print(tc(f" │ Intelligence: {character.intelligence:<5} (bonus: {character.intelligence_bonus:+d}){' '*18}│", "stat"))
-    print(tc(f" │ Charisma:     {character.charisma:<5} (bonus: {character.charisma_bonus:+d}){' '*18}│", "stat"))
-    if character.char_class == "Sorcerer":
-        print(tc(f" │ Mana:  {character.mana}/{character.mana_max}{' '*37}│", "stat"))
-    print(tc(f" │ Gold:  {character.gold}g{' '*37}│", "sys"))
-    print(tc(" └────────────────────────────────────────────────┘", "border"))
-    print()
+    """Display the character's complete stat sheet."""
+    print(character.stat_summary())
 
 def show_inventory(character) -> None:
     carried = _load_carried(character)
@@ -964,67 +948,37 @@ def choose_adventure(character, adventures: list):
         tprint(" Invalid choice.", "error")
 
 # ── Engine launch & return ────────────────────────────────────────────────────
-
 def _launch_engine(character, adv_path: str, savefile: str = ""):
-    safe_name  = character.name.lower().replace(" ", "_")
-    items_file = os.path.join("characters", f"{safe_name}_items.json")
-    cmd = [
-        sys.executable, "engine.py", adv_path,
-        "--name",         character.name,
-        "--class",        character.char_class,
-        "--hardiness",    str(character.hardiness),
-        "--agility",      str(character.agility),
-        "--charisma",     str(character.charisma),
-        "--intelligence", str(character.intelligence),
-        "--strength",     str(character.strength),
-        "--hp",           str(character.hp),
-        "--mana",         str(character.mana),
-        "--gold",         str(character.gold),
-        "--spells",       ",".join(character.spells),
-        "--xp",           str(character.xp),
-        "--level",        str(character.level),
-        "--items-file",   items_file,
-    ]
-    if savefile:
-        cmd += ["--savefile", savefile]
-    return subprocess.run(cmd)
+    """Launch adventure directly."""
+    from engine import run_adventure
+    result = run_adventure(character, adv_path)
+    return result
+
 
 def _handle_engine_return(character, result, adv_path: str,
                           adv_name: str = "", is_beginner_adv: bool = False) -> None:
-    # FIX: reload character from disk — engine may have updated XP, gold, level, spells, etc.
-    from character import Character
-    safe_name = character.name.lower().replace(" ", "_")
-    reloaded  = Character.load(safe_name)
-    if reloaded:
-        for attr in ("hardiness","agility","strength","intelligence","charisma",
-                     "hp","mana","gold","xp","level","spells",
-                     "is_beginner","adventures_completed"):
-            setattr(character, attr, getattr(reloaded, attr))
-
-    completed = (result.returncode == 1)
-    died      = (result.returncode == 2)
-    crashed   = result.returncode not in (0, 1, 2)
-
+    """Handle return from adventure."""
+    # Character is already updated by run_adventure() - no need to reload
+    
+    completed = (result == 1)  # 1 = won
+    died      = (result == 2)  # 2 = died
+    crashed   = result not in (0, 1, 2)
+    
     if crashed:
         tprint("\n Something went wrong during that adventure.", "error")
-        tprint(" Your character has not been affected.", "warn")
     elif died:
-        missing = character.hp_max - 1
-        cost    = min(missing * 2, character.gold)
-        character.gold -= cost
-        character.hp    = character.hp_max
-        tprint(f"\n You were revived. Revival cost: {cost}g", "warn")
+        tprint("\n You have fallen. The tavern healer revives you for 2 gold per HP lost.", "warn")
+        hp_lost = character.hp_max - character.hp
+        cost = max(2, hp_lost * 2)
+        character.gold = max(0, character.gold - cost)
+        character.hp = character.hp_max
         character.save()
-    else:
-        character.hp   = character.hp_max
-        character.mana = character.mana_max
-        if completed and adv_name and adv_name not in character.adventures_completed:
+    elif completed:
+        tprint("\n Welcome back, hero! Your deeds have been recorded.", "sys")
+        character.is_beginner = False
+        if adv_name and adv_name not in character.adventures_completed:
             character.adventures_completed.append(adv_name)
-            if is_beginner_adv and character.is_beginner:
-                character.is_beginner = False
-                tprint("\n You are no longer a beginner.", "sys")
         character.save()
-
 # ── Main loop ─────────────────────────────────────────────────────────────────
 
 def run_tavern() -> None:
