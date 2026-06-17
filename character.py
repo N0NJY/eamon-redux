@@ -254,7 +254,7 @@ class Character:
         if not os.path.isdir(CHARACTERS_DIR):
             return []
         return [f[:-5] for f in sorted(os.listdir(CHARACTERS_DIR))
-                if f.endswith(".json")]
+                if f.endswith(".json") and not f.endswith("_items.json")]
 
     @staticmethod
     def _path(name: str) -> str:
