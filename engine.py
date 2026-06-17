@@ -98,6 +98,25 @@ def xp_to_next_level(xp: int) -> int:
             return threshold - xp
     return 0
 
+# ── Item Persistence ──────────────────────────────────────────────────────────
+
+def _save_carried_items(character, world) -> None:
+    """
+    Save all carried items (not in rooms) back to character's items file.
+    Called when adventure ends to persist inventory.
+    """
+    safe_name = character.name.lower().replace(" ", "_")
+    items_path = os.path.join("characters", f"{safe_name}_items.json")
+    
+    os.makedirs("characters", exist_ok=True)
+    
+    # Get all artifacts that are carried (room_id is None)
+    carried = [a for a in world.artifacts.values() if a.room_id is None]
+    
+    # Convert to dicts and save
+    with open(items_path, "w") as f:
+        json.dump([a.to_dict() for a in carried], f, indent=2)
+
 # ── Game Engine ───────────────────────────────────────────────────────────────
 
 class Engine:
@@ -382,15 +401,7 @@ class Engine:
             if key and key.room_id is not None:
                 print(self.tc(f"The {direction} exit is locked. (Need: {key.name})", "warn"))
                 return
-    def cmd_status(self) -> None:
-        """Display character status/sheet."""
-        print()
-        print(self.tc(f" ─── {self.player.name} ───", "border"))
-        print(self.tc(f" HP: {self.player.hp}/{self.player.hp_max}  Gold: {self.player.gold}g  XP: {self.player.xp}", "stat"))
-        print(self.tc(f" Level: {self.player.level}  Hardiness: {self.character.hardiness}  Agility: {self.character.agility}", "stat"))
-        print(self.tc(f" Strength: {self.character.strength}  Intelligence: {self.character.intelligence}  Charisma: {self.character.charisma}", "stat"))
-        print()
-            
+        
         # Move to new room
         new_room_id = room.exits[direction]
         self.player.room_id = new_room_id
@@ -410,6 +421,15 @@ class Engine:
                 print(self.tc(f"A {m.name} attacks you!", "warn"))
                 self.cmd_attack(m.name)
                 break
+
+    def cmd_status(self) -> None:
+        """Display character status/sheet."""
+        print()
+        print(self.tc(f" ─── {self.player.name} ───", "border"))
+        print(self.tc(f" HP: {self.player.hp}/{self.player.hp_max}  Gold: {self.player.gold}g  XP: {self.player.xp}", "stat"))
+        print(self.tc(f" Level: {self.player.level}  Hardiness: {self.character.hardiness}  Agility: {self.character.agility}", "stat"))
+        print(self.tc(f" Strength: {self.character.strength}  Intelligence: {self.character.intelligence}  Charisma: {self.character.charisma}", "stat"))
+        print()
 
     # ── Inventory & Equipment ─────────────────────────────────────────────────
 
@@ -1313,6 +1333,9 @@ def run_adventure(character, adventure_path: str, savefile: str = "") -> int:
             character.xp = engine.player.xp
             character.save()
             
+            # ✅ NEW: Save carried items back to file
+            _save_carried_items(character, engine.world)
+            
             return 1
         elif result == 2:
             # Died!
@@ -1332,6 +1355,9 @@ def run_adventure(character, adventure_path: str, savefile: str = "") -> int:
             character.xp = engine.player.xp
             character.save()
             
+            # ✅ NEW: Save carried items back to file
+            _save_carried_items(character, engine.world)
+            
             return 2
         elif result == 0:
             # Quit confirmed - ask to save
@@ -1343,6 +1369,10 @@ def run_adventure(character, adventure_path: str, savefile: str = "") -> int:
                 character.gold = engine.player.gold
                 character.xp = engine.player.xp
                 character.save()
+                
+                # ✅ NEW: Save carried items back to file
+                _save_carried_items(character, engine.world)
+                
                 print(engine.tc("Progress saved.", "sys"))
             return 0
         elif result == -1:    # Don't quit - continue playing
