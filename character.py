@@ -64,6 +64,7 @@ class Character:
     # ── Weapon proficiencies (separate for each weapon type)
     weapon_proficiencies: dict[str, int] = field(
         default_factory=lambda: {
+            "unarmed": 0,
             "axe": 5,
             "bow": -10,
             "club": 20,
@@ -222,7 +223,7 @@ class Character:
                 "blast": None, "heal": None, "speed": None, "power": None
             }),
             weapon_proficiencies=d.get("weapon_proficiencies", {
-                "axe": 5, "bow": -10, "club": 20, "spear": 10, "sword": 0
+                "unarmed": 0, "axe": 5, "bow": -10, "club": 20, "spear": 10, "sword": 0
             }),
             xp=d.get("xp", 0),
             level=d.get("level", 1),

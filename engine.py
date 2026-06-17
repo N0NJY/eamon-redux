@@ -1140,8 +1140,8 @@ class Engine:
             failure_chance = 100 - weapon_prof
             growth_roll = random.randint(1, 100)
             if growth_roll < failure_chance:
-                old_prof = self.player.weapon_proficiencies[weapon_type]
-                self.player.weapon_proficiencies[weapon_type] += 2
+                old_prof = self.player.weapon_proficiencies.get(weapon_type, 0)
+                self.player.weapon_proficiencies[weapon_type] = old_prof + 2
                 new_prof = self.player.weapon_proficiencies[weapon_type]
                 print(self.tc(f"Your {weapon_type} proficiency increased: {old_prof}% → {new_prof}%", "success"))
         

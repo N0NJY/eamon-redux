@@ -53,6 +53,7 @@ class Player:
     # Weapon proficiencies
     weapon_proficiencies: dict[str, int] = field(
         default_factory=lambda: {
+            "unarmed": 0,
             "axe": 5,
             "bow": -10,
             "club": 20,
