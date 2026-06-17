@@ -941,7 +941,7 @@ class Engine:
         # ── Get weapon and proficiency ────────────────────────────────────────
         
         weapon = self.player.equipped_weapon(self.world)
-        weapon_type = weapon.weapon_type if weapon and hasattr(weapon, 'weapon_type') else None
+        weapon_type = "unarmed" if not weapon else weapon.weapon_type
         weapon_prof = self.player.weapon_proficiencies.get(weapon_type, 0) if weapon_type else 0
         
         # ── Roll for hit ──────────────────────────────────────────────────────
@@ -950,7 +950,7 @@ class Engine:
         monster_ac = monster.armor_class
         
         # Hit chance = 50 + agility_bonus + weapon_proficiency - monster_ac
-        hit_chance = 50 + agility_bonus + weapon_prof - monster_ac
+        hit_chance = max(5, min(95, 50 + agility_bonus + weapon_prof - monster_ac))
         hit_roll = random.randint(1, 100)
         
         is_hit = hit_roll <= hit_chance
@@ -1043,13 +1043,7 @@ class Engine:
                 # 3× damage
                 damage = damage * 3
                 print(self.tc(f"CRITICAL HIT! {damage} damage!", "hit"))
-            else:
-                # Instant kill
-                print(self.tc(f"INSTANT KILL!", "win"))
-                monster.hp = 0
-                monster.is_alive = False
-                return
-        
+                    
         # ── Apply armor reduction ─────────────────────────────────────────────
         
         if not ignore_armor:
