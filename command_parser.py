@@ -11,52 +11,52 @@ from typing import Tuple, Optional, List
 # ============================================================================
 
 ENGINE_COMMANDS = {
-    # Movement (allow 1 char for cardinal directions)
+    # Movement (reserve single chars: n, s, e, w, u, d for directions)
     "north": {"aliases": ["n"], "min_chars": 1, "category": "movement"},
     "south": {"aliases": ["s"], "min_chars": 1, "category": "movement"},
     "east": {"aliases": ["e"], "min_chars": 1, "category": "movement"},
     "west": {"aliases": ["w"], "min_chars": 1, "category": "movement"},
     "up": {"aliases": ["u"], "min_chars": 1, "category": "movement"},
     "down": {"aliases": ["d"], "min_chars": 1, "category": "movement"},
-    "go": {"aliases": [], "min_chars": 2, "category": "movement"},
+    "go": {"aliases": ["g"], "min_chars": 1, "category": "movement"},
     
     # Examination & Interaction
     "look": {"aliases": ["l"], "min_chars": 1, "category": "examine"},
-    "examine": {"aliases": ["x", "exa"], "min_chars": 1, "category": "examine"},
-    "read": {"aliases": [], "min_chars": 3, "category": "examine"},
-    "talk": {"aliases": [], "min_chars": 3, "category": "interact"},
+    "examine": {"aliases": ["x", "ex", "exa"], "min_chars": 2, "category": "examine"},
+    "read": {"aliases": ["re"], "min_chars": 2, "category": "examine"},
+    "talk": {"aliases": ["ta"], "min_chars": 2, "category": "interact"},
     
     # Inventory
-    "inventory": {"aliases": ["i", "inv"], "min_chars": 1, "category": "inventory"},
-    "get": {"aliases": [], "min_chars": 2, "category": "inventory"},
-    "getall": {"aliases": ["get all"], "min_chars": 2, "category": "inventory"},
-    "drop": {"aliases": [], "min_chars": 3, "category": "inventory"},
-    "open": {"aliases": [], "min_chars": 3, "category": "inventory"},
-    "close": {"aliases": [], "min_chars": 3, "category": "inventory"},
+    "inventory": {"aliases": ["i", "inv", "in"], "min_chars": 1, "category": "inventory"},
+    "get": {"aliases": ["ge"], "min_chars": 2, "category": "inventory"},
+    "getall": {"aliases": ["get all", "ga"], "min_chars": 2, "category": "inventory"},
+    "drop": {"aliases": ["dr"], "min_chars": 2, "category": "inventory"},
+    "open": {"aliases": ["op"], "min_chars": 2, "category": "inventory"},
+    "close": {"aliases": ["cl"], "min_chars": 2, "category": "inventory"},
     
     # Equipment
-    "equip": {"aliases": ["wear", "wield"], "min_chars": 2, "category": "equipment"},
-    "unequip": {"aliases": ["remove"], "min_chars": 3, "category": "equipment"},
-    "equipment": {"aliases": ["eq"], "min_chars": 2, "category": "equipment"},
+    "equip": {"aliases": ["wear", "wield", "eq"], "min_chars": 2, "category": "equipment"},
+    "unequip": {"aliases": ["remove", "un"], "min_chars": 2, "category": "equipment"},
+    "equipment": {"aliases": ["equ"], "min_chars": 3, "category": "equipment"},
     
     # Combat
-    "attack": {"aliases": ["kill"], "min_chars": 2, "category": "combat"},
-    "flee": {"aliases": [], "min_chars": 3, "category": "combat"},
-    "cast": {"aliases": [], "min_chars": 3, "category": "combat"},
+    "attack": {"aliases": ["kill", "att", "a"], "min_chars": 1, "category": "combat"},
+    "flee": {"aliases": ["fl"], "min_chars": 2, "category": "combat"},
+    "cast": {"aliases": ["ca"], "min_chars": 2, "category": "combat"},
     
     # Status
     "health": {"aliases": ["hp"], "min_chars": 1, "category": "status"},
-    "rest": {"aliases": [], "min_chars": 3, "category": "status"},
-    "spells": {"aliases": ["spell"], "min_chars": 3, "category": "status"},
+    "rest": {"aliases": ["res"], "min_chars": 2, "category": "status"},
+    "spells": {"aliases": ["spell", "sp"], "min_chars": 2, "category": "status"},
     
     # Items
-    "eat": {"aliases": [], "min_chars": 2, "category": "items"},
-    "drink": {"aliases": [], "min_chars": 3, "category": "items"},
-    "unlock": {"aliases": [], "min_chars": 3, "category": "items"},
+    "eat": {"aliases": ["ea"], "min_chars": 2, "category": "items"},
+    "drink": {"aliases": ["di"], "min_chars": 2, "category": "items"},
+    "unlock": {"aliases": ["ul"], "min_chars": 2, "category": "items"},
     
     # Game Control
-    "save": {"aliases": [], "min_chars": 2, "category": "control"},
-    "load": {"aliases": [], "min_chars": 2, "category": "control"},
+    "save": {"aliases": ["sa"], "min_chars": 2, "category": "control"},
+    "load": {"aliases": ["lo"], "min_chars": 2, "category": "control"},
     "help": {"aliases": ["h", "?"], "min_chars": 1, "category": "control"},
     "quit": {"aliases": ["q", "exit", "bye"], "min_chars": 1, "category": "control"},
 }
@@ -66,29 +66,29 @@ ENGINE_COMMANDS = {
 # ============================================================================
 
 TAVERN_COMMANDS = {
-    # Navigation
+    # Navigation (reserve n, s, e, w for directions)
     "north": {"aliases": ["n"], "min_chars": 1, "category": "navigation"},
     "south": {"aliases": ["s"], "min_chars": 1, "category": "navigation"},
     "east": {"aliases": ["e"], "min_chars": 1, "category": "navigation"},
     "west": {"aliases": ["w"], "min_chars": 1, "category": "navigation"},
     
     # Character Management
-    "character": {"aliases": ["sheet", "c", "ch"], "min_chars": 1, "category": "character"},
-    "inventory": {"aliases": ["i", "inv"], "min_chars": 1, "category": "character"},
-    "spells": {"aliases": ["spell"], "min_chars": 3, "category": "character"},
+    "character": {"aliases": ["sheet", "ch", "cha"], "min_chars": 2, "category": "character"},
+    "inventory": {"aliases": ["i", "inv", "in"], "min_chars": 1, "category": "character"},
+    "spells": {"aliases": ["spell", "sp"], "min_chars": 2, "category": "character"},
     
     # Tavern Actions
     "look": {"aliases": ["l"], "min_chars": 1, "category": "explore"},
-    "talk": {"aliases": [], "min_chars": 3, "category": "explore"},
+    "talk": {"aliases": ["ta"], "min_chars": 2, "category": "explore"},
     "buy": {"aliases": ["b"], "min_chars": 1, "category": "shop"},
-    "sell": {"aliases": ["s"], "min_chars": 1, "category": "shop"},
-    "horace": {"aliases": ["shop"], "min_chars": 1, "category": "shop"},
-    "wizard": {"aliases": ["aldric", "magic"], "min_chars": 1, "category": "shop"},
+    "sell": {"aliases": ["se"], "min_chars": 2, "category": "shop"},
+    "horace": {"aliases": ["shop", "ho"], "min_chars": 2, "category": "shop"},
+    "wizard": {"aliases": ["aldric", "magic", "wiz"], "min_chars": 3, "category": "shop"},
     
     # Adventures
-    "adventure": {"aliases": ["a", "adv"], "min_chars": 1, "category": "adventure"},
-    "resume": {"aliases": ["r", "load"], "min_chars": 1, "category": "adventure"},
-    "new": {"aliases": ["n"], "min_chars": 1, "category": "character"},
+    "adventure": {"aliases": ["a", "adv", "ad"], "min_chars": 1, "category": "adventure"},
+    "resume": {"aliases": ["r", "load", "res"], "min_chars": 1, "category": "adventure"},
+    "new": {"aliases": ["ne"], "min_chars": 2, "category": "character"},
     
     # Game Control
     "help": {"aliases": ["h", "?"], "min_chars": 1, "category": "control"},
