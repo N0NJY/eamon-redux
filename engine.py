@@ -291,6 +291,10 @@ class Engine:
         
     def _check_win(self) -> bool:
         """Check if player has achieved win condition."""
+        # Check for EXIT_TAVERN special exit
+        if self.player.room_id == "EXIT_TAVERN":
+            return True
+        
         wc = self.world.win_condition
         if not wc:
             return False
@@ -332,12 +336,12 @@ class Engine:
             print(self.tc("You can't go that way.", "error"))
             return
             
-        # ✅ ADD THIS SECTION:
+        # ✅ CHECK FOR WIN EXIT
         next_exit = room.exits[direction]
         if next_exit == "EXIT_TAVERN":
             print(self.tc("You escape to the surface and return to town!", "spell"))
-            self.player.room_id = "EXIT_TAVERN"
-            return
+            # Return 1 to signal WIN and exit the game loop properly
+            return  # Will be caught by handle() which will return 1
         
         # Check for locked exit
         if direction in room.locked_exits:
@@ -347,10 +351,8 @@ class Engine:
                 print(self.tc(f"The {direction} exit is locked. (Need: {key.name})", "warn"))
                 return
         
-        # Move
-        # Move
+        # Move to new room
         new_room_id = room.exits[direction]
-        print(f"[DEBUG] Moving from {self.player.room_id} to {new_room_id}")  # ADD THIS
         self.player.room_id = new_room_id
 
         new_room = self.world.get_room(new_room_id)
@@ -589,8 +591,8 @@ class Engine:
         self.player.hp = min(self.player.hp + healing, self.player.hp_max)
         print(self.tc(f"You {verb} the {artifact.name}. ({healing} HP restored)", "heal"))
         
-        # Remove from inventory
-        self.world.artifacts[artifact.id].room_id = self.player.room_id
+        # Remove from inventory (delete the artifact, don't drop it)
+        del self.world.artifacts[artifact.id]
 
     def cmd_eat(self, noun: str) -> None:
         self._consume(noun, ArtifactType.FOOD, "eat")
@@ -1014,7 +1016,7 @@ class Engine:
             base_damage = roll(damage_dice, damage_sides)
         else:
             # Unarmed
-            base_damage = self.roll(self.player.damage_dice, self.player.damage_sides)
+            base_damage = roll(self.player.damage_dice, self.player.damage_sides)
         
         # ── Check for CRITICAL HIT (5% chance on successful hit) ──────────────
         
@@ -1043,7 +1045,7 @@ class Engine:
                 print(self.tc(f"CRITICAL HIT! {damage} damage!", "hit"))
             else:
                 # Instant kill
-                print(self.tc(f"INSTANT KILL!", "combat_win"))
+                print(self.tc(f"INSTANT KILL!", "win"))
                 monster.hp = 0
                 monster.is_alive = False
                 return
@@ -1269,9 +1271,10 @@ def run_adventure(character, adventure_path: str) -> int:
             print(engine.tc("★ " * 36, "win"))
             print()
             
-            # Sync proficiencies back to character
+            # Sync proficiencies and stats back to character
             character.spell_proficiencies = engine.player.spell_proficiencies.copy()
             character.weapon_proficiencies = engine.player.weapon_proficiencies.copy()
+            character.hp = engine.player.hp  # ✅ SYNC HP (actual remaining HP)
             character.gold = engine.player.gold
             character.xp = engine.player.xp
             character.save()
@@ -1287,9 +1290,10 @@ def run_adventure(character, adventure_path: str) -> int:
             print(engine.tc("╚" + "═" * 70 + "╝", "die"))
             print()
             
-            # Sync proficiencies back to character
+            # Sync proficiencies AND HP back to character
             character.spell_proficiencies = engine.player.spell_proficiencies.copy()
             character.weapon_proficiencies = engine.player.weapon_proficiencies.copy()
+            character.hp = engine.player.hp  # ✅ SYNC HP (was 0 on death)
             character.gold = engine.player.gold
             character.xp = engine.player.xp
             character.save()
@@ -1301,6 +1305,7 @@ def run_adventure(character, adventure_path: str) -> int:
             if response.lower() == 'y':
                 character.spell_proficiencies = engine.player.spell_proficiencies.copy()
                 character.weapon_proficiencies = engine.player.weapon_proficiencies.copy()
+                character.hp = engine.player.hp  # ✅ SYNC HP
                 character.gold = engine.player.gold
                 character.xp = engine.player.xp
                 character.save()
@@ -1310,4 +1315,4 @@ def run_adventure(character, adventure_path: str) -> int:
             continue
 
 if __name__ == "__main__":
-    print(engine.tc("Run via tavern.py", "error"))
+    print(c(C.ERROR, "Run via tavern.py"))

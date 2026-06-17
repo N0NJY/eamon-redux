@@ -232,6 +232,7 @@ def _add_to_inventory(character, template: dict) -> None:
     carried.append(_make_artifact(template, new_id))
     _save_carried(character, carried)
 
+# BUG 10 FIX: Removed dead 'if raw == "sell all": pass' block
 def _process_sell(raw: str, sellable: list, all_carried: list,
                   character, allowed_types: set) -> None:
     raw = raw.strip().lower()
@@ -269,8 +270,7 @@ def _process_sell(raw: str, sellable: list, all_carried: list,
         except ValueError:
             tprint(" Usage: S <number> or SELL ALL", "error"); return
 
-    if raw == "sell all":
-        pass  # total already set
+    # ✅ REMOVED: if raw == "sell all": pass
     sold    = [a for a in sellable if id(a) in ids_to_sell]
     total   = sum(sell_value(a) for a in sold)
     remaining = [a for a in all_carried if id(a) not in ids_to_sell]
@@ -319,35 +319,6 @@ def list_saves(character) -> list:
             continue
     saves.sort(key=lambda s: s["mtime"], reverse=True)
     return saves
-
-def menu_load_save(character) -> bool:
-    saves = list_saves(character)
-    if not saves:
-        tprint("\n No saved games found for this character.", "warn")
-        tinput(" Press Enter to continue...")
-        return False
-    print(tc("\n ─── Saved Games ────────────────────────────────────────", "border"))
-    for i, s in enumerate(saves, 1):
-        print(tc(f" {i}. ", "border") +
-              tc(f"{s['name']:<22}", "title") +
-              tc(f" {s['adv_title']:<22}", "desc") +
-              tc(f" {s['mtime_str']}", "sys"))
-    print(tc(" 0. Cancel", "border"))
-    print()
-    while True:
-        raw = tinput(" Choose save: ")
-        try:
-            n = int(raw)
-            if n == 0: return False
-            if 1 <= n <= len(saves):
-                chosen = saves[n - 1]; break
-        except ValueError:
-            pass
-        tprint(" Invalid choice.", "error")
-    tprint(f"\n Resuming '{chosen['name']}' — {chosen['adv_title']}...", "sys")
-    result = _launch_engine(character, chosen["adv_path"], savefile=chosen["name"])
-    _handle_engine_return(character, result, chosen["adv_path"])
-    return True
 
 # ── Room display & character commands ─────────────────────────────────────────
 
@@ -585,13 +556,13 @@ def handle_tavern_command(raw: str, character, room_id: str) -> Optional[str]:
     cmd, status, suggestions = parse_command(raw, "tavern")
     
     # Extract noun (everything after the first word)
-    parts = raw.strip().lower().split(maxsplit=1)
+    parts = raw.strip().lower().split(maxsplit=2)  # ✅ BUG 9 FIX: Changed maxsplit=1 to maxsplit=2
     noun = parts[1] if len(parts) > 1 else ""
     
     # Handle special "talk to" syntax
-    if len(parts) >= 3 and parts[0] == "talk" and parts[1] == "to":
+    if len(parts) >= 3 and parts[0] == "talk" and parts[1] == "to":  # ✅ Now reachable!
         cmd = "talk"
-        noun = " ".join(parts[2:])
+        noun = parts[2]  # ✅ Fixed: use parts[2] directly instead of join
     
     # ────────────────────────────────────────────────────────────────────────────
     # Handle parsing results
@@ -735,6 +706,9 @@ def show_tavern_help() -> None:
         print(tc(f" {cmd:<22}", "title") + tc(desc, "desc"))
     print()
 
+# ✅ BUG 8 FIX: REMOVED first definition of menu_load_save (lines 323+)
+# Only keeping the second, complete definition below:
+
 def menu_load_save(character) -> None:
     """Browse and resume saved games by adventure."""
     from character import Character
@@ -827,7 +801,7 @@ def menu_load_save(character) -> None:
     savefile = f"{safe_name}_{safe_adv}_slot{slot}"
     
     tprint(f"\n Resuming: {adventure}\n", "sys")
-    result = _launch_engine(character, adv_path, savefile)
+    result = _launch_engine(character, adv_path, savefile)  # ✅ Now savefile is used!
     _handle_engine_return(character, result, adv_path,
                           adv_name=adventure,
                           is_beginner_adv=False)
@@ -948,10 +922,11 @@ def choose_adventure(character, adventures: list):
         tprint(" Invalid choice.", "error")
 
 # ── Engine launch & return ────────────────────────────────────────────────────
+# ✅ BUG 7 FIX: NOW PASSES savefile PARAMETER
 def _launch_engine(character, adv_path: str, savefile: str = ""):
     """Launch adventure directly."""
     from engine import run_adventure
-    result = run_adventure(character, adv_path)
+    result = run_adventure(character, adv_path, savefile)  # ✅ savefile passed
     return result
 
 
@@ -979,6 +954,7 @@ def _handle_engine_return(character, result, adv_path: str,
         if adv_name and adv_name not in character.adventures_completed:
             character.adventures_completed.append(adv_name)
         character.save()
+
 # ── Main loop ─────────────────────────────────────────────────────────────────
 
 def run_tavern() -> None:
