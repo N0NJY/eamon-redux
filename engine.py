@@ -124,7 +124,9 @@ class Engine:
             xp=character.xp,
             level=character.level,
         )
-        
+        # Load character's carried items from JSON file
+        self._load_character_items(character)
+
         # Initialize spell fatigue multipliers to 1.0
         for spell_key in self.player.spell_proficiencies:
             if self.player.spell_proficiencies[spell_key] is not None:
@@ -159,7 +161,33 @@ class Engine:
         }
         color = colors.get(style, C.SYS)
         return c(color, text)
-
+    
+    def _load_character_items(self, character) -> None:
+        """Load character's carried items from JSON and add to world."""
+        from world import Artifact
+        import os
+        import json
+        
+        # Build path: characters/<name>_items.json
+        safe_name = character.name.lower().replace(" ", "_")
+        items_path = os.path.join("characters", f"{safe_name}_items.json")
+        
+        if not os.path.exists(items_path):
+            return  # No items file yet
+        
+        try:
+            with open(items_path) as f:
+                items_data = json.load(f)
+            
+            # Load each item and add to world as carried
+            for item_dict in items_data:
+                artifact = Artifact.from_dict(item_dict)
+                artifact.room_id = None  # Mark as carried (in inventory)
+                self.world.artifacts[artifact.id] = artifact
+        
+        except (json.JSONDecodeError, IOError, KeyError):
+            pass  # Silently skip if file is corrupted
+ 
     # ── Room & World ──────────────────────────────────────────────────────────
 
     def look(self) -> None:
@@ -208,13 +236,15 @@ class Engine:
         cmd, status, suggestions = parse_command(raw_input, "engine")
         
         if status == "empty":
-            return 0
+            return -1  # Continue playing (don't quit)
         elif status == "not_found":
             print(self.tc("Unknown command. Type HELP for available commands.", "error"))
-            return 0
+            return -1  # Continue playing (don't quit)
+            
+        
         elif status == "ambiguous":
             print(self.tc(f"Ambiguous: {', '.join(suggestions)}. Be more specific.", "warn"))
-            return 0
+            return -1  # Continue playing (don't quit)
         
         # Handle partial/exact matches
         if status in ("partial", "exact"):
@@ -271,8 +301,10 @@ class Engine:
                 self.cmd_flee()
             elif cmd == "spells":
                 self.cmd_spells()
-            elif cmd == "help":
+            elif cmd == "help" or cmd == "?":
                 self.cmd_help()
+            elif cmd in ("status", "sheet", "character", "char"):
+                self.cmd_status()    
             elif cmd == "save":
                 noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
                 self.cmd_save(noun)
@@ -350,7 +382,15 @@ class Engine:
             if key and key.room_id is not None:
                 print(self.tc(f"The {direction} exit is locked. (Need: {key.name})", "warn"))
                 return
-        
+    def cmd_status(self) -> None:
+        """Display character status/sheet."""
+        print()
+        print(self.tc(f" ─── {self.player.name} ───", "border"))
+        print(self.tc(f" HP: {self.player.hp}/{self.player.hp_max}  Gold: {self.player.gold}g  XP: {self.player.xp}", "stat"))
+        print(self.tc(f" Level: {self.player.level}  Hardiness: {self.character.hardiness}  Agility: {self.character.agility}", "stat"))
+        print(self.tc(f" Strength: {self.character.strength}  Intelligence: {self.character.intelligence}  Charisma: {self.character.charisma}", "stat"))
+        print()
+            
         # Move to new room
         new_room_id = room.exits[direction]
         self.player.room_id = new_room_id
@@ -1219,7 +1259,7 @@ class Engine:
 
 # ── Game Runner ───────────────────────────────────────────────────────────────
 
-def run_adventure(character, adventure_path: str) -> int:
+def run_adventure(character, adventure_path: str, savefile: str = "") -> int:
     """
     Run an adventure with the given character.
     Returns: 0=quit, 1=won, 2=died
