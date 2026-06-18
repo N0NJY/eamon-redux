@@ -9,7 +9,7 @@ Two modes:
 from __future__ import annotations
 import os
 import sys
-from world import World, Room, Artifact, ArtifactType, DIRECTIONS
+from world import World, Room, Artifact, ArtifactType, Monster, Attitude, DIRECTIONS
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -298,9 +298,10 @@ class Designer:
             print("  1. Adventure settings")
             print("  2. Rooms")
             print("  3. Artifacts (objects)")
-            print("  4. View map")
-            print("  5. Save")
-            print("  6. Test play (launch engine)")
+            print("  4. Monsters & NPCs")
+            print("  5. View map")
+            print("  6. Save")
+            print("  7. Test play (launch engine)")
             print("  0. Quit")
             choice = input("\n  > ").strip()
 
@@ -311,14 +312,16 @@ class Designer:
             elif choice == "3":
                 self.menu_artifacts()
             elif choice == "4":
+                self.menu_monsters()
+            elif choice == "5":
                 cls()
                 print(f"\n  MAP: {self.world.title}")
                 render_map(self.world)
                 input("  Press Enter to continue...")
-            elif choice == "5":
+            elif choice == "6":
                 self.world.save(self.path)
                 print(f"\n  Saved to: {self.path}")
-            elif choice == "6":
+            elif choice == "7":
                 self.launch_engine()
             elif choice == "0":
                 if prompt_bool("Save before quitting?", default=True):
@@ -413,7 +416,46 @@ class Designer:
         r.name        = prompt("Name",        r.name)
         r.description = prompt("Description", r.description)
         r.is_dark     = prompt_bool("Is it dark?", r.is_dark)
+
+        if prompt_bool("Edit flags (special behaviors)?", False):
+            self._edit_room_flags(r)
+
         print("  Room updated.")
+
+    def _edit_room_flags(self, room) -> None:
+        """Edit flags for a room (exit, win condition, event trigger)."""
+        print(f"\n  ROOM FLAGS — {room.name} (#{room.id})")
+        print(f"  {hr('─', 40)}")
+
+        flags = dict(room.flags)
+
+        # --- EXIT ROOM ---
+        is_exit = prompt_bool("Is this an exit room (way out)?", flags.get("is_exit", False))
+        if is_exit:
+            flags["is_exit"] = True
+        else:
+            flags.pop("is_exit", None)
+
+        # --- WIN ROOM ---
+        is_win = prompt_bool("Is this a win room (victory condition)?", flags.get("is_win_room", False))
+        if is_win:
+            flags["is_win_room"]    = True
+            flags["win_condition"]  = prompt("Win condition (e.g., 'has_rescued_girl')", flags.get("win_condition", ""))
+            flags["win_dialogue"]   = prompt("Victory message", flags.get("win_dialogue", "You have won!"))
+        else:
+            flags.pop("is_win_room",   None)
+            flags.pop("win_condition", None)
+            flags.pop("win_dialogue",  None)
+
+        # --- EVENT TRIGGER ---
+        triggers = prompt_bool("Does entering this room trigger an event?", bool(flags.get("triggers_event")))
+        if triggers:
+            flags["triggers_event"] = prompt("Event ID to trigger", flags.get("triggers_event", ""))
+        else:
+            flags.pop("triggers_event", None)
+
+        room.flags = flags
+        print("  Room flags updated.")
 
     def delete_room(self) -> None:
         rid = self._pick_room("Delete which room?")
@@ -584,7 +626,56 @@ class Designer:
         if a.is_container:
             a.is_open = prompt_bool("Currently open?", a.is_open)
 
+        if prompt_bool("Edit flags (special behaviors)?", False):
+            self._edit_artifact_flags(a)
+
         print("  Artifact updated.")
+
+    def _edit_artifact_flags(self, artifact) -> None:
+        """Edit flags for an artifact (tradeable, escape vehicle, quest, event trigger)."""
+        print(f"\n  ARTIFACT FLAGS — {artifact.name}")
+        print(f"  {hr('─', 40)}")
+
+        flags = dict(artifact.flags)
+
+        # --- TRADEABLE ---
+        is_tradeable = prompt_bool("Is this tradeable to NPCs?", flags.get("is_tradeable", False))
+        if is_tradeable:
+            flags["is_tradeable"] = True
+            flags["trade_npc"]       = prompt("Trade with which NPC?",      flags.get("trade_npc", ""))
+            flags["trade_dialogue"]  = prompt("Dialogue when traded?",       flags.get("trade_dialogue", ""))
+        else:
+            flags.pop("is_tradeable",    None)
+            flags.pop("trade_npc",       None)
+            flags.pop("trade_dialogue",  None)
+
+        # --- ESCAPE VEHICLE ---
+        is_escape = prompt_bool("Is this an escape vehicle (boat, portal)?", flags.get("is_escape_vehicle", False))
+        if is_escape:
+            flags["is_escape_vehicle"] = True
+            flags["escape_dialogue"]   = prompt("Dialogue when used to escape?", flags.get("escape_dialogue", "You escape!"))
+        else:
+            flags.pop("is_escape_vehicle", None)
+            flags.pop("escape_dialogue",   None)
+
+        # --- QUEST ITEM ---
+        is_quest = prompt_bool("Is this a quest item (can't be sold)?", flags.get("is_quest_item", False))
+        if is_quest:
+            flags["is_quest_item"] = True
+            flags["quest_id"]      = prompt("Quest ID (for tracking)", flags.get("quest_id", ""))
+        else:
+            flags.pop("is_quest_item", None)
+            flags.pop("quest_id",      None)
+
+        # --- EVENT TRIGGER ---
+        triggers = prompt_bool("Does using this trigger an event?", bool(flags.get("triggers_event")))
+        if triggers:
+            flags["triggers_event"] = prompt("Event ID to trigger", flags.get("triggers_event", ""))
+        else:
+            flags.pop("triggers_event", None)
+
+        artifact.flags = flags
+        print("  Flags updated.")
 
     def delete_artifact(self) -> None:
         aid = self._pick_artifact("Delete which artifact?")
@@ -608,6 +699,144 @@ class Designer:
         if rid is not None:
             a.room_id = rid
             print(f"  '{a.name}' moved to room #{rid}.")
+
+    # ── Monsters ──────────────────────────────────────────────────────────────
+
+    def menu_monsters(self) -> None:
+        while True:
+            print(f"\n  MONSTERS & NPCs  ({len(self.world.monsters)} total)")
+            print(f"  {hr('─', 40)}")
+            print("  1. List monsters")
+            print("  2. Add new monster")
+            print("  3. Edit monster")
+            print("  4. Delete monster")
+            print("  0. Back")
+            choice = input("\n  > ").strip()
+
+            if choice == "1":
+                self.list_monsters()
+            elif choice == "2":
+                self.add_monster()
+            elif choice == "3":
+                self.edit_monster()
+            elif choice == "4":
+                self.delete_monster()
+            elif choice == "0":
+                break
+
+    def list_monsters(self) -> None:
+        if not self.world.monsters:
+            print("  No monsters yet.")
+            return
+        print()
+        for mid in sorted(self.world.monsters.keys()):
+            m = self.world.monsters[mid]
+            location = (f"Room #{m.room_id} {self.world.rooms[m.room_id].name}"
+                        if m.room_id in self.world.rooms
+                        else f"Room #{m.room_id}")
+            print(f"  #{mid:>3}  {m.name:<28}  [{m.attitude}]  HP:{m.hp_max}  @ {location}")
+
+    def _pick_monster(self, title="Select monster") -> int | None:
+        ids = sorted(self.world.monsters.keys())
+        if not ids:
+            print("  No monsters exist yet.")
+            return None
+        names = [f"#{m} {self.world.monsters[m].name}" for m in ids]
+        n = choose(names, title)
+        return ids[n - 1] if n else None
+
+    def add_monster(self) -> None:
+        print(f"\n  NEW MONSTER / NPC")
+        mid = self.world.next_monster_id()
+        name = prompt("Name")
+        if not name:
+            print("  Cancelled.")
+            return
+        desc = prompt("Description")
+
+        attitudes = [Attitude.HOSTILE, Attitude.NEUTRAL, Attitude.FRIENDLY]
+        n = choose(attitudes, "Attitude")
+        attitude = attitudes[n - 1] if n else Attitude.HOSTILE
+
+        hp           = prompt_int("HP", 10)
+        damage_dice  = prompt_int("Damage dice", 1)
+        damage_sides = prompt_int("Damage sides", 6)
+        armor_class  = prompt_int("Armor class", 0)
+        xp_value     = prompt_int("XP value (0 = auto)", 0)
+        dialogue     = prompt("Dialogue (shown on TALK)", "")
+        death_msg    = prompt("Death message", "")
+
+        synonyms_raw = prompt("Synonyms (comma-separated)", "")
+        synonyms = [s.strip() for s in synonyms_raw.split(",") if s.strip()]
+
+        heal_amount = 0
+        heal_cost   = 0
+        if attitude in (Attitude.NEUTRAL, Attitude.FRIENDLY):
+            if prompt_bool("Can this NPC heal the player?", False):
+                heal_amount = prompt_int("HP healed per use", 5)
+                heal_cost   = prompt_int("Gold cost per use", 10)
+
+        if not self.world.rooms:
+            print("  No rooms exist — monster will be placed in room 1.")
+            room_id = 1
+        else:
+            rid = self._pick_room("Place in which room?")
+            room_id = rid if rid is not None else self.world.start_room
+
+        m = Monster(
+            id=mid, name=name, description=desc, room_id=room_id,
+            attitude=attitude, hp=hp, hp_max=hp,
+            damage_dice=damage_dice, damage_sides=damage_sides,
+            armor_class=armor_class, xp_value=xp_value,
+            dialogue=dialogue, death_message=death_msg,
+            heal_amount=heal_amount, heal_cost=heal_cost,
+            synonyms=synonyms,
+        )
+        self.world.monsters[mid] = m
+        print(f"  Monster #{mid} '{name}' created.")
+
+    def edit_monster(self) -> None:
+        mid = self._pick_monster("Edit which monster?")
+        if mid is None:
+            return
+        m = self.world.monsters[mid]
+        print(f"\n  EDIT MONSTER #{mid}")
+        m.name         = prompt("Name",         m.name)
+        m.description  = prompt("Description",  m.description)
+        m.hp           = prompt_int("HP",           m.hp_max)
+        m.hp_max       = m.hp
+        m.damage_dice  = prompt_int("Damage dice",  m.damage_dice)
+        m.damage_sides = prompt_int("Damage sides", m.damage_sides)
+        m.armor_class  = prompt_int("Armor class",  m.armor_class)
+        m.xp_value     = prompt_int("XP value",     m.xp_value)
+        m.dialogue     = prompt("Dialogue",     m.dialogue)
+        m.death_message = prompt("Death message", m.death_message)
+
+        attitudes = [Attitude.HOSTILE, Attitude.NEUTRAL, Attitude.FRIENDLY]
+        n = choose(attitudes, f"Attitude [{m.attitude}]")
+        if n:
+            m.attitude = attitudes[n - 1]
+            m.aggro = m.attitude == Attitude.HOSTILE
+
+        syns = ", ".join(m.synonyms)
+        syns_new = prompt("Synonyms (comma-separated)", syns)
+        m.synonyms = [s.strip() for s in syns_new.split(",") if s.strip()]
+
+        if prompt_bool("Edit heal mechanics?", False):
+            m.heal_amount = prompt_int("HP healed per use", m.heal_amount)
+            m.heal_cost   = prompt_int("Gold cost per use", m.heal_cost)
+
+        print("  Monster updated.")
+
+    def delete_monster(self) -> None:
+        mid = self._pick_monster("Delete which monster?")
+        if mid is None:
+            return
+        name = self.world.monsters[mid].name
+        if not prompt_bool(f"Delete monster #{mid} '{name}'?", False):
+            return
+        del self.world.monsters[mid]
+        print(f"  Monster #{mid} deleted.")
 
     # ── Test play ─────────────────────────────────────────────────────────────
 

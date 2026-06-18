@@ -65,6 +65,7 @@ class Artifact:
     is_quest_item: bool = False  # quest items and keys cannot be sold
     synonyms: list[str] = field(default_factory=list)
     weapon_type: Optional[str] = None  # for weapons: axe, bow, club, spear, sword
+    flags: dict = field(default_factory=dict)
 
     def matches(self, word: str) -> bool:
         word = word.lower()
@@ -82,6 +83,7 @@ class Artifact:
             "damage_sides": self.damage_sides, "armor_class": self.armor_class,
             "heal_amount": self.heal_amount, "value": self.value,
             "is_quest_item": self.is_quest_item, "synonyms": self.synonyms,
+            "flags": self.flags,
         }
         if self.weapon_type:
             d["weapon_type"] = self.weapon_type
@@ -103,6 +105,7 @@ class Artifact:
             is_quest_item=d.get("is_quest_item", False),
             synonyms=d.get("synonyms", []),
             weapon_type=d.get("weapon_type"),
+            flags=d.get("flags", {}),
         )
 
 
@@ -127,6 +130,7 @@ class Monster:
     heal_amount: int = 0     # HP the NPC can restore per use (0 = no healing)
     heal_cost: int = 0       # gold cost per HP healed
     synonyms: list[str] = field(default_factory=list)
+    flags: dict = field(default_factory=dict)
 
     is_alive: bool = field(default=True, init=False)
     aggro: bool = field(default=False, init=False)
@@ -156,7 +160,8 @@ class Monster:
             "armor_class": self.armor_class, "loot_id": self.loot_id,
             "death_message": self.death_message, "dialogue": self.dialogue,
             "heal_amount": self.heal_amount, "heal_cost": self.heal_cost,
-            "synonyms": self.synonyms,
+            "synonyms": self.synonyms, "xp_value": self.xp_value,
+            "flags": self.flags,
         }
 
     @staticmethod
@@ -173,6 +178,8 @@ class Monster:
             heal_amount=d.get("heal_amount", 0),
             heal_cost=d.get("heal_cost", 0),
             synonyms=d.get("synonyms", []),
+            xp_value=d.get("xp_value", 0),
+            flags=d.get("flags", {}),
         )
 
 
@@ -191,6 +198,7 @@ class Room:
     locked_exits: dict[str, int] = field(default_factory=dict)
     is_dark: bool = False
     first_visit: bool = True
+    flags: dict = field(default_factory=dict)
 
     def exit_list(self) -> str:
         if not self.exits:
@@ -201,9 +209,12 @@ class Room:
         d = {
             "id": self.id, "name": self.name, "description": self.description,
             "exits": self.exits, "is_dark": self.is_dark,
+            "first_visit": self.first_visit,
         }
         if self.locked_exits:
             d["locked_exits"] = self.locked_exits
+        if self.flags:
+            d["flags"] = self.flags
         return d
 
     @staticmethod
@@ -213,6 +224,8 @@ class Room:
             exits=d.get("exits", {}),
             locked_exits=d.get("locked_exits", {}),
             is_dark=d.get("is_dark", False),
+            first_visit=d.get("first_visit", True),
+            flags=d.get("flags", {}),
         )
 
 

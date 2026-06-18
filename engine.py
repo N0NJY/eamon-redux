@@ -10,6 +10,7 @@ import sys
 import os
 import json
 import random
+import importlib
 from character import SPELL_DEFS, WEAPON_TYPES
 from world import WeaponType
 
@@ -22,6 +23,7 @@ except ImportError:
     pass  # Windows fallback
 
 from world import World, DIRECTIONS, DIR_ABBREV, Attitude, ArtifactType
+from core.base_handlers import BaseAdventureHandlers
 from player import Player, slot_for_type, EQUIP_SLOTS
 from save_system import (
     save_game as save_game_slotted,
@@ -122,11 +124,13 @@ def _save_carried_items(character, world) -> None:
 class Engine:
     """Main game engine for Eamon Redux adventures."""
 
-    def __init__(self, world: World, character):
+    def __init__(self, world: World, character, adventure_path: str = None):
         """Initialize engine with world and character data."""
         self.world = world
         self.character = character
-        
+        self.adventure_path = adventure_path
+        self.game_data = {}
+
         # Create player runtime state from character
         self.player = Player(
             name=character.name,
@@ -142,6 +146,7 @@ class Engine:
             weapon_proficiencies=character.weapon_proficiencies.copy(),
             xp=character.xp,
             level=character.level,
+            max_carry_weight=character.carry_capacity,
         )
         # Load character's carried items from JSON file
         self._load_character_items(character)
@@ -154,6 +159,75 @@ class Engine:
         self.turn = 0
         self.in_combat = False
         self.enemy = None
+
+        # Tier 1: generic flag-reading handlers
+        self.base_handlers = BaseAdventureHandlers(self)
+
+        # Tier 2: adventure-specific custom handlers (optional)
+        self.custom_handlers = {}
+        if adventure_path:
+            self._load_adventure_handlers(adventure_path)
+
+    # ── Handler infrastructure ─────────────────────────────────────────────────
+
+    def _load_adventure_handlers(self, adventure_path: str) -> None:
+        """Dynamically load adventure-specific handlers if they exist."""
+        try:
+            adventure_name = adventure_path.rstrip("/").split("/")[-1]
+            module = importlib.import_module(f"adventures.{adventure_name}.handlers")
+            if hasattr(module, "HANDLERS"):
+                self.custom_handlers = getattr(module, "HANDLERS")
+            elif hasattr(module, "AdventureHandlers"):
+                self.custom_handlers = getattr(module, "AdventureHandlers")(self)
+        except ImportError:
+            self.custom_handlers = {}
+        except Exception as e:
+            print(f"Warning: Could not load adventure handlers: {e}")
+            self.custom_handlers = {}
+
+    def trigger_event(self, event_id: str) -> None:
+        """Trigger a named event, checking custom handlers first."""
+        if isinstance(self.custom_handlers, dict):
+            handler = self.custom_handlers.get(event_id)
+            if handler and callable(handler):
+                handler(self)
+                return
+        if hasattr(self.custom_handlers, event_id):
+            method = getattr(self.custom_handlers, event_id)
+            if callable(method):
+                method(self)
+
+    def call_hook(self, hook_name: str, *args, **kwargs):
+        """Call a hook — custom handlers take priority, then base handlers."""
+        if isinstance(self.custom_handlers, dict):
+            handler = self.custom_handlers.get(hook_name)
+            if handler and callable(handler):
+                return handler(self, *args, **kwargs)
+        elif hasattr(self.custom_handlers, hook_name):
+            method = getattr(self.custom_handlers, hook_name)
+            if callable(method):
+                return method(*args, **kwargs)
+
+        if hasattr(self.base_handlers, hook_name):
+            method = getattr(self.base_handlers, hook_name)
+            if callable(method):
+                return method(*args, **kwargs)
+
+    def on_game_start(self) -> None:
+        self.call_hook("on_game_start")
+
+    def on_enter_room(self, room_id: int) -> None:
+        self.call_hook("on_enter_room", room_id)
+
+    def on_talk_to_npc(self, npc_name: str) -> None:
+        self.call_hook("on_talk_to_npc", npc_name)
+
+    def on_use_item(self, artifact_name: str, target: str = None) -> bool:
+        result = self.call_hook("on_use_item", artifact_name, target)
+        return result if result is not None else False
+
+    def on_monster_defeated(self, monster_id: int) -> None:
+        self.call_hook("on_monster_defeated", monster_id)
 
     def tc(self, text: str, style: str = "sys") -> str:
         """Text color helper."""
@@ -269,6 +343,8 @@ class Engine:
         if status in ("partial", "exact"):
             if cmd in ["north", "south", "east", "west", "up", "down"]:
                 self.cmd_go(cmd)
+                if self.player.room_id == "EXIT_TAVERN":
+                    return 3
                 # Fatigue recovery on movement
                 recovery = random.randint(5, 10)
                 self.player.recover_all_spell_fatigue(recovery)
@@ -276,6 +352,10 @@ class Engine:
                 parts = raw_input.split()
                 if len(parts) > 1:
                     self.cmd_go(parts[1])
+                else:
+                    print(self.tc("Go where? (north, south, east, west, up, down)", "error"))
+                    if self.player.room_id == "EXIT_TAVERN":
+                        return 3
                     recovery = random.randint(5, 10)
                     self.player.recover_all_spell_fatigue(recovery)
             elif cmd == "look":
@@ -318,6 +398,24 @@ class Engine:
                 self.cmd_attack(noun)
             elif cmd == "flee":
                 self.cmd_flee()
+            elif cmd == "eat":
+                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
+                self.cmd_eat(noun)
+            elif cmd == "drink":
+                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
+                self.cmd_drink(noun)
+            elif cmd == "open":
+                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
+                self.cmd_open(noun)
+            elif cmd == "close":
+                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
+                self.cmd_close(noun)
+            elif cmd == "unlock":
+                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
+                self.cmd_unlock(noun)
+            elif cmd == "talk":
+                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
+                self.cmd_talk(noun)
             elif cmd == "spells":
                 self.cmd_spells()
             elif cmd == "help" or cmd == "?":
@@ -342,10 +440,6 @@ class Engine:
         
     def _check_win(self) -> bool:
         """Check if player has achieved win condition."""
-        # Check for EXIT_TAVERN special exit
-        if self.player.room_id == "EXIT_TAVERN":
-            return True
-        
         wc = self.world.win_condition
         if not wc:
             return False
@@ -387,12 +481,12 @@ class Engine:
             print(self.tc("You can't go that way.", "error"))
             return
             
-        # ✅ CHECK FOR WIN EXIT
+        # Check for surface exit — signals engine to return player to tavern
         next_exit = room.exits[direction]
         if next_exit == "EXIT_TAVERN":
             print(self.tc("You escape to the surface and return to town!", "spell"))
-            # Return 1 to signal WIN and exit the game loop properly
-            return  # Will be caught by handle() which will return 1
+            self.player.room_id = "EXIT_TAVERN"
+            return
         
         # Check for locked exit
         if direction in room.locked_exits:
@@ -414,12 +508,17 @@ class Engine:
         else:
             print(self.tc(f"You go {direction}.", "sys"))
         
-        # Check for hostile monsters
+        # Fire room-entry hooks (win conditions, event triggers)
+        self.on_enter_room(new_room_id)
+        if not self.running:
+            return
+
+        # Check for hostile monsters — monster gets the first strike on entry
         monsters = self.world.monsters_in_room(new_room_id)
         for m in monsters:
             if m.attitude == Attitude.HOSTILE:
-                print(self.tc(f"A {m.name} attacks you!", "warn"))
-                self.cmd_attack(m.name)
+                print(self.tc(f"A {m.name} leaps at you!", "warn"))
+                self.monster_round(m)
                 break
 
     def cmd_status(self) -> None:
@@ -1006,9 +1105,9 @@ class Engine:
         
         # ── Roll for hit ──────────────────────────────────────────────────────
         
-        agility_bonus = self.player.agility_bonus
+        agility_bonus = self.player.agility_effective_bonus
         monster_ac = monster.armor_class
-        
+
         # Hit chance = 50 + agility_bonus + weapon_proficiency - monster_ac
         hit_chance = max(5, min(95, 50 + agility_bonus + weapon_prof - monster_ac))
         hit_roll = random.randint(1, 100)
@@ -1119,19 +1218,23 @@ class Engine:
         if monster.hp <= 0:
             print(self.tc(f"{monster.name} {monster.death_message}", "win"))
             monster.is_alive = False
-            
+
+            # Track kills and fire defeat hook
+            self.player.combat_kills += 1
+            self.on_monster_defeated(monster.id)
+
             # Gain XP
             xp_value = monster.xp_value or (monster.hp_max * 10)
             self.player.xp += xp_value
             print(self.tc(f"You gain {xp_value} XP!", "heal"))
-            
+
             # Drop loot
             if monster.loot_id:
                 loot = self.world.artifacts.get(monster.loot_id)
                 if loot:
                     loot.room_id = self.player.room_id
                     print(self.tc(f"{monster.name} drops {loot.name}!", "item"))
-            
+
             return
         
         # ── Weapon proficiency growth (only on successful hit) ────────────────
@@ -1156,7 +1259,7 @@ class Engine:
             return
         
         # Roll for hit
-        hit_chance = 50 - self.player.agility_bonus - self.player.armor_class(self.world)
+        hit_chance = 50 - self.player.agility_effective_bonus - self.player.armor_class(self.world)
         hit_roll = random.randint(1, 100)
         
         if hit_roll > hit_chance:
@@ -1185,19 +1288,19 @@ class Engine:
         direction = random.choice(DIRECTIONS)
         room = self.world.get_room(self.player.room_id)
         
-        if direction not in room.exits:
-            print(self.tc(f"You can't flee {direction}!", "warn"))
-            return
-        
-        print(self.tc(f"You flee {direction}!", "warn"))
-        self.player.room_id = room.exits[direction]
-        
-        # Monsters get a free attack
+        # Monster always gets a free strike — whether flee succeeds or not
         for monster in monsters:
             if monster.is_alive:
-                print(self.tc(f"{monster.name} strikes as you flee!", "dmg"))
+                print(self.tc(f"{monster.name} strikes as you attempt to flee!", "dmg"))
                 self.monster_round(monster)
                 break
+
+        if direction not in room.exits:
+            print(self.tc(f"You can't flee {direction}! You're trapped!", "warn"))
+            return
+
+        print(self.tc(f"You flee {direction}!", "warn"))
+        self.player.room_id = room.exits[direction]
 
     # ── NPC Interaction ────────────────────────────────────────────────────────
 
@@ -1206,25 +1309,20 @@ class Engine:
         if not noun:
             print(self.tc("Talk to whom?", "error"))
             return
-        
+
         monsters = self.world.monsters_in_room(self.player.room_id)
         npc = self.world.find_monster_by_name(noun, monsters)
-        
+
         if not npc:
             print(self.tc(f"You don't see a {noun} here.", "error"))
             return
-        
+
         if npc.attitude == Attitude.HOSTILE:
             print(self.tc(f"The {npc.name} snarls at you.", "warn"))
             return
-        
-        # Display dialogue
-        if npc.dialogue:
-            print()
-            print(self.tc(npc.dialogue, "desc"))
-            print()
-        else:
-            print(self.tc(f"The {npc.name} has nothing to say.", "sys"))
+
+        # Handler manages dialogue, follower recruitment, healing, etc.
+        self.on_talk_to_npc(npc.name)
 
     # ── Save/Load System ───────────────────────────────────────────────────────
 
@@ -1285,7 +1383,7 @@ def run_adventure(character, adventure_path: str, savefile: str = "") -> int:
     Returns: 0=quit, 1=won, 2=died
     """
     world = World.load(adventure_path)
-    engine = Engine(world, character)
+    engine = Engine(world, character, adventure_path=adventure_path)
     
     # Intro
     print()
@@ -1350,7 +1448,7 @@ def run_adventure(character, adventure_path: str, savefile: str = "") -> int:
             # Sync proficiencies AND HP back to character
             character.spell_proficiencies = engine.player.spell_proficiencies.copy()
             character.weapon_proficiencies = engine.player.weapon_proficiencies.copy()
-            character.hp = engine.player.hp  # ✅ SYNC HP (was 0 on death)
+            character.hp = max(0, engine.player.hp)  # clamp overkill damage to 0
             character.gold = engine.player.gold
             character.xp = engine.player.xp
             character.save()
@@ -1359,6 +1457,16 @@ def run_adventure(character, adventure_path: str, savefile: str = "") -> int:
             _save_carried_items(character, engine.world)
             
             return 2
+        elif result == 3:
+            # Escaped to tavern mid-adventure — sync state, no win/death processing
+            character.spell_proficiencies = engine.player.spell_proficiencies.copy()
+            character.weapon_proficiencies = engine.player.weapon_proficiencies.copy()
+            character.hp = engine.player.hp
+            character.gold = engine.player.gold
+            character.xp = engine.player.xp
+            character.save()
+            _save_carried_items(character, engine.world)
+            return 3
         elif result == 0:
             # Quit confirmed - ask to save
             response = input(engine.tc("Save progress? (y/n): ", "warn"))

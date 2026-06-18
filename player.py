@@ -102,6 +102,12 @@ class Player:
     level: int = 1
     xp_gained: int = 0   # XP earned this adventure session
 
+    # Quest and follower tracking
+    quest_flags: dict = field(default_factory=dict)
+    followers: list = field(default_factory=list)
+    alignment: str = "neutral"
+    combat_kills: int = 0
+
     # Combat tracking
     took_damage_this_fight: bool = False
 
@@ -136,6 +142,11 @@ class Player:
         if self.speed_active:
             base *= 2
         return base
+
+    @property
+    def agility_effective_bonus(self) -> int:
+        """Combat agility bonus, doubled while speed spell is active."""
+        return (self.agility_effective - 10) // 2
 
     @property
     def strength_bonus(self) -> int:
@@ -284,6 +295,8 @@ class Player:
     # ── Display ───────────────────────────────────────────────────────────────
 
     def health_bar(self) -> str:
+        if self.hp_max <= 0:
+            return "HP [░░░░░░░░░░░░░░░░░░░░] 0/0"
         pct = max(0, self.hp) / self.hp_max
         filled = int(pct * 20)
         bar = "█" * filled + "░" * (20 - filled)

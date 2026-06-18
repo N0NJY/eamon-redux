@@ -158,8 +158,6 @@ def _spell_price(spell_key: str, character) -> int:
             break
     else:
         base *= 16
-    if character.char_class == "Fighter":
-        base *= 2
     return base
 
 HORACE_CORE = [
@@ -232,7 +230,6 @@ def _add_to_inventory(character, template: dict) -> None:
     carried.append(_make_artifact(template, new_id))
     _save_carried(character, carried)
 
-# BUG 10 FIX: Removed dead 'if raw == "sell all": pass' block
 def _process_sell(raw: str, sellable: list, all_carried: list,
                   character, allowed_types: set) -> None:
     raw = raw.strip().lower()
@@ -270,7 +267,6 @@ def _process_sell(raw: str, sellable: list, all_carried: list,
         except ValueError:
             tprint(" Usage: S <number> or SELL ALL", "error"); return
 
-    # ✅ REMOVED: if raw == "sell all": pass
     sold    = [a for a in sellable if id(a) in ids_to_sell]
     total   = sum(sell_value(a) for a in sold)
     remaining = [a for a in all_carried if id(a) not in ids_to_sell]
@@ -355,18 +351,15 @@ def show_inventory(character) -> None:
 def show_spells(character) -> None:
     from character import SPELL_DEFS
     print()
-    if character.char_class != "Sorcerer":
-        tprint(" You do not know any spells.", "warn"); return
-    if not character.spells:
+    learned = {k: v for k, v in character.spell_proficiencies.items() if v is not None}
+    if not learned:
         tprint(" You have not learned any spells yet.", "warn"); return
     print(tc(" ┌─── Known Spells ──────────────────────────────────┐", "border"))
-    print(tc(f" │ Mana: {character.mana}/{character.mana_max}{' '*39}│", "sys"))
     print(tc(" ├───────────────────────────────────────────────────┤", "border"))
-    for key in character.spells:
+    for key, prof in learned.items():
         if key in SPELL_DEFS:
             sp = SPELL_DEFS[key]
-            affordable = "✦" if character.mana >= sp["cost"] else "✗"
-            print(tc(f" │ {affordable} {sp['name']:<12} ({sp['cost']} mana)  {sp['desc']:<20}│", "stat"))
+            print(tc(f" │  {sp['name']:<12} {prof:>3}%   {sp['desc']:<26}│", "stat"))
     print(tc(" └───────────────────────────────────────────────────┘", "border"))
     print()
 
@@ -449,12 +442,10 @@ def run_wizard_shop(character) -> None:
         print(tc(' Aldric says: "Knowledge has a price. So does everything else."', "npc"))
         print()
 
-        # Spells available to this character's class
-        fighter_only = character.char_class == "Fighter"
+        # All characters can learn any spell — show only unlearned ones
         available_spells = [
             (k, v) for k, v in SPELL_DEFS.items()
-            if k not in character.spells
-            and (not fighter_only or k in _SPELL_FIGHTER_OK)
+            if character.spell_proficiencies.get(k) is None
         ]
 
         print(tc(" ── Spells ────────────────────────────────────────", "border"))
@@ -482,8 +473,8 @@ def run_wizard_shop(character) -> None:
 
         print()
         print(tc(f" Gold: {character.gold}g  |  Level: {character.level}  |  XP: {character.xp}", "stat"))
-        if character.char_class == "Sorcerer":
-            print(tc(f" Known spells: {', '.join(character.spells) or 'none'}", "desc"))
+        learned = [k for k, v in character.spell_proficiencies.items() if v is not None]
+        print(tc(f" Known spells: {', '.join(learned) if learned else 'none'}", "desc"))
         print(tc(" B <n> — buy   S <n> / SELL ALL — sell magical items   DONE — leave", "desc"))
         print()
 
@@ -522,9 +513,9 @@ def run_wizard_shop(character) -> None:
                         tprint(f" Not enough gold. (Need {price}g, have {character.gold}g)", "error"); continue
                     if tinput(f" Learn {val['name']} for {price}g? (y/n): ").lower() == "y":
                         character.gold -= price
-                        character.spells.append(key)
+                        character.spell_proficiencies[key] = random.randint(25, 75)
                         character.save()
-                        tprint(f" You have learned {val['name']}!", "sys")
+                        tprint(f" You have learned {val['name']}! (starting proficiency: {character.spell_proficiencies[key]}%)", "sys")
                         print(tc(' Aldric says: "Use it wisely. Or don\'t. I don\'t care."', "npc"))
                 else:
                     item  = val
@@ -674,12 +665,16 @@ def _execute_tavern_command(cmd: str, noun: str, character, room) -> Optional[st
         show_tavern_help()
         return None
     
+    if cmd == "adventure":
+        return "BOARD"
+
     if cmd == "resume":
         menu_load_save(character)
         return None
-    
+
     if cmd == "quit":
-        return "QUIT"
+        character.save()
+        return "EXIT_GAME"
     
     # Should not reach here (parser already validated command)
     tprint(" You don't understand that. (Type HELP for commands)", "error")
@@ -698,8 +693,9 @@ def show_tavern_help() -> None:
         ("HORACE / SHOP",     "Trade with Horace (at the bar)"),
         ("ALDRIC / WIZARD",   "Visit Aldric (bar → east)"),
         ("TALK TO <name>",    "Speak to an NPC"),
+        ("ADVENTURE / A",     "Go to the adventure board"),
         ("RESUME / SAVES",    "Resume a saved adventure"),
-        ("QUIT / Q",          "Go to adventure board"),
+        ("QUIT / Q",          "Save and exit the game"),
         ("HELP / ?",          "This message"),
     ]
     for cmd, desc in cmds:
@@ -806,16 +802,16 @@ def menu_load_save(character) -> None:
                           adv_name=adventure,
                           is_beginner_adv=False)
 
-def run_tavern_exploration(character) -> bool:
-    """Walk the tavern until QUIT. Returns True to proceed to adventure board."""
+def run_tavern_exploration(character) -> str:
+    """Walk the tavern. Returns 'BOARD' to go to adventure board, 'EXIT_GAME' to quit."""
     current_room = "entrance"
     show_room(TAVERN_ROOMS[current_room])
-    tprint(" Type HELP for commands, QUIT for the adventure board.", "sys")
+    tprint(" Type HELP for commands, ADVENTURE for the board, QUIT to exit.", "sys")
     while True:
         raw    = tinput(f" [{TAVERN_ROOMS[current_room].name}] > ")
         result = handle_tavern_command(raw, character, current_room)
-        if result == "QUIT":
-            return True
+        if result in ("BOARD", "EXIT_GAME"):
+            return result
         elif result is not None:
             current_room = result
             show_room(TAVERN_ROOMS[current_room])
@@ -937,9 +933,13 @@ def _handle_engine_return(character, result, adv_path: str,
     
     completed = (result == 1)  # 1 = won
     died      = (result == 2)  # 2 = died
-    crashed   = result not in (0, 1, 2)
-    
-    if crashed:
+    escaped   = (result == 3)  # 3 = exited via EXIT_TAVERN
+    crashed   = result not in (0, 1, 2, 3)
+
+    if escaped:
+        tprint("\n You return to the Saunter Inn.", "sys")
+        return
+    elif crashed:
         tprint("\n Something went wrong during that adventure.", "error")
     elif died:
         tprint("\n You have fallen. The tavern healer revives you for 2 gold per HP lost.", "warn")
@@ -970,11 +970,16 @@ def run_tavern() -> None:
             tprint(" Welcome to the Saunter Inn and Tavern.", "sys")
             first_entry = False
 
-        run_tavern_exploration(character)
+        action = run_tavern_exploration(character)
 
+        if action == "EXIT_GAME":
+            tprint("\n Until next time, adventurer.\n", "desc")
+            break
+
+        # action == "BOARD" — proceed to adventure board
         adventures = find_adventures()
         if not adventures:
-            tprint(" No adventures available.", "error"); break
+            tprint(" No adventures available.", "error"); continue
 
         adv = choose_adventure(character, adventures)
         if adv is None:
@@ -986,7 +991,10 @@ def run_tavern() -> None:
                               adv_name=adv["name"],
                               is_beginner_adv=adv["is_beginner"])
 
-        again = tinput("\n Return to the adventure board? (y/n): ").lower()
+        if result == 3:
+            continue  # Escaped — return to tavern exploration
+
+        again = tinput("\n Return to the Saunter Inn? (y/n): ").lower()
         if again != "y":
             tprint("\n Until next time, adventurer.", "desc"); break
 

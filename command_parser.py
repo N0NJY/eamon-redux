@@ -29,7 +29,7 @@ ENGINE_COMMANDS = {
     # Inventory
     "inventory": {"aliases": ["i", "inv", "in"], "min_chars": 1, "category": "inventory"},
     "get": {"aliases": ["ge"], "min_chars": 2, "category": "inventory"},
-    "getall": {"aliases": ["get all", "ga"], "min_chars": 2, "category": "inventory"},
+    "getall": {"aliases": ["ga"], "min_chars": 2, "category": "inventory"},
     "drop": {"aliases": ["dr"], "min_chars": 2, "category": "inventory"},
     "open": {"aliases": ["op"], "min_chars": 2, "category": "inventory"},
     "close": {"aliases": ["cl"], "min_chars": 2, "category": "inventory"},
@@ -113,7 +113,7 @@ def parse_command(raw_input: str, context: str = "engine") -> Tuple[Optional[str
     Examples:
         parse_command("N", "engine") → ("north", "exact", None)
         parse_command("nor", "engine") → ("north", "partial", None)
-        parse_command("l", "engine") → (None, "ambiguous", ["look", "load"])
+        parse_command("l", "engine") → ("look", "exact", None)
         parse_command("xyz", "engine") → (None, "not_found", None)
     """
     
