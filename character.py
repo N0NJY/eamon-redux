@@ -78,6 +78,7 @@ class Character:
     level: int = 1
     is_beginner: bool = True
     adventures_completed: list[str] = field(default_factory=list)
+    equipped: dict = field(default_factory=dict)  # slot → artifact_name
 
     # ── Computed ──────────────────────────────────────────────────────────────
 
@@ -161,6 +162,8 @@ class Character:
         ])
         
         for weapon_key, prof in self.weapon_proficiencies.items():
+            if weapon_key not in WEAPON_TYPES:
+                continue
             weapon_name = WEAPON_TYPES[weapon_key]["name"]
             lines.append(f"  │  {weapon_name:<12} : {prof:>3}%")
         
@@ -175,7 +178,19 @@ class Character:
         
         if self.adventures_completed:
             lines.append(f"  │  Completed    : {', '.join(self.adventures_completed)}")
-        
+
+        active = {s: n for s, n in self.equipped.items() if n}
+        lines.extend([
+            f"  ║                                                    ║",
+            f"  ║  EQUIPPED ITEMS                                    ║",
+            f"  ├────────────────────────────────────────────────────┤",
+        ])
+        if active:
+            for slot, name in active.items():
+                lines.append(f"  │  {slot.upper():<12} : {name}")
+        else:
+            lines.append(f"  │  (nothing equipped)")
+
         lines.extend([
             f"  ╚════════════════════════════════════════════════════╝",
             f"",
@@ -206,6 +221,7 @@ class Character:
             "level": self.level,
             "is_beginner": self.is_beginner,
             "adventures_completed": self.adventures_completed,
+            "equipped": self.equipped,
         }
 
     @staticmethod
@@ -229,6 +245,7 @@ class Character:
             level=d.get("level", 1),
             is_beginner=d.get("is_beginner", True),
             adventures_completed=d.get("adventures_completed", []),
+            equipped=d.get("equipped", {}),
         )
         if ch.hp <= 0:
             ch.hp = ch.hp_max

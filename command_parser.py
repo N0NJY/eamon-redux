@@ -76,6 +76,7 @@ TAVERN_COMMANDS = {
     "character": {"aliases": ["sheet", "ch", "cha"], "min_chars": 2, "category": "character"},
     "inventory": {"aliases": ["i", "inv", "in"], "min_chars": 1, "category": "character"},
     "spells": {"aliases": ["spell", "sp"], "min_chars": 2, "category": "character"},
+    "equipment": {"aliases": ["eq", "equ"], "min_chars": 2, "category": "character"},
     
     # Tavern Actions
     "look": {"aliases": ["l"], "min_chars": 1, "category": "explore"},

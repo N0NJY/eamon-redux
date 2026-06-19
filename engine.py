@@ -102,6 +102,21 @@ def xp_to_next_level(xp: int) -> int:
 
 # ── Item Persistence ──────────────────────────────────────────────────────────
 
+def _sync_player_to_character(character, player, world) -> None:
+    """Sync all runtime player state back to the persistent character."""
+    character.spell_proficiencies  = player.spell_proficiencies.copy()
+    character.weapon_proficiencies = player.weapon_proficiencies.copy()
+    character.hp   = player.hp
+    character.gold = player.gold
+    character.xp   = player.xp
+    character.equipped = {}
+    for slot, aid in player.equipped.items():
+        if aid is not None:
+            artifact = world.artifacts.get(aid)
+            if artifact:
+                character.equipped[slot] = artifact.name
+
+
 def _save_carried_items(character, world) -> None:
     """
     Save all carried items (not in rooms) back to character's items file.
@@ -280,7 +295,15 @@ class Engine:
         
         except (json.JSONDecodeError, IOError, KeyError):
             pass  # Silently skip if file is corrupted
- 
+
+        # Restore equipped slots from character's persisted equipment
+        for slot, item_name in character.equipped.items():
+            if item_name:
+                for artifact in self.world.artifacts.values():
+                    if artifact.name == item_name and artifact.room_id is None:
+                        self.player.equipped[slot] = artifact.id
+                        break
+
     # ── Room & World ──────────────────────────────────────────────────────────
 
     def look(self) -> None:
@@ -1423,17 +1446,10 @@ def run_adventure(character, adventure_path: str, savefile: str = "") -> int:
             print(engine.tc("★ " * 36, "win"))
             print()
             
-            # Sync proficiencies and stats back to character
-            character.spell_proficiencies = engine.player.spell_proficiencies.copy()
-            character.weapon_proficiencies = engine.player.weapon_proficiencies.copy()
-            character.hp = engine.player.hp  # ✅ SYNC HP (actual remaining HP)
-            character.gold = engine.player.gold
-            character.xp = engine.player.xp
+            # Sync all player state back to character
+            _sync_player_to_character(character, engine.player, engine.world)
             character.save()
-            
-            # ✅ NEW: Save carried items back to file
             _save_carried_items(character, engine.world)
-            
             return 1
         elif result == 2:
             # Died!
@@ -1444,26 +1460,14 @@ def run_adventure(character, adventure_path: str, savefile: str = "") -> int:
             print(engine.tc("║" + " " * 70 + "║", "die"))
             print(engine.tc("╚" + "═" * 70 + "╝", "die"))
             print()
-            
-            # Sync proficiencies AND HP back to character
-            character.spell_proficiencies = engine.player.spell_proficiencies.copy()
-            character.weapon_proficiencies = engine.player.weapon_proficiencies.copy()
-            character.hp = max(0, engine.player.hp)  # clamp overkill damage to 0
-            character.gold = engine.player.gold
-            character.xp = engine.player.xp
+            _sync_player_to_character(character, engine.player, engine.world)
+            character.hp = max(0, engine.player.hp)  # clamp overkill damage
             character.save()
-            
-            # ✅ NEW: Save carried items back to file
             _save_carried_items(character, engine.world)
-            
             return 2
         elif result == 3:
-            # Escaped to tavern mid-adventure — sync state, no win/death processing
-            character.spell_proficiencies = engine.player.spell_proficiencies.copy()
-            character.weapon_proficiencies = engine.player.weapon_proficiencies.copy()
-            character.hp = engine.player.hp
-            character.gold = engine.player.gold
-            character.xp = engine.player.xp
+            # Escaped to tavern mid-adventure
+            _sync_player_to_character(character, engine.player, engine.world)
             character.save()
             _save_carried_items(character, engine.world)
             return 3
@@ -1471,16 +1475,9 @@ def run_adventure(character, adventure_path: str, savefile: str = "") -> int:
             # Quit confirmed - ask to save
             response = input(engine.tc("Save progress? (y/n): ", "warn"))
             if response.lower() == 'y':
-                character.spell_proficiencies = engine.player.spell_proficiencies.copy()
-                character.weapon_proficiencies = engine.player.weapon_proficiencies.copy()
-                character.hp = engine.player.hp  # ✅ SYNC HP
-                character.gold = engine.player.gold
-                character.xp = engine.player.xp
+                _sync_player_to_character(character, engine.player, engine.world)
                 character.save()
-                
-                # ✅ NEW: Save carried items back to file
                 _save_carried_items(character, engine.world)
-                
                 print(engine.tc("Progress saved.", "sys"))
             return 0
         elif result == -1:    # Don't quit - continue playing

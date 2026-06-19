@@ -363,6 +363,41 @@ def show_spells(character) -> None:
     print(tc(" └───────────────────────────────────────────────────┘", "border"))
     print()
 
+def show_equipment(character) -> None:
+    """Display equipped items and allow unequipping in the tavern."""
+    print()
+    print(tc(" ┌─── Equipment ──────────────────────────────────────┐", "border"))
+    active = {s: n for s, n in character.equipped.items() if n}
+    if not active:
+        print(tc(" │  (nothing equipped)                                │", "stat"))
+        print(tc(" └───────────────────────────────────────────────────┘", "border"))
+        print()
+        return
+    slots = list(active.keys())
+    for i, slot in enumerate(slots, 1):
+        name = active[slot]
+        print(tc(f" │ {i:>2}. {slot.upper():<10} {name:<32}│", "stat"))
+    print(tc(f" │ {'─'*48}│", "border"))
+    print(tc(f" │  Enter # to unequip, or 0 to cancel               │", "desc"))
+    print(tc(" └───────────────────────────────────────────────────┘", "border"))
+    print()
+    choice = tinput(" > ").strip()
+    if not choice or choice == "0":
+        return
+    try:
+        idx = int(choice) - 1
+        if 0 <= idx < len(slots):
+            slot = slots[idx]
+            name = active[slot]
+            del character.equipped[slot]
+            character.save()
+            tprint(f" {name} unequipped.", "desc")
+        else:
+            tprint(" Invalid choice.", "error")
+    except ValueError:
+        tprint(" Invalid input.", "error")
+
+
 # ── Shops ─────────────────────────────────────────────────────────────────────
 
 def run_horace_shop(character) -> None:
@@ -653,7 +688,11 @@ def _execute_tavern_command(cmd: str, noun: str, character, room) -> Optional[st
     if cmd == "spells":
         show_spells(character)
         return None
-    
+
+    if cmd == "equipment":
+        show_equipment(character)
+        return None
+
     # ────────────────────────────────────────────────────────────────────────────
     # Game Control
     # ────────────────────────────────────────────────────────────────────────────
@@ -689,6 +728,7 @@ def show_tavern_help() -> None:
         ("CHARACTER / SHEET", "View character sheet"),
         ("INVENTORY / I",     "View carried items"),
         ("SPELLS",            "View known spells"),
+        ("EQUIPMENT / EQ",   "View and manage equipped items"),
         ("LOOK / L",          "Describe current room"),
         ("HORACE / SHOP",     "Trade with Horace (at the bar)"),
         ("ALDRIC / WIZARD",   "Visit Aldric (bar → east)"),
