@@ -145,9 +145,9 @@ def can_sell(artifact) -> bool:
 
 # ── Shop data ─────────────────────────────────────────────────────────────────
 
-# Spell pricing mirrors engine.py SPELL_CATALOG; imported names come from character.py SPELL_DEFS
-_SPELL_BASE_PRICE = {"heal": 50, "light": 25, "shield": 75, "fireball": 150}
-_SPELL_FIGHTER_OK = {"heal", "light"}   # Fighters pay double for these
+# Spell pricing: BUG-10 fix — use actual spell keys (blast, heal, speed, power)
+_SPELL_BASE_PRICE = {"blast": 100, "heal": 50, "speed": 200, "power": 25}
+_SPELL_FIGHTER_OK = {"heal"}  # Fighters may only learn Heal
 
 def _spell_price(spell_key: str, character) -> int:
     base  = _SPELL_BASE_PRICE.get(spell_key, 50)
@@ -477,10 +477,13 @@ def run_wizard_shop(character) -> None:
         print(tc(' Aldric says: "Knowledge has a price. So does everything else."', "npc"))
         print()
 
-        # All characters can learn any spell — show only unlearned ones
+        # Fighters may only learn Heal; Sorcerers may learn all spells
+        from character import FIGHTER_ALLOWED_SPELLS
+        is_fighter = character.character_class == "fighter"
         available_spells = [
             (k, v) for k, v in SPELL_DEFS.items()
             if character.spell_proficiencies.get(k) is None
+            and (not is_fighter or k in FIGHTER_ALLOWED_SPELLS)
         ]
 
         print(tc(" ── Spells ────────────────────────────────────────", "border"))

@@ -149,6 +149,7 @@ class Engine:
         # Create player runtime state from character
         self.player = Player(
             name=character.name,
+            character_class=character.character_class,
             room_id=world.start_room,
             hardiness=character.hardiness,
             agility=character.agility,
@@ -156,6 +157,7 @@ class Engine:
             intelligence=character.intelligence,
             strength=character.strength,
             hp=character.hp_max,
+            mana=character.mana_max,
             gold=character.gold,
             spell_proficiencies=character.spell_proficiencies.copy(),
             weapon_proficiencies=character.weapon_proficiencies.copy(),
@@ -174,6 +176,7 @@ class Engine:
         self.turn = 0
         self.in_combat = False
         self.enemy = None
+        self.running = True  # BUG-01 fix: must be set before any room-entry hooks
 
         # Tier 1: generic flag-reading handlers
         self.base_handlers = BaseAdventureHandlers(self)
@@ -393,11 +396,16 @@ class Engine:
                 self.cmd_inventory()
             elif cmd == "get":
                 parts = raw_input.split(maxsplit=1)
-                if len(parts) > 1 and parts[1].lower() == "all":
-                    self.cmd_get_all("")
+                if len(parts) > 1:
+                    rest = parts[1].strip()
+                    if rest.lower() == "all":
+                        self.cmd_get_all("")
+                    elif rest.lower().startswith("all "):
+                        self.cmd_get_all(rest[4:].strip())
+                    else:
+                        self.cmd_get(rest)
                 else:
-                    noun = parts[1] if len(parts) > 1 else ""
-                    self.cmd_get(noun)
+                    self.cmd_get("")
             elif cmd == "drop":
                 noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
                 self.cmd_drop(noun)
@@ -437,7 +445,12 @@ class Engine:
                 noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
                 self.cmd_unlock(noun)
             elif cmd == "talk":
-                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
+                # BUG-02 fix: strip "to" from "TALK TO <npc>"
+                parts = raw_input.strip().lower().split(maxsplit=2)
+                if len(parts) >= 3 and parts[1] == "to":
+                    noun = parts[2]
+                else:
+                    noun = parts[1] if len(parts) > 1 else ""
                 self.cmd_talk(noun)
             elif cmd == "spells":
                 self.cmd_spells()
@@ -489,11 +502,18 @@ class Engine:
         direction = direction.lower()
         if direction in DIR_ABBREV:
             direction = DIR_ABBREV[direction]
-        
+
         if direction not in DIRECTIONS:
             print(self.tc(f"Invalid direction: {direction}", "error"))
             return
-        
+
+        # BUG-09 fix: block movement while hostile monsters are present
+        hostiles = [m for m in self.world.monsters_in_room(self.player.room_id)
+                    if m.attitude == Attitude.HOSTILE]
+        if hostiles:
+            print(self.tc("You cannot move while hostile monsters are present! Fight or flee.", "warn"))
+            return
+
         room = self.world.get_room(self.player.room_id)
         if not room:
             print(self.tc("(No current room)", "error"))
@@ -598,10 +618,15 @@ class Engine:
     def cmd_get_all(self, noun: str) -> None:
         """Pick up all items (or all of a type)."""
         artifacts = self.world.artifacts_in_room(self.player.room_id)
-        
+
         if noun:
-            artifact_type = noun.lower()
-            artifacts = [a for a in artifacts if artifact_type in a.artifact_type.lower()]
+            # Match if user's noun appears in artifact type OR artifact type appears in noun
+            # (handles "potions" matching "potion", "weapons" matching "weapon", etc.)
+            noun_lower = noun.lower().rstrip("s")  # strip plural 's'
+            artifacts = [a for a in artifacts
+                         if noun_lower in a.artifact_type.lower()
+                         or a.artifact_type.lower() in noun_lower
+                         or noun_lower in a.name.lower()]
         
         if not artifacts:
             print(self.tc("Nothing to pick up.", "sys"))
@@ -876,98 +901,108 @@ class Engine:
             print(self.tc("You can't rest with monsters around!", "warn"))
             return
         
-        # Rest
+        # BUG-06 fix: restore 25% HP (not full)
         old_hp = self.player.hp
-        self.player.hp = self.player.hp_max
+        restore_hp = max(1, self.player.hp_max // 4)
+        self.player.hp = min(self.player.hp + restore_hp, self.player.hp_max)
         hp_restored = self.player.hp - old_hp
-        
-        print(self.tc(f"You rest. ({hp_restored} HP restored)", "heal"))
-        
-        # Fatigue recovery (larger than movement)
-        recovery = random.randint(10, 20)
+
+        # Restore 25% mana
+        old_mana = self.player.mana
+        restore_mana = max(1, self.player.mana_max // 4)
+        self.player.mana = min(self.player.mana + restore_mana, self.player.mana_max)
+        mana_restored = self.player.mana - old_mana
+
+        print(self.tc(f"You rest. ({hp_restored} HP restored, {mana_restored} mana recovered)", "heal"))
+
+        # Fatigue recovery
+        recovery = random.randint(5, 10)
         self.player.recover_all_spell_fatigue(recovery)
-        print(self.tc(f"Your mental fatigue eases. (recovery: {recovery}%)", "sys"))
+        print(self.tc(f"Your mental fatigue eases. (fatigue recovery: {recovery}%)", "sys"))
 
     def cmd_health(self) -> None:
         """Show health status."""
         print()
         print(self.tc(self.player.health_bar(), "sys"))
-        
+        print(self.tc(f"Mana: {self.player.mana}/{self.player.mana_max}", "spell"))
+
         # Equipped items
         weapon = self.player.equipped_weapon(self.world)
         armor_id = self.player.equipped.get("armor")
         shield_id = self.player.equipped.get("shield")
-        
+
         weapon_str = weapon.name if weapon else "(unarmed)"
         armor_str = self.world.artifacts.get(armor_id).name if armor_id else "(none)"
         shield_str = self.world.artifacts.get(shield_id).name if shield_id else "(none)"
-        
+
         print(self.tc(f"Weapon: {weapon_str}", "item"))
         print(self.tc(f"Armor: {armor_str}", "item"))
         print(self.tc(f"Shield: {shield_str}", "item"))
         print(self.tc(f"AC: {self.player.armor_class(self.world)}", "sys"))
         print(self.tc(f"Gold: {self.player.gold}g", "sys"))
-        
-        # Speed spell status
+
         if self.player.speed_active:
             print(self.tc(f"Speed: ACTIVE ({self.player.speed_rounds_remaining} rounds remaining)", "spell"))
-        
+
         print()
 
     # ── SPELL SYSTEM (NEW) ─────────────────────────────────────────────────────
 
     def _attempt_cast(self, spell_key: str, target_name: str = None) -> bool:
         """
-        Core spell casting logic with proficiency checks, fatigue, and skill growth.
+        Core spell casting logic with mana check, proficiency rolls, fatigue, and skill growth.
         Returns True if spell succeeded, False otherwise.
         """
         # Check if spell is learned
         if self.player.spell_proficiencies.get(spell_key) is None:
             print(self.tc(f"You don't know the {SPELL_DEFS[spell_key]['name']} spell.", "error"))
             return False
-        
-        # Check if spell is locked (1% critical failure)
+
+        # Check mana
+        mana_cost = SPELL_DEFS[spell_key].get("mana_cost", 2)
+        if self.player.mana < mana_cost:
+            print(self.tc(f"Not enough mana. ({mana_cost} needed, {self.player.mana} available.)", "error"))
+            return False
+
+        # Check if spell is locked (1% critical failure from previous overload)
         if self.player.is_spell_locked(spell_key):
             print(self.tc(f"The {SPELL_DEFS[spell_key]['name']} spell overloaded your mind! It's unusable.", "error"))
             return False
-        
+
+        # Deduct mana (spent on attempt regardless of success)
+        self.player.mana -= mana_cost
+
         # Get effective proficiency (with fatigue applied)
         effective_prof = self.player.get_effective_spell_proficiency(spell_key)
-        
-        # Roll for success (1D100)
-        success_roll = random.randint(1, 100)
-        
-        # Check for CRITICAL FAILURE (1% chance)
+
+        # Check for CRITICAL FAILURE (1% chance — overload)
         if random.randint(1, 100) == 1:
             print(self.tc(f"MENTAL OVERLOAD! Your mind fractures. {SPELL_DEFS[spell_key]['name']} is now locked!", "error"))
             self.player.lock_spell(spell_key)
             self.player.apply_spell_fatigue(spell_key)
             return False
-        
-        # Check for success
+
+        # Roll for success (1D100)
+        success_roll = random.randint(1, 100)
+
         if success_roll <= effective_prof:
             # SPELL SUCCEEDED
-            
-            # Check for CRITICAL SUCCESS (roll == 01)
             if success_roll == 1:
                 print(self.tc("CRITICAL SUCCESS!", "spell"))
-            
-            # Attempt skill growth (only on success)
+
+            # Skill growth on success (BUG-07 fix: +1 not +2)
             failure_chance = 100 - self.player.spell_proficiencies[spell_key]
-            growth_roll = random.randint(1, 100)
-            if growth_roll < failure_chance:
+            if random.randint(1, 100) < failure_chance:
                 old_prof = self.player.spell_proficiencies[spell_key]
-                self.player.spell_proficiencies[spell_key] += 2
+                self.player.spell_proficiencies[spell_key] += 1
                 new_prof = self.player.spell_proficiencies[spell_key]
                 print(self.tc(f"Your {SPELL_DEFS[spell_key]['name']} proficiency increased: {old_prof}% → {new_prof}%", "success"))
-            
-            # Apply fatigue AFTER successful cast
+
             self.player.apply_spell_fatigue(spell_key)
             return True
         else:
             # SPELL FAILED
             print(self.tc(f"Your {SPELL_DEFS[spell_key]['name']} fails to manifest.", "error"))
-            # Fatigue still applies even on failure
             self.player.apply_spell_fatigue(spell_key)
             return False
 
@@ -1006,11 +1041,11 @@ class Engine:
 
     def _cast_blast(self, target_name: str = None) -> None:
         """
-        Blast spell: 1D6 damage, bypasses armor completely.
+        Blast spell: 1D6 + Intelligence bonus damage, bypasses armor.
         """
         # Find target monster
         monsters = self.world.monsters_in_room(self.player.room_id)
-        
+
         if target_name:
             target = self.world.find_monster_by_name(target_name, monsters)
         else:
@@ -1018,13 +1053,13 @@ class Engine:
                 print(self.tc("No target here.", "error"))
                 return
             target = monsters[0]
-        
+
         if not target:
             print(self.tc("Target not found.", "error"))
             return
-        
-        # Roll damage (1D6, bypasses armor)
-        damage = random.randint(1, 6)
+
+        # Roll damage (1D6 + Intelligence bonus, bypasses armor)
+        damage = max(1, random.randint(1, 6) + self.player.intelligence_bonus)
         print(self.tc(f"A blast of pure energy hits {target.name} for {damage} damage!", "spell"))
         
         # Apply damage (no armor reduction)
@@ -1042,14 +1077,13 @@ class Engine:
 
     def _cast_heal(self, target_name: str = None) -> None:
         """
-        Heal spell: 1D10 HP restoration.
+        Heal spell: 1D10 + Intelligence bonus HP restoration.
         """
-        # Roll healing (1D10)
-        healing = random.randint(1, 10)
+        healing = max(1, random.randint(1, 10) + self.player.intelligence_bonus)
         old_hp = self.player.hp
         self.player.hp = min(self.player.hp + healing, self.player.hp_max)
         actual_healing = self.player.hp - old_hp
-        
+
         print(self.tc(f"You feel revitalized! ({actual_healing} HP restored)", "heal"))
 
     def _cast_speed(self, target_name: str = None) -> None:
@@ -1083,19 +1117,21 @@ class Engine:
         print(self.tc(random.choice(messages), "spell"))
 
     def cmd_spells(self) -> None:
-        """Show all learned spells and proficiencies."""
+        """Show all learned spells with mana costs and affordability."""
         print()
-        print(self.tc("SPELLS:", "title"))
+        print(self.tc(f"SPELLS  (mana: {self.player.mana}/{self.player.mana_max}):", "title"))
         print()
-        
+
         for spell_key, spell_info in SPELL_DEFS.items():
+            mana_cost = spell_info.get("mana_cost", 2)
             prof = self.player.spell_proficiencies.get(spell_key)
             if prof is None:
-                print(self.tc(f"  {spell_info['name']:<12} : Not learned ({spell_info['cost']} gold)", "sys"))
+                print(self.tc(f"  {spell_info['name']:<12} : Not learned  ({spell_info['cost']} gold)", "sys"))
             else:
                 locked = " [LOCKED]" if self.player.is_spell_locked(spell_key) else ""
-                print(self.tc(f"  {spell_info['name']:<12} : {prof:>3}%{locked}", "spell"))
-        
+                affordable = "✦" if self.player.mana >= mana_cost else "✗"
+                print(self.tc(f"  {spell_info['name']:<12} : {prof:>3}%  cost: {mana_cost} mana {affordable}{locked}", "spell"))
+
         print()
 
     # ── COMBAT SYSTEM (WITH WEAPON PROFICIENCIES) ───────────────────────────────
@@ -1191,14 +1227,17 @@ class Engine:
             return
         
         # ── HIT! Roll damage ──────────────────────────────────────────────────
-        
+
         if weapon:
-            damage_dice = weapon.damage_dice
-            damage_sides = weapon.damage_sides
-            base_damage = roll(damage_dice, damage_sides)
+            base_damage = roll(weapon.damage_dice, weapon.damage_sides)
         else:
-            # Unarmed
             base_damage = roll(self.player.damage_dice, self.player.damage_sides)
+
+        # Add Agility bonus and (for Fighters) Strength bonus to damage
+        base_damage += self.player.agility_effective_bonus
+        if self.player.character_class == "fighter":
+            base_damage += self.player.strength_bonus
+        base_damage = max(1, base_damage)
         
         # ── Check for CRITICAL HIT (5% chance on successful hit) ──────────────
         
@@ -1225,7 +1264,11 @@ class Engine:
                 # 3× damage
                 damage = damage * 3
                 print(self.tc(f"CRITICAL HIT! {damage} damage!", "hit"))
-                    
+            else:
+                # BUG-08 fix: Instant Kill (1%)
+                print(self.tc(f"INSTANT KILL! A perfect strike fells {monster.name}!", "hit"))
+                monster.hp = 0
+
         # ── Apply armor reduction ─────────────────────────────────────────────
         
         if not ignore_armor:
@@ -1264,10 +1307,9 @@ class Engine:
         
         if weapon_type:
             failure_chance = 100 - weapon_prof
-            growth_roll = random.randint(1, 100)
-            if growth_roll < failure_chance:
+            if random.randint(1, 100) < failure_chance:
                 old_prof = self.player.weapon_proficiencies.get(weapon_type, 0)
-                self.player.weapon_proficiencies[weapon_type] = old_prof + 2
+                self.player.weapon_proficiencies[weapon_type] = old_prof + 1
                 new_prof = self.player.weapon_proficiencies[weapon_type]
                 print(self.tc(f"Your {weapon_type} proficiency increased: {old_prof}% → {new_prof}%", "success"))
         
@@ -1351,11 +1393,81 @@ class Engine:
 
     def cmd_save(self, noun: str) -> None:
         """Save game to a slot."""
-        print(self.tc("Save feature coming soon.", "sys"))
+        adv_name = os.path.basename(self.adventure_path.rstrip("/")) if self.adventure_path else "unknown"
+
+        player_state = {
+            "name":                    self.player.name,
+            "room_id":                 self.player.room_id,
+            "hp":                      self.player.hp,
+            "mana":                    self.player.mana,
+            "gold":                    self.player.gold,
+            "xp":                      self.player.xp,
+            "level":                   self.player.level,
+            "spell_proficiencies":     self.player.spell_proficiencies.copy(),
+            "weapon_proficiencies":    self.player.weapon_proficiencies.copy(),
+            "equipped":                {k: v for k, v in self.player.equipped.items()},
+            "spell_fatigue_multiplier": self.player.spell_fatigue_multiplier.copy(),
+            "spell_locked":            self.player.spell_locked.copy(),
+            "speed_active":            self.player.speed_active,
+            "speed_rounds_remaining":  self.player.speed_rounds_remaining,
+            "quest_flags":             self.player.quest_flags.copy(),
+        }
+
+        world_state = {
+            "adv_path": self.adventure_path,
+            "monsters": {
+                str(mid): {"hp": m.hp, "is_alive": m.is_alive, "room_id": m.room_id}
+                for mid, m in self.world.monsters.items()
+            },
+            "artifacts": {
+                str(aid): {"room_id": a.room_id}
+                for aid, a in self.world.artifacts.items()
+            },
+        }
+
+        save_game_slotted(self.character.name, adv_name, player_state, world_state)
 
     def cmd_load(self, noun: str) -> None:
-        """Load a saved game."""
-        print(self.tc("Load feature coming soon.", "sys"))
+        """Load a saved game from a slot."""
+        adv_name = os.path.basename(self.adventure_path.rstrip("/")) if self.adventure_path else "unknown"
+
+        data = load_game_slotted(self.character.name, adv_name)
+        if not data:
+            return
+
+        ps = data.get("player", {})
+        ws = data.get("world", {})
+
+        self.player.room_id                 = ps.get("room_id", self.player.room_id)
+        self.player.hp                      = ps.get("hp", self.player.hp)
+        self.player.mana                    = ps.get("mana", self.player.mana)
+        self.player.gold                    = ps.get("gold", self.player.gold)
+        self.player.xp                      = ps.get("xp", self.player.xp)
+        self.player.level                   = ps.get("level", self.player.level)
+        self.player.spell_proficiencies     = ps.get("spell_proficiencies", self.player.spell_proficiencies)
+        self.player.weapon_proficiencies    = ps.get("weapon_proficiencies", self.player.weapon_proficiencies)
+        self.player.equipped                = ps.get("equipped", self.player.equipped)
+        self.player.spell_fatigue_multiplier = ps.get("spell_fatigue_multiplier", self.player.spell_fatigue_multiplier)
+        self.player.spell_locked            = ps.get("spell_locked", self.player.spell_locked)
+        self.player.speed_active            = ps.get("speed_active", False)
+        self.player.speed_rounds_remaining  = ps.get("speed_rounds_remaining", 0)
+        self.player.quest_flags             = ps.get("quest_flags", {})
+
+        for mid_str, mstate in ws.get("monsters", {}).items():
+            mid = int(mid_str)
+            if mid in self.world.monsters:
+                m = self.world.monsters[mid]
+                m.hp       = mstate.get("hp", m.hp)
+                m.is_alive = mstate.get("is_alive", m.is_alive)
+                m.room_id  = mstate.get("room_id", m.room_id)
+
+        for aid_str, astate in ws.get("artifacts", {}).items():
+            aid = int(aid_str)
+            if aid in self.world.artifacts:
+                self.world.artifacts[aid].room_id = astate.get("room_id")
+
+        print(self.tc("Game loaded.", "sys"))
+        self.look()
 
     # ── Help & Quit ────────────────────────────────────────────────────────────
 

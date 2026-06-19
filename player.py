@@ -28,6 +28,7 @@ def slot_for_type(artifact_type: str) -> Optional[str]:
 class Player:
     name: str = "Adventurer"
     room_id: int = 1
+    character_class: str = "fighter"  # "fighter" or "sorcerer"
 
     # Stats
     hardiness:    int = 10
@@ -38,6 +39,7 @@ class Player:
 
     # Runtime pools
     hp:   int = 0
+    mana: int = 0
     gold: int = 200
 
     # Spell proficiencies (None = not learned, int = proficiency %)
@@ -120,6 +122,8 @@ class Player:
     def __post_init__(self):
         if self.hp <= 0:
             self.hp = self.hp_max
+        if self.mana <= 0:
+            self.mana = self.mana_max
         # Ensure all slots exist
         for slot in EQUIP_SLOTS:
             if slot not in self.equipped:
@@ -130,6 +134,10 @@ class Player:
     @property
     def hp_max(self) -> int:
         return self.hardiness * 2
+
+    @property
+    def mana_max(self) -> int:
+        return self.intelligence * 2
 
     @property
     def agility_bonus(self) -> int:
@@ -151,6 +159,10 @@ class Player:
     @property
     def strength_bonus(self) -> int:
         return (self.strength - 10) // 2
+
+    @property
+    def intelligence_bonus(self) -> int:
+        return (self.intelligence - 10) // 2
 
     @property
     def is_alive(self) -> bool:

@@ -40,7 +40,7 @@ ENGINE_COMMANDS = {
     "equipment": {"aliases": ["equ"], "min_chars": 3, "category": "equipment"},
     
     # Combat
-    "attack": {"aliases": ["kill", "att", "a"], "min_chars": 1, "category": "combat"},
+    "attack": {"aliases": ["kill", "fight", "hit", "att", "a"], "min_chars": 1, "category": "combat"},
     "flee": {"aliases": ["fl"], "min_chars": 2, "category": "combat"},
     "cast": {"aliases": ["ca"], "min_chars": 2, "category": "combat"},
     
