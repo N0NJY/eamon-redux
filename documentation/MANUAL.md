@@ -437,10 +437,17 @@ Some rooms are dark. Without a light source, you cannot navigate safely. Find a 
 ### Looking Around
 
 ```
-LOOK    — describe the current room (also: L)
+LOOK      — describe the current room in full (also: L)
+VERBOSE   — always show the full description when entering a room (also: VER)
+BRIEF     — show a short description on re-entry after the first visit (also: BR)
 ```
 
-The room description shows exits, any monsters present, and any visible items. The first time you enter a room you see the full description; use LOOK again to re-read it.
+The room description shows exits, any monsters present, and any visible items. The first time you enter a room you always see the full description. After that, behaviour depends on the current mode:
+
+- **Verbose mode** (default) — full description every time you enter.
+- **Brief mode** — a shorter description is shown on re-entry. If the adventure designer did not write a brief description for a room, the full description is used as a fallback.
+
+`LOOK` always shows the full description regardless of mode. The mode resets to Verbose at the start of each adventure.
 
 ---
 
@@ -813,7 +820,9 @@ Your character is saved to disk, your bank balance is preserved, and the game ex
 ### Exploration
 | Command | Aliases | Notes |
 |---|---|---|
-| `LOOK` | `L` | Describe room |
+| `LOOK` | `L` | Describe room in full (ignores BRIEF mode) |
+| `VERBOSE` | `VER` | Full description on every room entry (default) |
+| `BRIEF` | `BR` | Short description on re-entry after first visit |
 | `EXAMINE <x>` | `X`, `EX` | Inspect item, monster, or feature |
 | `READ <item>` | `REA` | Read a readable item |
 | `OPEN <item>` | `OP` | Open a container |
@@ -968,7 +977,9 @@ python3 designer.py adventures/my_adventure
 
 ### Rooms
 
-Each room has a name, a description, and a set of exits. Exits can point to another room by ID, or to the special code `EXIT_TAVERN` to send the player back to the surface.
+Each room has a name, a **verbose description**, an optional **brief description**, and a set of exits. Exits can point to another room by ID, or to the special code `EXIT_TAVERN` to send the player back to the surface.
+
+The **verbose description** is shown on the first visit and whenever the player types `LOOK` or is in Verbose mode. The **brief description** is shown on re-entry when the player has enabled Brief mode — write it as a one- or two-sentence reminder of where the player is. Leaving it blank causes Brief mode to fall back to the verbose description.
 
 **Directions supported:** north, south, east, west, up, down, northeast, northwest, southeast, southwest.
 
