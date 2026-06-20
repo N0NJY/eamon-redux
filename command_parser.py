@@ -45,6 +45,7 @@ ENGINE_COMMANDS = {
     "cast": {"aliases": ["ca"], "min_chars": 2, "category": "combat"},
     
     # Status
+    "character": {"aliases": ["char", "ch", "status", "sheet", "v", "cha"], "min_chars": 2, "category": "status"},
     "health": {"aliases": ["hp"], "min_chars": 1, "category": "status"},
     "rest": {"aliases": ["res"], "min_chars": 2, "category": "status"},
     "spells": {"aliases": ["spell", "sp"], "min_chars": 2, "category": "status"},
@@ -73,7 +74,7 @@ TAVERN_COMMANDS = {
     "west": {"aliases": ["w"], "min_chars": 1, "category": "navigation"},
     
     # Character Management
-    "character": {"aliases": ["sheet", "ch", "cha"], "min_chars": 2, "category": "character"},
+    "character": {"aliases": ["sheet", "char", "ch", "cha", "v", "status"], "min_chars": 2, "category": "character"},
     "inventory": {"aliases": ["i", "inv", "in"], "min_chars": 1, "category": "character"},
     "spells": {"aliases": ["spell", "sp"], "min_chars": 2, "category": "character"},
     "equipment": {"aliases": ["eq", "equ"], "min_chars": 2, "category": "character"},

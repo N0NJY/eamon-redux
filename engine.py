@@ -493,8 +493,8 @@ class Engine:
                 self.cmd_spells()
             elif cmd == "help" or cmd == "?":
                 self.cmd_help()
-            elif cmd in ("status", "sheet", "character", "char"):
-                self.cmd_status()    
+            elif cmd == "character":
+                self.cmd_status()
             elif cmd == "save":
                 noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
                 self.cmd_save(noun)
@@ -602,13 +602,20 @@ class Engine:
                 break
 
     def cmd_status(self) -> None:
-        """Display character status/sheet."""
-        print()
-        print(self.tc(f" ─── {self.player.name} ───", "border"))
-        print(self.tc(f" HP: {self.player.hp}/{self.player.hp_max}  Gold: {self.player.gold}g  XP: {self.player.xp}", "stat"))
-        print(self.tc(f" Level: {self.player.level}  Hardiness: {self.character.hardiness}  Agility: {self.character.agility}", "stat"))
-        print(self.tc(f" Strength: {self.character.strength}  Intelligence: {self.character.intelligence}  Charisma: {self.character.charisma}", "stat"))
-        print()
+        """Display character sheet (same layout as tavern CHAR command)."""
+        # Sync live adventure state into character before display
+        self.character.hp   = self.player.hp
+        self.character.gold = self.player.gold
+        self.character.xp   = self.player.xp
+        self.character.level = self.player.level
+        # Sync equipped items by name so the sheet shows current gear
+        self.character.equipped = {}
+        for slot, aid in self.player.equipped.items():
+            if aid is not None:
+                a = self.world.artifacts.get(aid)
+                if a:
+                    self.character.equipped[slot] = a.name
+        print(f"\033[1;33m{self.character.stat_summary()}\033[0m")
 
     # ── Inventory & Equipment ─────────────────────────────────────────────────
 

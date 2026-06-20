@@ -338,13 +338,22 @@ def show_inventory(character) -> None:
         return
     total_weight = sum(a.weight for a in carried)
     cap = character.carry_capacity
+    equipped_names = set(character.equipped.values())
+    INNER = 46  # chars between ` │ ` and `│`
     print()
     print(tc(" ┌─── Your Inventory ────────────────────────────────┐", "border"))
     for i, a in enumerate(carried, 1):
         sv = f" ({sell_value(a)}g)" if can_sell(a) else ""
-        print(tc(f" │ {i:>2}. {a.name:<30} {a.weight:>3}g{sv:<7}│", "stat"))
-    print(tc(f" │ {'─'*48}│", "border"))
-    print(tc(f" │ Weight: {total_weight}/{cap} gronds{' '*(37 - len(str(total_weight)) - len(str(cap)))}│", "sys"))
+        eq = " [EQUIPPED]" if a.name in equipped_names else ""
+        right = f"{a.weight:>3}g{sv:<7}"          # 11 chars
+        left  = f"{i:>2}. {a.name}{eq}"
+        pad   = max(0, INNER - len(left) - len(right))
+        inner = (left + " " * pad + right)[:INNER]  # plain string, exact width
+        color = "title" if eq else "stat"
+        print(tc(" │ ", "border") + tc(inner, color) + tc("│", "border"))
+    print(tc(f" │ {'─'*INNER}│", "border"))
+    wline = f" Weight: {total_weight}/{cap} gronds"
+    print(tc(" │ ", "border") + tc(f"{wline:<{INNER}}", "sys") + tc("│", "border"))
     print(tc(" └───────────────────────────────────────────────────┘", "border"))
     print()
 
