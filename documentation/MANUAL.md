@@ -706,60 +706,122 @@ Adventures are plain folders containing four JSON files. Anyone can build one us
 python3 designer.py adventures/my_adventure
 ```
 
-### Getting Started
+The adventure directory is created automatically if it doesn't exist.
 
-1. Run the designer tool with a new adventure name
-2. Set adventure title, author, introduction text, and starting room
-3. Add rooms and link them with exits (including diagonals: northeast, northwest, etc.)
-4. Add artifacts (items) and place them in rooms
-5. Add monsters and NPCs
-6. Set a win condition
-7. Test play your adventure from start to finish
+### Recommended Workflow
 
-### Adventure Design Basics
-
-**Rooms** each have:
-- A unique ID number
-- A name and description
-- Exits leading to other rooms (north, south, east, west, up, down, northeast, northwest, southeast, southwest)
-- Optional locked exits (require a key artifact)
-- Optional flags for tracking state
-
-**Artifacts** are items: weapons, armor, food, keys, readable texts, containers, light sources, magical items, etc.
-
-**Monsters** are creatures and NPCs with hit points, armor class, attitude (hostile/neutral/friendly), and optional dialogue and healing services.
-
-**Win Condition** defines what the player must do:
-- Kill a specific monster
-- Kill all monsters
-- Reach a specific room (including `EXIT_TAVERN` to return home)
-- Carry a specific artifact to the exit
-- Complete a named quest (handler-dependent)
+1. **Settings** — set title, author, and introduction text (skip win condition for now)
+2. **Rooms** — add all rooms; connect them with exits
+3. **Artifacts** — add items and place them in rooms
+4. **Monsters & NPCs** — add enemies, healers, followers, and captives
+5. **Settings again** — pick the starting room and set the win condition (monsters must exist first for kill conditions)
+6. **Save**, then **Test play** to verify
 
 ### Designer Menu
 
 ```
-1. Adventure settings   — title, author, intro, starting room, win condition
-2. Rooms                — add, edit, delete; set exits and locked exits
-3. Artifacts            — add, edit, delete; place in rooms
-4. View map             — ASCII map of room connections
-5. Save
-6. Test play
+1. Adventure settings  — title, author, intro, starting room, win condition
+2. Rooms               — add, edit, exits, locked exits
+3. Artifacts           — items, weapons, armor, rings, ...
+4. Monsters & NPCs     — enemies, followers, captives
+5. View map            — ASCII grid of room connections
+6. Save
+7. Test play (launch engine)
 0. Quit
 ```
 
+### Rooms
+
+Each room has a name, a description, and a set of exits. Exits can point to another room by ID, or to the special code `EXIT_TAVERN` to send the player back to the surface.
+
+**Directions supported:** north, south, east, west, up, down, northeast, northwest, southeast, southwest.
+
+**Locked exits** require the player to be carrying a specific key artifact to pass through. Set them via **Rooms → 6. Edit locked exits** — pick the exit direction and the artifact ID of the key.
+
+The map viewer (option 5 from the main menu) renders a live ASCII grid of all room connections to help you spot dead ends or missing links.
+
+### Artifacts
+
+All 13 artifact types are supported. Choose the type when adding an artifact and the designer prompts for the relevant fields:
+
+| Type | Player action | Key fields |
+|---|---|---|
+| `generic` | EXAMINE / USE | — |
+| `weapon` | EQUIP / ATTACK | damage dice, damage sides, weapon type |
+| `armor` | EQUIP | armor class bonus |
+| `shield` | EQUIP | armor class bonus |
+| `ring` | EQUIP | stat bonuses, ring label, cursed |
+| `cloak` | EQUIP | stat bonuses, ring label, cursed |
+| `container` | OPEN / CLOSE | starts open? |
+| `readable` | READ | text displayed |
+| `spellbook` | READ | text displayed; name after the spell it teaches |
+| `food` | EAT | HP restored |
+| `potion` | DRINK | HP restored |
+| `light` | LIGHT | illuminates dark rooms |
+| `key` | carried automatically | link to a locked exit via Rooms → Edit locked exits |
+
+**Weapon types** (affects proficiency system): sword, axe, club, spear, bow.
+
+**Sell value** is set per artifact. Use −1 to let the engine calculate a default from the type.
+
+#### Artifact Flags
+
+The designer prompts for these when adding or editing an artifact (via **Edit special flags**):
+
+| Flag | Effect |
+|---|---|
+| `adventure_only` | Item cannot be carried out of the adventure; auto-sold for gold on exit |
+| `is_tradeable` | Can be given to a specific NPC for a scripted trade |
+| `is_escape_vehicle` | USE on this item ends the adventure (boat, portal, etc.) |
+| `triggers_event` | Using the item fires a named event handler |
+
+**Rings and cloaks** also prompt for stat bonuses (per stat, positive or negative) and a label shown when the item is equipped. Setting `cursed: true` makes the item impossible to remove.
+
+### Monsters & NPCs
+
+Every monster has a name, description, attitude (hostile / neutral / friendly), HP, damage dice, armor class, XP value, dialogue (shown on TALK TO), and a death message.
+
+**Loot:** set a loot artifact ID to have the monster drop that item when killed.
+
+**Healing NPCs:** neutral and friendly NPCs can offer healing for gold — the designer prompts for HP per use and gold cost per HP.
+
+#### Follower Flags
+
+When adding or editing a monster, choose **Configure follower / captive flags** to make an NPC recruitable or captive. The designer prompts for every field:
+
+**Recruitable followers** (via TALK TO):
+
+| follower_type | Condition checked |
+|---|---|
+| `stat` | Player must have a minimum score in a chosen stat |
+| `chance` | Random roll, optionally boosted by a stat (e.g. Charisma) |
+| `trade` | Player must be carrying a specific item |
+| `combat` | Player must have reached a kill-count threshold |
+| `alignment` | Player must have a specific alignment |
+| `quest` | A named quest flag must be True |
+
+Additional fields: `recruit_cost` (gold to join), `follower_dialogue` (shown on success), `recruit_fail_dialogue` (shown on failure), `can_fight` (does the follower fight in combat?).
+
+**Captives** (freed with FREE command):
+
+Set `is_captive: true`. The designer also prompts for `guard_id` (the monster that must be killed first), `free_dialogue`, `free_fail_dialogue`, `free_xp_bonus`, and `can_fight`.
+
 ### Win Conditions
 
-The `win_condition` in `adventure.json` supports several types:
+Set the win condition from **Adventure Settings → Edit win condition**. The designer walks you through all the options and picks rooms, monsters, and artifacts by name from your existing data.
 
-| Type | Description |
+| Type | When it triggers |
 |---|---|
-| `reach_room` | Player reaches a specific room ID (use `"EXIT_TAVERN"` for the surface exit) |
-| `kill_monster` | A specific monster (by `monster_id`) must be dead |
-| `kill_all` | Every monster in the adventure must be dead |
-| `carry_artifact` | Player must be carrying a specific artifact (by `artifact_id`) |
-| `has_follower` | Player must have a specific NPC as a follower (by `monster_id`) |
-| `compound` | All conditions in an `all_of` list must be true simultaneously |
+| `reach_room` | Player enters a specific room (use `EXIT_TAVERN` for the surface exit) |
+| `kill_monster` | A specific monster is dead |
+| `kill_all` | Every monster in the adventure is dead |
+| `carry_artifact` | Player is carrying a specific artifact |
+| `has_follower` | A specific NPC is in the player's party |
+| `compound` | All conditions in an `all_of` list are simultaneously true |
+
+**Tip:** set the win condition last — kill and follower conditions require monsters to already exist in the designer before you can pick them.
+
+Every win condition also has a **victory message** shown in the win banner.
 
 Example — kill the Pirate to win the Beginner's Cave:
 ```json
@@ -781,55 +843,6 @@ Example compound win condition — reach the exit carrying the relic:
   "message": "You escaped with the relic!"
 }
 ```
-
-### Follower Flags (monsters.json)
-
-To make an NPC recruitable, add a `flags` object to their monster entry:
-
-```json
-"flags": {
-  "is_follower": true,
-  "follower_type": "stat",
-  "required_stat": "strength",
-  "required_stat_value": 12,
-  "recruit_cost": 0,
-  "follower_dialogue": "I'll fight by your side!",
-  "recruit_fail_dialogue": "You're not strong enough.",
-  "can_fight": true
-}
-```
-
-| Flag | Values | Meaning |
-|---|---|---|
-| `follower_type` | `stat`, `chance`, `trade`, `combat`, `alignment`, `quest` | Recruitment condition type |
-| `required_stat` | stat name | For `stat` type: which stat to check |
-| `required_stat_value` | integer | Minimum stat value required |
-| `chance_base` | 0.0–1.0 | For `chance` type: base probability |
-| `stat_modifier` | stat name | Stat whose value modifies the chance roll |
-| `recruit_cost` | integer | Gold required to join |
-| `can_fight` | true/false | Whether follower participates in combat |
-| `is_captive` | true/false | Must be freed with FREE, not recruited with TALK TO |
-| `guard_id` | monster id | Monster that must be killed before captive can be freed |
-| `free_dialogue` | string | Said when successfully freed |
-| `free_fail_dialogue` | string | Said when guard is still alive |
-| `free_xp_bonus` | integer | XP awarded for freeing |
-
-### Ring / Stat Bonus Flags (artifacts.json)
-
-To give an artifact a stat bonus, add `stat_bonuses` and optionally a `ring_label`:
-
-```json
-{
-  "id": 6,
-  "artifact_type": "ring",
-  "stat_bonuses": { "intelligence": 2 },
-  "flags": { "ring_label": "+2 Intelligence", "cursed": false }
-}
-```
-
-Setting `"cursed": true` makes the ring impossible to remove.
-
-Any equipment type can carry `stat_bonuses`, not just rings — a cursed gauntlet could penalise Agility, for example.
 
 ### Advanced: Custom Handlers
 
