@@ -480,6 +480,7 @@ def run_horace_shop(character) -> None:
     stock = HORACE_CORE + extras
 
     while True:
+        show_inventory(character)
         tprint("\n " + tc("─── Horace's Outfitters ──────────────────────────", "border"), "desc")
         print(tc(' Horace says: "Buy, sell, or just browse. Gold talks."', "npc"))
         print()
@@ -504,7 +505,6 @@ def run_horace_shop(character) -> None:
             horace_types   = {"weapon","armor","shield","ring","cloak","generic","light"}
             eligible       = [a for a in carried if can_sell(a) and a.artifact_type in horace_types]
             sellable       = [a for a in eligible if a.name not in equipped_names]
-            show_inventory(character)
             if not eligible:
                 tprint(" Nothing here I'd buy. Try Aldric for magical items.", "warn")
                 continue
@@ -560,6 +560,7 @@ def run_wizard_shop(character) -> None:
     random.seed()
 
     while True:
+        show_inventory(character)
         tprint("\n " + tc("─── Aldric's Arcane Emporium ─────────────────────", "border"), "desc")
         print(tc(' Aldric says: "Knowledge has a price. So does everything else."', "npc"))
         print()
@@ -611,7 +612,6 @@ def run_wizard_shop(character) -> None:
             aldric_types   = {"potion","readable","spellbook"}
             eligible       = [a for a in carried if can_sell(a) and a.artifact_type in aldric_types]
             sellable       = [a for a in eligible if a.name not in equipped_names]
-            show_inventory(character)
             if not eligible:
                 tprint(" Nothing magical I'd buy. Try Horace for weapons.", "warn"); continue
             print(tc(" ── Items Aldric will buy ───────────────────────────", "border"))
