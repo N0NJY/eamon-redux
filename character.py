@@ -351,18 +351,23 @@ class Character:
             )
             ch.hp = ch.hp_max
 
+            # Inner content width = 47 chars (49 dashes minus 2 leading spaces inside box)
+            _W = 47
+            def _r(text, color="stat"):
+                return tc(f"  │  {text:<{_W}.{_W}}│", color)
+
             print()
-            print(tc(f"  ┌─────────────────────────────────────────────────┐", "border"))
-            print(tc(f"  │  {name}{'':<{49 - len(name)}}│", "title"))
-            print(tc(f"  │  Roll #{roll_number:<42}│", "desc"))
-            print(tc(f"  ├─────────────────────────────────────────────────┤", "border"))
-            print(tc(f"  │  Hardiness    : {hardiness:<3}  HP: {ch.hp_max:<18}│", "stat"))
-            print(tc(f"  │  Agility      : {agility:<3}  (combat bonus: {ch.agility_bonus:+d}){'':<10}│", "stat"))
-            print(tc(f"  │  Strength     : {strength:<3}  (damage bonus: {ch.strength_bonus:+d}){'':<11}│", "stat"))
-            print(tc(f"  │  Intelligence : {intelligence:<3}  (spell bonus: {ch.intelligence_bonus:+d}, mana: {ch.mana_max}){'':<3}│", "stat"))
-            print(tc(f"  │  Charisma     : {charisma:<3}  (reaction: {ch.charisma_bonus:+d}){'':<13}│", "stat"))
-            print(tc(f"  │  Gold         : 200 (starting capital){'':<20}│", "stat"))
-            print(tc(f"  └─────────────────────────────────────────────────┘", "border"))
+            print(tc("  ┌─────────────────────────────────────────────────┐", "border"))
+            print(_r(name, "title"))
+            print(_r(f"Roll #{roll_number}", "desc"))
+            print(tc("  ├─────────────────────────────────────────────────┤", "border"))
+            print(_r(f"Hardiness    : {hardiness:<3}  HP: {ch.hp_max}"))
+            print(_r(f"Agility      : {agility:<3}  (combat bonus: {ch.agility_bonus:+d})"))
+            print(_r(f"Strength     : {strength:<3}  (damage bonus: {ch.strength_bonus:+d})"))
+            print(_r(f"Intelligence : {intelligence:<3}  (spell bonus: {ch.intelligence_bonus:+d}, mana: {ch.mana_max})"))
+            print(_r(f"Charisma     : {charisma:<3}  (reaction: {ch.charisma_bonus:+d})"))
+            print(_r("Gold         : 200  (starting capital)"))
+            print(tc("  └─────────────────────────────────────────────────┘", "border"))
             print()
 
             answer = input(tc("  Keep these stats? (y/n): ", "prompt")).strip().lower()
