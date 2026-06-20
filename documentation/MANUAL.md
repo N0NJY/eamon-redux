@@ -522,7 +522,7 @@ FREE prisoner
 
 A captive usually has a **guard** that must be defeated first. Attempting to free them while the guard lives will tell you so. Once the guard is dead, `FREE` releases them and they join you as a follower.
 
-Freeing a captive often awards bonus XP and may be required to complete the adventure's win condition.
+Freeing a captive often awards bonus XP. In some adventures, bringing a rescued captive to safety unlocks an additional reward — for example, rescuing Cynthia in the Beginner's Cave and completing the adventure with her in your party earns 50 gold from her father, Duke Luxom, as a reward for her safe return.
 
 ### Follower Display
 
@@ -761,15 +761,24 @@ The `win_condition` in `adventure.json` supports several types:
 | `has_follower` | Player must have a specific NPC as a follower (by `monster_id`) |
 | `compound` | All conditions in an `all_of` list must be true simultaneously |
 
-Example compound win condition — escape with Cynthia:
+Example — kill the Pirate to win the Beginner's Cave:
+```json
+"win_condition": {
+  "type": "kill_monster",
+  "monster_id": 8,
+  "message": "The Pirate falls! The cave is cleared."
+}
+```
+
+Example compound win condition — reach the exit carrying the relic:
 ```json
 "win_condition": {
   "type": "compound",
   "all_of": [
-    { "type": "reach_room",   "room_id": "EXIT_TAVERN" },
-    { "type": "has_follower", "monster_id": 3 }
+    { "type": "reach_room",     "room_id": "EXIT_TAVERN" },
+    { "type": "carry_artifact", "artifact_id": 12 }
   ],
-  "message": "You rescued Cynthia and escaped!"
+  "message": "You escaped with the relic!"
 }
 ```
 
@@ -824,7 +833,9 @@ Any equipment type can carry `stat_bonuses`, not just rings — a cursed gauntle
 
 ### Advanced: Custom Handlers
 
-Custom logic via **handlers** enables NPC follower recruitment, quest systems, conditional encounters, dynamic room descriptions, and item transformations. Handlers respond to events like `on_enter_room`, `on_monster_defeated`, `on_give`, `on_say`, `on_use`, `on_light`, and `on_free`.
+Custom logic via **handlers** enables NPC follower recruitment, quest systems, conditional encounters, dynamic room descriptions, and item transformations. Handlers respond to events like `on_enter_room`, `on_monster_defeated`, `on_give`, `on_say`, `on_use`, `on_light`, `on_free`, and `on_adventure_win`.
+
+`on_adventure_win` fires just before the player's state is saved at the end of a successful adventure, making it the right place to award end-of-adventure bonuses (extra gold, XP, stat changes). The Beginner's Cave uses it to pay out Duke Luxom's reward if Cynthia is in the party.
 
 See the README.md "For Developers" section for details on the handler architecture.
 
