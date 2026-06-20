@@ -501,6 +501,8 @@ class Designer:
 
     def menu_rooms(self) -> None:
         while True:
+            missing = sum(1 for r in self.world.rooms.values() if not r.brief_description)
+            brief_label = f"  7. Fill missing brief descriptions  ({missing} remaining)" if missing else ""
             print(f"\n  ROOMS  ({len(self.world.rooms)} total)")
             print(f"  {hr('─', 40)}")
             print("  1. List rooms")
@@ -509,6 +511,8 @@ class Designer:
             print("  4. Delete room")
             print("  5. Edit exits")
             print("  6. Edit locked exits (require a key)")
+            if brief_label:
+                print(brief_label)
             print("  0. Back")
             choice = input("\n  > ").strip()
 
@@ -524,6 +528,8 @@ class Designer:
                 self.edit_exits()
             elif choice == "6":
                 self.edit_locked_exits()
+            elif choice == "7" and missing:
+                self.fill_brief_descriptions()
             elif choice == "0":
                 break
 
@@ -578,6 +584,26 @@ class Designer:
         r.brief_description = prompt("Brief description",    r.brief_description)
         r.is_dark           = prompt_bool("Is it dark?",     r.is_dark)
         print("  Room updated.")
+
+    def fill_brief_descriptions(self) -> None:
+        rooms = [r for r in sorted(self.world.rooms.values(), key=lambda r: r.id)
+                 if not r.brief_description]
+        if not rooms:
+            print("  All rooms already have brief descriptions.")
+            return
+        print(f"\n  FILL BRIEF DESCRIPTIONS  ({len(rooms)} remaining)")
+        print("  Enter a short description for each room. Press Enter to skip, S to save and stop.\n")
+        saved = 0
+        for r in rooms:
+            print(f"  #{r.id}  {r.name}")
+            print(f"  Verbose: {r.description[:80]}{'...' if len(r.description) > 80 else ''}")
+            val = input("  Brief  : ").strip()
+            if val.lower() == "s":
+                break
+            if val:
+                r.brief_description = val
+                saved += 1
+        print(f"  {saved} brief description(s) added.")
 
     def delete_room(self) -> None:
         rid = self._pick_room("Delete which room?")
