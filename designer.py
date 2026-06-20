@@ -1214,15 +1214,86 @@ class Designer:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+def _choose_or_create(adventures_dir: str = "adventures") -> str:
+    """Interactive startup: pick an existing adventure or create a new one."""
+    existing = []
+    if os.path.isdir(adventures_dir):
+        for entry in sorted(os.listdir(adventures_dir)):
+            adv_path = os.path.join(adventures_dir, entry)
+            meta_path = os.path.join(adv_path, "adventure.json")
+            if os.path.isdir(adv_path) and os.path.exists(meta_path):
+                try:
+                    with open(meta_path) as f:
+                        meta = json.load(f)
+                    title = meta.get("title", entry)
+                except Exception:
+                    title = entry
+                existing.append((title, adv_path))
+
+    print(f"\n  {hr('═')}")
+    print(f"  EAMON REDUX — ADVENTURE DESIGNER")
+    print(f"  {hr('═')}\n")
+
+    if existing:
+        print(f"  Existing adventures:")
+        print(f"  {hr()}")
+        for i, (title, path) in enumerate(existing, 1):
+            print(f"  {i:>3}. {title}  ({path})")
+        print()
+        print(f"    N. New adventure")
+        print(f"    0. Quit")
+    else:
+        print(f"  No adventures found in '{adventures_dir}'.")
+        print(f"    N. New adventure")
+        print(f"    0. Quit")
+
+    while True:
+        raw = input("\n  > ").strip().lower()
+        if raw == "0":
+            print("\n  Goodbye!\n")
+            sys.exit(0)
+        elif raw == "n":
+            break
+        else:
+            try:
+                n = int(raw)
+                if 1 <= n <= len(existing):
+                    return existing[n - 1][1]
+            except ValueError:
+                pass
+            print("  Invalid choice.")
+
+    # New adventure
+    print(f"\n  {hr()}")
+    print(f"  NEW ADVENTURE\n")
+    while True:
+        name = input("  Title: ").strip()
+        if not name:
+            print("  Title cannot be empty.")
+            continue
+        slug = "".join(
+            c if c.isalnum() or c == "_" else "_"
+            for c in name.lower().replace(" ", "_").replace("'", "")
+        ).strip("_")
+        path = os.path.join(adventures_dir, slug)
+        if os.path.exists(path):
+            print(f"  '{path}' already exists — choose a different title or select it from the list.")
+            continue
+        print(f"  Directory: {path}")
+        confirm = input("  OK? [Y/n]: ").strip().lower()
+        if not confirm or confirm.startswith("y"):
+            return path
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Eamon Redux — Adventure Designer")
-    parser.add_argument("adventure", nargs="?", default="adventures/sample",
-                        help="Path to adventure directory (created if new)")
+    parser.add_argument("adventure", nargs="?", default=None,
+                        help="Path to adventure directory (optional; shows chooser if omitted)")
     args = parser.parse_args()
 
-    designer = Designer(args.adventure)
-    designer.run()
+    path = args.adventure if args.adventure else _choose_or_create()
+    Designer(path).run()
 
 
 if __name__ == "__main__":
