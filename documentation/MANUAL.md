@@ -700,13 +700,19 @@ Fire damage from TrollsFire stacks with critical hits and spell damage. The flam
 
 ## Designing Adventures
 
-Adventures are plain folders containing four JSON files. Anyone can build one using the designer tool:
+Adventures are plain folders containing four JSON files. Launch the designer with no arguments and it shows a startup menu:
+
+```bash
+python3 designer.py
+```
+
+The menu lists all existing adventures by number. Choose one to open it, `N` to create a new adventure (the designer prompts for a title and creates the directory automatically), or `0` to quit.
+
+You can also pass a path directly to skip the chooser — useful for scripting or opening an adventure by name:
 
 ```bash
 python3 designer.py adventures/my_adventure
 ```
-
-The adventure directory is created automatically if it doesn't exist.
 
 ### Recommended Workflow
 
