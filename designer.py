@@ -70,17 +70,26 @@ def render_map(world: World) -> None:
     """
     Lay out rooms on a 2D grid by following exits from the start room,
     then draw them with ASCII box-drawing characters.
+    Cardinal exits (N/S/E/W) use ─ and │.
+    Diagonal exits (NE/NW/SE/SW) use ╱ and ╲.
+    Vertical exits (UP/DOWN) are listed as text below the map.
     """
     if not world.rooms:
         print("  (no rooms to display)")
         return
 
-    DELTAS = {
-        "north": (0,  1),
-        "south": (0, -1),
-        "east":  (1,  0),
-        "west":  (-1, 0),
+    LAYOUT_DELTAS = {
+        "north":     ( 0,  1),
+        "south":     ( 0, -1),
+        "east":      ( 1,  0),
+        "west":      (-1,  0),
+        "northeast": ( 1,  1),
+        "northwest": (-1,  1),
+        "southeast": ( 1, -1),
+        "southwest": (-1, -1),
     }
+
+    # ── BFS grid layout ───────────────────────────────────────────────────────
     pos: dict[int, tuple[int, int]] = {}
     start = world.start_room if world.start_room in world.rooms else next(iter(world.rooms))
     pos[start] = (0, 0)
@@ -94,8 +103,8 @@ def render_map(world: World) -> None:
         for direction, dest_id in room.exits.items():
             if dest_id not in world.rooms:
                 continue
-            if direction in DELTAS and dest_id not in visited:
-                dx, dy = DELTAS[direction]
+            if direction in LAYOUT_DELTAS and dest_id not in visited:
+                dx, dy = LAYOUT_DELTAS[direction]
                 candidate = (gx + dx, gy + dy)
                 while candidate in pos.values():
                     candidate = (candidate[0] + dx, candidate[1] + dy)
@@ -123,12 +132,16 @@ def render_map(world: World) -> None:
 
     CELL_W = 9
     CELL_H = 3
+    BOX_W  = CELL_W + 2   # 11
+    BOX_H  = CELL_H + 2   # 5
 
-    cols_per_step = CELL_W + 3
-    rows_per_step = CELL_H + 2
+    # Extra spacing (vs old +3/+2) opens a 2-char H gap and 1-char V gap
+    # so diagonal connectors have room between boxes.
+    cols_per_step = CELL_W + 4   # 13  (H gap = 2)
+    rows_per_step = CELL_H + 3   # 6   (V gap = 1)
 
-    grid_w = (max_gx + 1) * cols_per_step + 2
-    grid_h = (max_gy + 1) * rows_per_step + 2
+    grid_w = (max_gx + 1) * cols_per_step + 4
+    grid_h = (max_gy + 1) * rows_per_step + 4
 
     canvas = [[" "] * grid_w for _ in range(grid_h)]
 
@@ -146,86 +159,96 @@ def render_map(world: World) -> None:
             put(x + i, y, ch)
 
     def draw_box(sx: int, sy: int, label: str, room_id: int, is_start: bool) -> None:
-        W = CELL_W + 2
-        H = CELL_H + 2
         tl = "╔" if is_start else "┌"
         tr = "╗" if is_start else "┐"
         bl = "╚" if is_start else "└"
         br = "╝" if is_start else "┘"
         hz = "═" if is_start else "─"
         vt = "║" if is_start else "│"
-
-        put(sx,       sy,       tl)
-        put(sx + W-1, sy,       tr)
-        put(sx,       sy + H-1, bl)
-        put(sx + W-1, sy + H-1, br)
-
-        for x in range(1, W-1):
-            put(sx + x, sy,       hz)
-            put(sx + x, sy + H-1, hz)
-        for y in range(1, H-1):
-            put(sx,       sy + y, vt)
-            put(sx + W-1, sy + y, vt)
-
-        inner_w = CELL_W
+        put(sx,          sy,          tl)
+        put(sx + BOX_W-1, sy,          tr)
+        put(sx,          sy + BOX_H-1, bl)
+        put(sx + BOX_W-1, sy + BOX_H-1, br)
+        for x in range(1, BOX_W-1):
+            put(sx + x, sy,          hz)
+            put(sx + x, sy + BOX_H-1, hz)
+        for y in range(1, BOX_H-1):
+            put(sx,          sy + y, vt)
+            put(sx + BOX_W-1, sy + y, vt)
         id_str = f"#{room_id}"
-        put_str(sx + 1, sy + 1, id_str[:inner_w].ljust(inner_w))
-        put_str(sx + 1, sy + 2, label[:inner_w].ljust(inner_w))
+        put_str(sx + 1, sy + 1, id_str[:CELL_W].ljust(CELL_W))
+        put_str(sx + 1, sy + 2, label[:CELL_W].ljust(CELL_W))
 
     for rid, (gx, gy) in pos.items():
         sx, sy = screen_xy(gx, gy)
-        room = world.rooms[rid]
-        draw_box(sx, sy, room.name, rid, rid == world.start_room)
+        draw_box(sx, sy, world.rooms[rid].name, rid, rid == world.start_room)
 
-    CONN_DELTAS = {
-        "north": (0,  1),
-        "south": (0, -1),
-        "east":  (1,  0),
-        "west":  (-1, 0),
-    }
+    # ── Draw connections ──────────────────────────────────────────────────────
     drawn_conns: set[frozenset] = set()
 
+    def diag_line(x1: int, y1: int, x2: int, y2: int, ch: str) -> None:
+        """Place ch along the straight line from (x1,y1) to (x2,y2)."""
+        dx, dy = x2 - x1, y2 - y1
+        steps = max(abs(dx), abs(dy))
+        if steps == 0:
+            put(x1, y1, ch)
+            return
+        for i in range(steps + 1):
+            put(x1 + round(i * dx / steps),
+                y1 + round(i * dy / steps), ch)
+
     for rid, (gx, gy) in pos.items():
         room = world.rooms[rid]
         sx, sy = screen_xy(gx, gy)
-        BOX_W = CELL_W + 2
-        BOX_H = CELL_H + 2
 
         for direction, dest_id in room.exits.items():
-            if direction not in CONN_DELTAS:
-                continue
             if dest_id not in pos:
                 continue
+            if direction not in LAYOUT_DELTAS:
+                continue
+
             key = frozenset([rid, dest_id])
             already = key in drawn_conns
             drawn_conns.add(key)
 
-            dx, dy = CONN_DELTAS[direction]
+            dest_sx, dest_sy = screen_xy(*pos[dest_id])
 
             if direction == "east":
-                cx = sx + BOX_W
                 cy = sy + BOX_H // 2
-                put(cx, cy, "─")
-                if not already:
-                    put(cx + 1, cy, "─")
+                put(sx + BOX_W,     cy, "─")
+                put(sx + BOX_W + 1, cy, "─")
             elif direction == "west":
-                cx = sx - 1
                 cy = sy + BOX_H // 2
-                put(cx, cy, "─")
-                if not already:
-                    put(cx - 1, cy, "─")
+                put(sx - 1, cy, "─")
+                put(sx - 2, cy, "─")
             elif direction == "north":
                 cx = sx + BOX_W // 2
-                cy = sy - 1
-                put(cx, cy, "│")
+                put(cx, sy - 1, "│")
                 if not already:
-                    put(cx, cy - 1, "│")
+                    put(cx, sy - 2, "│")
             elif direction == "south":
                 cx = sx + BOX_W // 2
-                cy = sy + BOX_H
-                put(cx, cy, "│")
+                put(cx, sy + BOX_H, "│")
                 if not already:
-                    put(cx, cy + 1, "│")
+                    put(cx, sy + BOX_H + 1, "│")
+            elif direction in ("northeast", "southwest") and not already:
+                # ╱  NE goes from source top-right → dest bottom-left
+                if direction == "northeast":
+                    x1, y1 = sx + BOX_W - 1, sy
+                    x2, y2 = dest_sx,         dest_sy + BOX_H - 1
+                else:
+                    x1, y1 = sx,              sy + BOX_H - 1
+                    x2, y2 = dest_sx + BOX_W - 1, dest_sy
+                diag_line(x1, y1, x2, y2, "╱")
+            elif direction in ("northwest", "southeast") and not already:
+                # ╲  NW goes from source top-left → dest bottom-right
+                if direction == "northwest":
+                    x1, y1 = sx,              sy
+                    x2, y2 = dest_sx + BOX_W - 1, dest_sy + BOX_H - 1
+                else:
+                    x1, y1 = sx + BOX_W - 1, sy + BOX_H - 1
+                    x2, y2 = dest_sx,         dest_sy
+                diag_line(x1, y1, x2, y2, "╲")
 
     print()
     for row in canvas:
@@ -234,9 +257,9 @@ def render_map(world: World) -> None:
             print("  " + line)
 
     print()
-    print(f"  ╔═ Start room   ┌─ Regular room")
+    print(f"  ╔═ Start room   ┌─ Regular room   ╱╲ Diagonal exit")
     if unreachable:
-        print(f"  Rooms without N/S/E/W connections shown at bottom.")
+        print(f"  Rooms not reachable by any mapped exit shown at bottom.")
 
     ud_lines = []
     for rid, room in world.rooms.items():
