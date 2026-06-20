@@ -22,15 +22,15 @@ from command_parser import parse_command
 # ── Colors ────────────────────────────────────────────────────────────────────
 
 _TAVERN_COLORS = {
-    "title"  : "\033[1;33m",
-    "border" : "\033[2;33m",
-    "stat"   : "\033[0;37m",
-    "sys"    : "\033[0;36m",
-    "error"  : "\033[0;31m",
-    "warn"   : "\033[0;33m",
-    "prompt" : "\033[1;37m",
-    "npc"    : "\033[0;35m",
-    "desc"   : "\033[2;37m",
+    "title"  : "\033[1;33m",   # bright yellow  — headers, banners
+    "border" : "\033[0;33m",   # yellow         — box borders, dividers
+    "stat"   : "\033[1;36m",   # bright cyan    — stats, item lists
+    "sys"    : "\033[0;36m",   # cyan           — weight, gold, system info
+    "error"  : "\033[1;31m",   # bright red     — errors
+    "warn"   : "\033[0;33m",   # yellow         — warnings, hints
+    "prompt" : "\033[1;37m",   # bright white   — input prompts
+    "npc"    : "\033[1;35m",   # bright magenta — NPC dialogue
+    "desc"   : "\033[0;32m",   # green          — room/area descriptions
     "reset"  : "\033[0m",
 }
 
@@ -328,8 +328,8 @@ def show_room(room: TavernRoom) -> None:
     print()
 
 def show_character_sheet(character) -> None:
-    """Display the character's complete stat sheet."""
-    print(character.stat_summary())
+    """Display the character's complete stat sheet in bright yellow."""
+    print(f"\033[1;33m{character.stat_summary()}\033[0m")
 
 def show_inventory(character) -> None:
     carried = _load_carried(character)
