@@ -137,73 +137,101 @@ class Character:
     # ── Display ───────────────────────────────────────────────────────────────
 
     def stat_summary(self) -> str:
-        """Return complete character sheet with ALL stats."""
+        """Return a clean, fully-bordered character sheet."""
+        W = 54  # inner width between ║ chars
+
+        def top():      return f"  ╔{'═'*W}╗"
+        def bot():      return f"  ╚{'═'*W}╝"
+        def sep():      return f"  ╠{'═'*W}╣"
+        def row(s=""):  return f"  ║  {s:<{W-2}}║"
+        def hdr(s):     return f"  ║  {s.upper():<{W-2}}║"
+
+        # ── Header ───────────────────────────────────────────────────────────
+        class_tag = f"[ {self.character_class.capitalize()} ]"
+        name_col  = W - 2 - len(class_tag) - 1
         lines = [
-            f"",
-            f"  ╔════════════════════════════════════════════════════╗",
-            f"  ║  {self.name:<50}║",
-            f"  ║  Class: {self.character_class.capitalize():<43}║",
-            f"  ╠════════════════════════════════════════════════════╣",
-            f"  ║  CORE STATS                                        ║",
-            f"  ├────────────────────────────────────────────────────┤",
-            f"  │  Hardiness    : {self.hardiness:<3}  HP: {self.hp}/{self.hp_max:<3}  Carry: {self.carry_capacity:<3} gronds",
-            f"  │  Agility      : {self.agility:<3}  (combat bonus: {self.agility_bonus:+d})",
-            f"  │  Strength     : {self.strength:<3}  (damage bonus: {self.strength_bonus:+d})",
-            f"  │  Intelligence : {self.intelligence:<3}  (spell bonus: {self.intelligence_bonus:+d}, mana: {self.mana_max})",
-            f"  │  Charisma     : {self.charisma:<3}  (reaction: {self.charisma_bonus:+d})",
-            f"  ║                                                    ║",
-            f"  ║  SPELL PROFICIENCIES                               ║",
-            f"  ├────────────────────────────────────────────────────┤",
+            "",
+            top(),
+            f"  ║  {self.name:<{name_col}}{class_tag} ║",
+            sep(),
         ]
-        
-        for spell_key, prof in self.spell_proficiencies.items():
-            spell_name = SPELL_DEFS[spell_key]["name"]
-            if prof is None:
-                lines.append(f"  │  {spell_name:<12} : Not learned")
-            else:
-                lines.append(f"  │  {spell_name:<12} : {prof:>3}%")
-        
-        lines.extend([
-            f"  ║                                                    ║",
-            f"  ║  WEAPON PROFICIENCIES                              ║",
-            f"  ├────────────────────────────────────────────────────┤",
-        ])
-        
-        for weapon_key, prof in self.weapon_proficiencies.items():
-            if weapon_key not in WEAPON_TYPES:
-                continue
-            weapon_name = WEAPON_TYPES[weapon_key]["name"]
-            lines.append(f"  │  {weapon_name:<12} : {prof:>3}%")
-        
-        lines.extend([
-            f"  ║                                                    ║",
-            f"  ║  PROGRESSION & STATUS                              ║",
-            f"  ├────────────────────────────────────────────────────┤",
-            f"  │  Gold         : {self.gold}",
-            f"  │  Level        : {self.level}  (XP: {self.xp})",
-            f"  │  Status       : {'Beginner' if self.is_beginner else 'Veteran'}",
-        ])
-        
+
+        # ── Core Stats ───────────────────────────────────────────────────────
+        lines.append(hdr("Core Stats"))
+        lines.append(sep())
+
+        def stat(label, val, right=""):
+            left = f"{label:<13}: {val:<3}"
+            return row(f"{left}   {right}" if right else left)
+
+        lines += [
+            stat("Hardiness",    self.hardiness,    f"HP:  {self.hp}/{self.hp_max}   Carry: {self.carry_capacity} gronds"),
+            stat("Agility",      self.agility,      f"Combat bonus: {self.agility_bonus:+d}"),
+            stat("Strength",     self.strength,     f"Damage bonus: {self.strength_bonus:+d}"),
+            stat("Intelligence", self.intelligence,  f"Mana: {self.mana_max}"),
+            stat("Charisma",     self.charisma,     f"Reaction:    {self.charisma_bonus:+d}"),
+        ]
+
+        # ── Weapon Skills ─────────────────────────────────────────────────────
+        lines.append(sep())
+        lines.append(hdr("Weapon Skills"))
+        lines.append(sep())
+
+        def fmt_wpn(name, prof):
+            return f"{name:<5}: {prof:>4}%"
+
+        weapons = [(WEAPON_TYPES[k]["name"], v)
+                   for k, v in self.weapon_proficiencies.items()
+                   if k in WEAPON_TYPES]
+        for i in range(0, len(weapons), 3):
+            group = weapons[i:i+3]
+            lines.append(row("   ".join(fmt_wpn(n, p) for n, p in group)))
+
+        # ── Spells ───────────────────────────────────────────────────────────
+        lines.append(sep())
+        lines.append(hdr("Spells"))
+        lines.append(sep())
+
+        def fmt_spell(name, prof):
+            val = f"{prof:>3}%" if prof is not None else " --"
+            return f"{name:<5}: {val}"
+
+        spells = [(SPELL_DEFS[k]["name"], v)
+                  for k, v in self.spell_proficiencies.items()]
+        for i in range(0, len(spells), 3):
+            group = spells[i:i+3]
+            lines.append(row("   ".join(fmt_spell(n, p) for n, p in group)))
+
+        # ── Progression ───────────────────────────────────────────────────────
+        lines.append(sep())
+        lines.append(hdr("Progression"))
+        lines.append(sep())
+        status = "Beginner" if self.is_beginner else "Veteran"
+        lines.append(row(f"Level: {self.level}   XP: {self.xp}   Gold: {self.gold}g   {status}"))
         if self.adventures_completed:
-            lines.append(f"  │  Completed    : {', '.join(self.adventures_completed)}")
+            lines.append(row(f"Completed: {', '.join(self.adventures_completed)}"))
+
+        # ── Equipped ─────────────────────────────────────────────────────────
+        lines.append(sep())
+        lines.append(hdr("Equipped"))
+        lines.append(sep())
 
         active = {s: n for s, n in self.equipped.items() if n}
-        lines.extend([
-            f"  ║                                                    ║",
-            f"  ║  EQUIPPED ITEMS                                    ║",
-            f"  ├────────────────────────────────────────────────────┤",
-        ])
         if active:
-            for slot, name in active.items():
-                lines.append(f"  │  {slot.upper():<12} : {name}")
+            items = list(active.items())
+            for i in range(0, len(items), 2):
+                s1, n1 = items[i]
+                left = f"{s1.capitalize():<8}: {n1}"
+                if i + 1 < len(items):
+                    s2, n2 = items[i + 1]
+                    right = f"{s2.capitalize():<8}: {n2}"
+                    lines.append(row(f"{left:<26}{right}"))
+                else:
+                    lines.append(row(left))
         else:
-            lines.append(f"  │  (nothing equipped)")
+            lines.append(row("(nothing equipped)"))
 
-        lines.extend([
-            f"  ╚════════════════════════════════════════════════════╝",
-            f"",
-        ])
-        
+        lines += [bot(), ""]
         return "\n".join(lines)
 
     # ── Persistence ───────────────────────────────────────────────────────────
