@@ -101,7 +101,9 @@ TAVERN_COMMANDS = {
     "inventory": {"aliases": ["i", "inv", "in"], "min_chars": 1, "category": "character"},
     "spells": {"aliases": ["spell", "sp"], "min_chars": 2, "category": "character"},
     "equipment": {"aliases": ["eq", "equ"], "min_chars": 2, "category": "character"},
-    
+    "equip":     {"aliases": ["wear", "wield", "ready", "wea"], "min_chars": 2, "category": "character"},
+    "unequip":   {"aliases": ["remove", "un", "doff"], "min_chars": 2, "category": "character"},
+
     # Tavern Actions
     "look": {"aliases": ["l"], "min_chars": 1, "category": "explore"},
     "talk": {"aliases": ["ta"], "min_chars": 2, "category": "explore"},

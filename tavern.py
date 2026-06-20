@@ -407,6 +407,70 @@ def show_equipment(character) -> None:
         tprint(" Invalid input.", "error")
 
 
+_EQUIP_SLOT = {"weapon": "weapon", "armor": "armor",
+               "shield": "shield", "ring":   "ring", "cloak": "cloak"}
+
+def cmd_equip_tavern(noun: str, character) -> None:
+    """Equip a carried item in the tavern (no combat context needed)."""
+    carried    = _load_carried(character)
+    equippable = [a for a in carried if a.artifact_type in _EQUIP_SLOT]
+    if not equippable:
+        tprint(" You have nothing that can be equipped.", "warn")
+        return
+
+    equipped_names = set(character.equipped.values())
+
+    target = None
+    if noun:
+        for a in equippable:
+            if noun.lower() in a.name.lower():
+                target = a
+                break
+        if not target:
+            tprint(f" You're not carrying anything called '{noun}'.", "error")
+            return
+    else:
+        print()
+        print(tc(" ─── Equippable Items ────────────────────────────────", "border"))
+        for i, a in enumerate(equippable, 1):
+            slot   = _EQUIP_SLOT[a.artifact_type]
+            eq_tag = " [EQUIPPED]" if a.name in equipped_names else ""
+            color  = "title" if eq_tag else "stat"
+            print(tc(f" {i:>3}. ", "border") +
+                  tc(f"{a.name:<28}", color) +
+                  tc(f"{slot:<8}", "desc") +
+                  tc(eq_tag, "title"))
+        print()
+        raw = tinput(" Equip #  (0 to cancel): ").strip()
+        if not raw or raw == "0":
+            return
+        try:
+            idx = int(raw) - 1
+            if 0 <= idx < len(equippable):
+                target = equippable[idx]
+            else:
+                tprint(" Invalid number.", "error"); return
+        except ValueError:
+            tprint(" Invalid input.", "error"); return
+
+    slot = _EQUIP_SLOT[target.artifact_type]
+
+    # Refuse to swap out a cursed item
+    current_name = character.equipped.get(slot)
+    if current_name:
+        current = next((a for a in carried if a.name == current_name), None)
+        if current and current.flags.get("cursed"):
+            tprint(f" The {current_name} is cursed — it cannot be removed!", "error")
+            return
+        msg = f" You remove the {current_name} and equip the {target.name}."
+    else:
+        msg = f" You equip the {target.name}."
+
+    character.equipped[slot] = target.name
+    character.save()
+    tprint(msg, "desc")
+
+
 # ── Shops ─────────────────────────────────────────────────────────────────────
 
 def run_horace_shop(character) -> None:
@@ -435,21 +499,35 @@ def run_horace_shop(character) -> None:
             break
 
         elif raw == "s" or raw.startswith("sell"):
-            carried  = _load_carried(character)
-            sellable = [a for a in carried
-                        if can_sell(a) and a.artifact_type in
-                        {"weapon","armor","shield","ring","cloak","generic","light"}]
-            if not sellable:
+            carried        = _load_carried(character)
+            equipped_names = set(character.equipped.values())
+            horace_types   = {"weapon","armor","shield","ring","cloak","generic","light"}
+            eligible       = [a for a in carried if can_sell(a) and a.artifact_type in horace_types]
+            sellable       = [a for a in eligible if a.name not in equipped_names]
+            show_inventory(character)
+            if not eligible:
                 tprint(" Nothing here I'd buy. Try Aldric for magical items.", "warn")
                 continue
-            print(tc("\n ── Your gear ──────────────────────────────────", "border"))
-            for i, a in enumerate(sellable, 1):
-                print(tc(f" {i:>3}. ", "border") +
-                      tc(f"{a.name:<30}", "title") +
-                      tc(f" {sell_value(a):>4}g", "sys"))
+            print(tc(" ── Items Horace will buy ───────────────────────────", "border"))
+            n = 0
+            for a in eligible:
+                is_eq = a.name in equipped_names
+                if is_eq:
+                    print(tc(f"      ", "border") +
+                          tc(f"{a.name:<30}", "title") +
+                          tc(f" {sell_value(a):>4}g", "sys") +
+                          tc(" [EQUIPPED — unequip first]", "warn"))
+                else:
+                    n += 1
+                    print(tc(f" {n:>3}. ", "border") +
+                          tc(f"{a.name:<30}", "title") +
+                          tc(f" {sell_value(a):>4}g", "sys"))
+            if not sellable:
+                tprint(" All sellable items are equipped. Use EQUIPMENT to unequip.", "warn")
+                continue
             sell_raw = tinput(" S <n> or SELL ALL: ").strip().lower()
             _process_sell(sell_raw, sellable, carried, character,
-                          {"weapon","armor","shield","ring","cloak","generic","light"})
+                          horace_types)
 
         elif raw.startswith("b "):
             try:
@@ -528,19 +606,34 @@ def run_wizard_shop(character) -> None:
             break
 
         elif raw == "s" or raw.startswith("sell"):
-            carried  = _load_carried(character)
-            sellable = [a for a in carried
-                        if can_sell(a) and a.artifact_type in {"potion","readable","spellbook"}]
-            if not sellable:
+            carried        = _load_carried(character)
+            equipped_names = set(character.equipped.values())
+            aldric_types   = {"potion","readable","spellbook"}
+            eligible       = [a for a in carried if can_sell(a) and a.artifact_type in aldric_types]
+            sellable       = [a for a in eligible if a.name not in equipped_names]
+            show_inventory(character)
+            if not eligible:
                 tprint(" Nothing magical I'd buy. Try Horace for weapons.", "warn"); continue
-            print(tc("\n ── Your magical items ─────────────────────────", "border"))
-            for i, a in enumerate(sellable, 1):
-                print(tc(f" {i:>3}. ", "border") +
-                      tc(f"{a.name:<30}", "title") +
-                      tc(f" {sell_value(a):>4}g", "sys"))
+            print(tc(" ── Items Aldric will buy ───────────────────────────", "border"))
+            n = 0
+            for a in eligible:
+                is_eq = a.name in equipped_names
+                if is_eq:
+                    print(tc(f"      ", "border") +
+                          tc(f"{a.name:<30}", "title") +
+                          tc(f" {sell_value(a):>4}g", "sys") +
+                          tc(" [EQUIPPED — unequip first]", "warn"))
+                else:
+                    n += 1
+                    print(tc(f" {n:>3}. ", "border") +
+                          tc(f"{a.name:<30}", "title") +
+                          tc(f" {sell_value(a):>4}g", "sys"))
+            if not sellable:
+                tprint(" All sellable items are equipped. Use EQUIPMENT to unequip.", "warn")
+                continue
             sell_raw = tinput(" S <n> or SELL ALL: ").strip().lower()
             _process_sell(sell_raw, sellable, carried, character,
-                          {"potion","readable","spellbook"})
+                          aldric_types)
 
         elif raw.startswith("b "):
             try:
@@ -591,13 +684,13 @@ def handle_tavern_command(raw: str, character, room_id: str) -> Optional[str]:
     cmd, status, suggestions = parse_command(raw, "tavern")
     
     # Extract noun (everything after the first word)
-    parts = raw.strip().lower().split(maxsplit=2)  # ✅ BUG 9 FIX: Changed maxsplit=1 to maxsplit=2
-    noun = parts[1] if len(parts) > 1 else ""
-    
+    parts = raw.strip().lower().split()
+    noun = " ".join(parts[1:]) if len(parts) > 1 else ""
+
     # Handle special "talk to" syntax
-    if len(parts) >= 3 and parts[0] == "talk" and parts[1] == "to":  # ✅ Now reachable!
+    if len(parts) >= 3 and parts[0] == "talk" and parts[1] == "to":
         cmd = "talk"
-        noun = parts[2]  # ✅ Fixed: use parts[2] directly instead of join
+        noun = " ".join(parts[2:])
     
     # ────────────────────────────────────────────────────────────────────────────
     # Handle parsing results
@@ -702,6 +795,14 @@ def _execute_tavern_command(cmd: str, noun: str, character, room) -> Optional[st
         show_equipment(character)
         return None
 
+    if cmd == "equip":
+        cmd_equip_tavern(noun, character)
+        return None
+
+    if cmd == "unequip":
+        show_equipment(character)   # show_equipment already prompts to unequip by number
+        return None
+
     # ────────────────────────────────────────────────────────────────────────────
     # Game Control
     # ────────────────────────────────────────────────────────────────────────────
@@ -737,7 +838,9 @@ def show_tavern_help() -> None:
         ("CHARACTER / SHEET", "View character sheet"),
         ("INVENTORY / I",     "View carried items"),
         ("SPELLS",            "View known spells"),
-        ("EQUIPMENT / EQ",   "View and manage equipped items"),
+        ("EQUIPMENT / EQ",    "View equipped items and unequip"),
+        ("EQUIP <item>",      "Equip a carried weapon, armor, or accessory"),
+        ("UNEQUIP",           "Unequip an item (same menu as EQUIPMENT)"),
         ("LOOK / L",          "Describe current room"),
         ("HORACE / SHOP",     "Trade with Horace (at the bar)"),
         ("ALDRIC / WIZARD",   "Visit Aldric (bar → east)"),
