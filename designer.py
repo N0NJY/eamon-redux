@@ -1253,7 +1253,27 @@ def _choose_or_create(adventures_dir: str = "adventures") -> str:
             print("\n  Goodbye!\n")
             sys.exit(0)
         elif raw == "n":
-            break
+            # New adventure sub-flow — blank title or 'back' returns to this menu
+            print(f"\n  {hr()}")
+            print(f"  NEW ADVENTURE  (blank title to go back)\n")
+            while True:
+                name = input("  Title: ").strip()
+                if not name:
+                    print()
+                    break   # back to chooser
+                slug = "".join(
+                    c if c.isalnum() or c == "_" else "_"
+                    for c in name.lower().replace(" ", "_").replace("'", "")
+                ).strip("_")
+                path = os.path.join(adventures_dir, slug)
+                if os.path.exists(path):
+                    print(f"  '{path}' already exists — choose a different title or select it from the list.")
+                    continue
+                print(f"  Directory: {path}")
+                confirm = input("  OK? [Y/n]: ").strip().lower()
+                if not confirm or confirm.startswith("y"):
+                    return path
+                # else loop and ask for a new title
         else:
             try:
                 n = int(raw)
@@ -1262,27 +1282,6 @@ def _choose_or_create(adventures_dir: str = "adventures") -> str:
             except ValueError:
                 pass
             print("  Invalid choice.")
-
-    # New adventure
-    print(f"\n  {hr()}")
-    print(f"  NEW ADVENTURE\n")
-    while True:
-        name = input("  Title: ").strip()
-        if not name:
-            print("  Title cannot be empty.")
-            continue
-        slug = "".join(
-            c if c.isalnum() or c == "_" else "_"
-            for c in name.lower().replace(" ", "_").replace("'", "")
-        ).strip("_")
-        path = os.path.join(adventures_dir, slug)
-        if os.path.exists(path):
-            print(f"  '{path}' already exists — choose a different title or select it from the list.")
-            continue
-        print(f"  Directory: {path}")
-        confirm = input("  OK? [Y/n]: ").strip().lower()
-        if not confirm or confirm.startswith("y"):
-            return path
 
 
 def main():
