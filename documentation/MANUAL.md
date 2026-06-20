@@ -27,6 +27,40 @@ Unlike the original, Eamon Redux runs in Python on any modern system, stores all
 - No external libraries needed
 - Works on Linux, macOS, and Windows
 
+### File Organization
+
+All game data lives in the project directory. Nothing is written outside it.
+
+```
+eamon-redux/
+├── tavern.py              # Start here — runs the Saunter Inn and Tavern
+├── engine.py              # Adventure game loop (do not run directly)
+├── designer.py            # Adventure designer tool
+├── *.py                   # Other engine modules
+├── README.md              # Quick-start and developer reference
+│
+├── documentation/
+│   ├── MANUAL.md          # This file
+│   └── README.md          # Developer documentation
+│
+├── adventures/            # One folder per adventure
+│   ├── beginners_cave/
+│   │   ├── adventure.json
+│   │   ├── rooms.json
+│   │   ├── artifacts.json
+│   │   ├── monsters.json
+│   │   └── handlers.py    # Optional custom event handlers
+│   └── <your_adventure>/  # Adventures you build with the designer go here
+│
+├── characters/            # Your character save files (one JSON per character)
+└── stored_games/          # Mid-adventure saves (one JSON per save slot)
+```
+
+**Where things get saved:**
+- Characters are saved to `characters/<name>.json` automatically when you finish an adventure or quit from the tavern.
+- Mid-adventure saves go to `stored_games/<name>_<adventure>_slot<n>.json` and can be resumed from the tavern.
+- Adventures you create with the designer are stored under `adventures/` and appear in the adventure board immediately.
+
 ### The Saunter Inn and Tavern
 
 When you start the game with `python3 tavern.py`, you arrive at the Saunter Inn and Tavern. This is your home base. From here you can create characters, manage your inventory, buy equipment and spells, and choose your next adventure.

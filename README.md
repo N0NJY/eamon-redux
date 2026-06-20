@@ -44,27 +44,48 @@ This implementation features a proficiency-based magic system, weapon skill grow
 All data is stored locally in the project directory. No internet connection required after initial setup.
 
 ```
-Eamon/
-├── tavern.py              # Entry point — Saunter Inn and Tavern, character hub
-├── engine.py              # Game loop, parser, commands, combat, spells
-├── player.py              # Runtime player state (HP, mana, equipment slots)
-├── world.py               # Data classes: Room, Artifact, Monster, World loader
-├── character.py           # Persistent character data (stats, class, spells, gold)
-├── designer.py            # CLI adventure designer tool
-├── command_parser.py      # Fuzzy command matching and parsing
-├── save_system.py         # Mid-adventure save/load system
-├── README.md              # This file
-├── MANUAL.md              # Player-facing in-game manual
+eamon-redux/
+├── tavern.py                    # Entry point — Saunter Inn and Tavern hub
+├── engine.py                    # Game loop, commands, combat, spells
+├── player.py                    # Runtime player state (HP, mana, equipment)
+├── world.py                     # Data classes: Room, Artifact, Monster, World
+├── character.py                 # Persistent character data (stats, gold, spells)
+├── designer.py                  # Interactive adventure designer tool
+├── command_parser.py            # Fuzzy command matching and parsing
+├── save_system.py               # Mid-adventure save/load system
+├── test_suite.py                # Automated test suite
+├── README.md                    # This file
+├── eamon_banner.png             # Title banner
+│
 ├── core/
-│   └── base_handlers.py   # Generic event handler system for adventures
-├── characters/            # One JSON file per character (auto-created)
-└── adventures/
-    └── beginner_cave/     # "The Beginner's Cave" — starting adventure
-        ├── adventure.json
-        ├── rooms.json
-        ├── artifacts.json
-        └── monsters.json
+│   ├── __init__.py
+│   └── base_handlers.py         # Data-driven event handler system
+│
+├── documentation/
+│   ├── MANUAL.md                # Player and designer manual
+│   └── README.md                # Developer reference
+│
+├── adventures/                  # One subdirectory per adventure
+│   ├── beginners_cave/
+│   │   ├── adventure.json       # Title, author, intro, win condition
+│   │   ├── rooms.json
+│   │   ├── artifacts.json
+│   │   ├── monsters.json
+│   │   └── handlers.py          # Optional: adventure-specific event handlers
+│   └── sample/                  # Additional bundled adventures follow same layout
+│
+├── characters/                  # Character save files (*.json gitignored; dir preserved)
+│   └── .gitkeep
+│
+├── stored_games/                # Mid-adventure saves (*.json gitignored; dir preserved)
+│   └── .gitkeep
+│
+├── old_files/                   # Archived development documents and old scripts
+├── original_adventures_json/    # Classic Eamon adventure data (reference only)
+└── eamon-source/                # Original Eamon Redux JS source (reference only)
 ```
+
+> **Note:** `backup.sh` and `push.sh` are local-only scripts excluded from the repository. `characters/` and `stored_games/` directories are created automatically on first run; their `.gitkeep` files ensure they exist after a fresh clone.
 
 ---
 
@@ -230,22 +251,29 @@ Spell prices scale with character level.
 ## Building an Adventure
 
 ```
+python3 designer.py
+```
+
+The designer shows a numbered list of existing adventures on startup. Choose one to open it, `N` to create a new one, or `0` to quit. You can also pass a path directly to skip the chooser:
+
+```
 python3 designer.py adventures/my_adventure
 ```
 
 ### Designer Menu
 
 ```
-1. Adventure settings   — title, author, intro, starting room, win condition
-2. Rooms                — add, edit, delete; set exits and locked exits
-3. Artifacts            — add, edit, delete; place in rooms; set flags
-4. View map             — ASCII map of room connections
-5. Save
-6. Test play
+1. Adventure settings  — title, author, intro, starting room, win condition
+2. Rooms               — add, edit, exits, locked exits
+3. Artifacts           — items, weapons, armor, rings, ...
+4. Monsters & NPCs     — enemies, followers, captives
+5. View map            — ASCII grid of room connections (all 8 compass directions)
+6. Save
+7. Test play (launch engine)
 0. Quit
 ```
 
-Monsters must be edited in `monsters.json` directly. Custom adventure logic (NPCs, followers, events) is implemented via the handler system (see "For Developers" section below).
+See `documentation/MANUAL.md` for a full walkthrough of the designer including artifact types, follower flags, win conditions, and custom handlers.
 
 ---
 
