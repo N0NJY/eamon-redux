@@ -149,7 +149,6 @@ class Engine:
         # Create player runtime state from character
         self.player = Player(
             name=character.name,
-            character_class=character.character_class,
             room_id=world.start_room,
             hardiness=character.hardiness,
             agility=character.agility,
@@ -1243,10 +1242,9 @@ class Engine:
         else:
             base_damage = roll(self.player.damage_dice, self.player.damage_sides)
 
-        # Add Agility bonus and (for Fighters) Strength bonus to damage
+        # Add Agility and Strength bonuses to damage
         base_damage += self.player.agility_effective_bonus
-        if self.player.character_class == "fighter":
-            base_damage += self.player.strength_bonus
+        base_damage += self.player.strength_bonus
         base_damage = max(1, base_damage)
         
         # ── Check for CRITICAL HIT (5% chance on successful hit) ──────────────

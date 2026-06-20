@@ -477,13 +477,10 @@ def run_wizard_shop(character) -> None:
         print(tc(' Aldric says: "Knowledge has a price. So does everything else."', "npc"))
         print()
 
-        # Fighters may only learn Heal; Sorcerers may learn all spells
-        from character import FIGHTER_ALLOWED_SPELLS
-        is_fighter = character.character_class == "fighter"
+        # All characters may learn any spell
         available_spells = [
             (k, v) for k, v in SPELL_DEFS.items()
             if character.spell_proficiencies.get(k) is None
-            and (not is_fighter or k in FIGHTER_ALLOWED_SPELLS)
         ]
 
         print(tc(" ── Spells ────────────────────────────────────────", "border"))

@@ -28,8 +28,6 @@ def slot_for_type(artifact_type: str) -> Optional[str]:
 class Player:
     name: str = "Adventurer"
     room_id: int = 1
-    character_class: str = "fighter"  # "fighter" or "sorcerer"
-
     # Stats
     hardiness:    int = 10
     agility:      int = 10

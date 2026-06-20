@@ -22,7 +22,6 @@ SPELL_DEFS = {
     "power":  {"name": "Power",  "cost": 100,  "mana_cost": 1, "desc": "Adventure-specific effect"},
 }
 
-FIGHTER_ALLOWED_SPELLS = {"heal"}
 
 # ── Weapon Types ──────────────────────────────────────────────────────────────
 
@@ -41,8 +40,6 @@ def roll3d6() -> int:
 @dataclass
 class Character:
     name: str
-    character_class: str = "fighter"  # "fighter" or "sorcerer"
-
     # ── Core stats ────────────────────────────────────────────────────────────
     hardiness:    int = 10
     agility:      int = 10
@@ -147,12 +144,10 @@ class Character:
         def hdr(s):     return f"  ║  {s.upper():<{W-2}}║"
 
         # ── Header ───────────────────────────────────────────────────────────
-        class_tag = f"[ {self.character_class.capitalize()} ]"
-        name_col  = W - 2 - len(class_tag) - 1
         lines = [
             "",
             top(),
-            f"  ║  {self.name:<{name_col}}{class_tag} ║",
+            f"  ║  {self.name:<{W-2}}║",
             sep(),
         ]
 
@@ -244,7 +239,6 @@ class Character:
     def to_dict(self) -> dict:
         return {
             "name": self.name,
-            "character_class": self.character_class,
             "hardiness": self.hardiness,
             "agility": self.agility,
             "charisma": self.charisma,
@@ -265,7 +259,6 @@ class Character:
     def from_dict(d: dict) -> "Character":
         ch = Character(
             name=d["name"],
-            character_class=d.get("character_class", "fighter"),
             hardiness=d.get("hardiness", 10),
             agility=d.get("agility", 10),
             charisma=d.get("charisma", 10),
@@ -334,31 +327,6 @@ class Character:
             print(tc("  Load them instead, or choose a different name.", "warn"))
             return existing
 
-        # ── Class selection ───────────────────────────────────────────────────
-        print()
-        print(tc("  ┌─────────────────────────────────────────────────┐", "border"))
-        print(tc("  │  Choose your class:                             │", "title"))
-        print(tc("  ├─────────────────────────────────────────────────┤", "border"))
-        print(tc("  │  F) Fighter  — strength, weapons, armor         │", "stat"))
-        print(tc("  │               Strength bonus to melee damage    │", "desc"))
-        print(tc("  │               Cannot learn most spells          │", "desc"))
-        print(tc("  │                                                 │", "border"))
-        print(tc("  │  S) Sorcerer — magic, intelligence, spells      │", "stat"))
-        print(tc("  │               Intelligence bonus to spells      │", "desc"))
-        print(tc("  │               Mana pool for casting             │", "desc"))
-        print(tc("  │               Starts with one chosen spell      │", "desc"))
-        print(tc("  └─────────────────────────────────────────────────┘", "border"))
-        print()
-        while True:
-            cls_input = input(tc("  Class (F/S): ", "prompt")).strip().lower()
-            if cls_input in ("f", "fighter"):
-                character_class = "fighter"
-                break
-            elif cls_input in ("s", "sorcerer"):
-                character_class = "sorcerer"
-                break
-            print(tc("  Enter F for Fighter or S for Sorcerer.", "warn"))
-
         # ── Stat rolling loop ─────────────────────────────────────────────────
         roll_number = 1
         while True:
@@ -370,7 +338,6 @@ class Character:
 
             ch = Character(
                 name=name,
-                character_class=character_class,
                 hardiness=hardiness, agility=agility, charisma=charisma,
                 intelligence=intelligence, strength=strength,
             )
@@ -379,17 +346,13 @@ class Character:
             print()
             print(tc(f"  ┌─────────────────────────────────────────────────┐", "border"))
             print(tc(f"  │  {name}{'':<{49 - len(name)}}│", "title"))
-            print(tc(f"  │  Class: {character_class.capitalize():<41}│", "stat"))
             print(tc(f"  │  Roll #{roll_number:<42}│", "desc"))
             print(tc(f"  ├─────────────────────────────────────────────────┤", "border"))
             print(tc(f"  │  Hardiness    : {hardiness:<3}  HP: {ch.hp_max:<18}│", "stat"))
             print(tc(f"  │  Agility      : {agility:<3}  (combat bonus: {ch.agility_bonus:+d}){'':<10}│", "stat"))
             print(tc(f"  │  Strength     : {strength:<3}  (damage bonus: {ch.strength_bonus:+d}){'':<11}│", "stat"))
-            print(tc(f"  │  Intelligence : {intelligence:<3}  (spell bonus: {ch.intelligence_bonus:+d}){'':<11}│", "stat"))
+            print(tc(f"  │  Intelligence : {intelligence:<3}  (spell bonus: {ch.intelligence_bonus:+d}, mana: {ch.mana_max}){'':<3}│", "stat"))
             print(tc(f"  │  Charisma     : {charisma:<3}  (reaction: {ch.charisma_bonus:+d}){'':<13}│", "stat"))
-            if character_class == "sorcerer":
-                mana = ch.mana_max
-                print(tc(f"  │  Mana         : {mana:<3}  (Intelligence × 2){'':<14}│", "stat"))
             print(tc(f"  │  Gold         : 200 (starting capital){'':<20}│", "stat"))
             print(tc(f"  └─────────────────────────────────────────────────┘", "border"))
             print()
@@ -400,31 +363,7 @@ class Character:
             roll_number += 1
             print(tc("  Re-rolling...", "sys"))
 
-        # ── Sorcerer starting spell ───────────────────────────────────────────
-        if character_class == "sorcerer":
-            print()
-            print(tc("  Choose your starting spell:", "title"))
-            spell_options = list(SPELL_DEFS.items())
-            for i, (key, sp) in enumerate(spell_options, 1):
-                print(tc(f"  {i}) {sp['name']:<12} — {sp['desc']}", "stat"))
-            print()
-            while True:
-                try:
-                    choice = int(input(tc("  Starting spell (1-4): ", "prompt")).strip())
-                    if 1 <= choice <= len(spell_options):
-                        spell_key = spell_options[choice - 1][0]
-                        starting_prof = random.randint(25, 75)
-                        ch.spell_proficiencies[spell_key] = starting_prof
-                        print(tc(f"  You begin with {SPELL_DEFS[spell_key]['name']} at {starting_prof}% proficiency.", "sys"))
-                        break
-                except ValueError:
-                    pass
-                print(tc(f"  Enter a number from 1 to {len(spell_options)}.", "warn"))
-
         ch.save()
         print(tc(f"\n  Character '{name}' saved. Starting with 200 gold.", "sys"))
-        if character_class == "sorcerer":
-            print(tc(f"  Visit Aldric in the tavern to learn more spells!", "sys"))
-        else:
-            print(tc(f"  Visit Horace in the tavern to buy weapons and armor!", "sys"))
+        print(tc(f"  Visit the tavern to buy weapons, armor, and spells!", "sys"))
         return ch
