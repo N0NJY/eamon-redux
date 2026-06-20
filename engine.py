@@ -754,25 +754,35 @@ class Engine:
         print(self.tc(f"You don't see a {noun} here.", "error"))
 
     def cmd_read(self, noun: str) -> None:
-        """Read a readable item."""
+        """Read a readable item — works on items in the room or carried."""
         if not noun:
             print(self.tc("Read what?", "error"))
             return
-        
-        artifacts = self.world.artifacts_carried()
-        artifact = self.world.find_artifact_by_name(noun, artifacts)
-        
-        if not artifact:
-            print(self.tc(f"You're not carrying a {noun}.", "error"))
+
+        # Check room artifacts first, then carried
+        candidates = (
+            self.world.artifacts_in_room(self.player.room_id)
+            + self.world.artifacts_carried()
+        )
+        artifact = self.world.find_artifact_by_name(noun, candidates)
+
+        if artifact:
+            if artifact.artifact_type != ArtifactType.READABLE:
+                print(self.tc(f"There's nothing to read on the {artifact.name}.", "error"))
+                return
+            print()
+            print(self.tc(artifact.read_text or "(the page is blank)", "desc"))
+            print()
             return
-        
-        if artifact.artifact_type != ArtifactType.READABLE:
-            print(self.tc(f"You can't read the {artifact.name}.", "error"))
+
+        # Check monsters — can't read a living creature
+        monsters = self.world.monsters_in_room(self.player.room_id)
+        monster = self.world.find_monster_by_name(noun, monsters)
+        if monster:
+            print(self.tc(f"You can't read a {monster.name}.", "error"))
             return
-        
-        print()
-        print(self.tc(artifact.read_text or "(blank page)", "desc"))
-        print()
+
+        print(self.tc(f"You don't see a {noun} here.", "error"))
 
     # ── Consumption ───────────────────────────────────────────────────────────
 
