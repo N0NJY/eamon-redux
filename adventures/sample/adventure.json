@@ -1,9 +1,8 @@
 {
   "title": "The Ruins of Thornwall Keep",
+  "intro": "You stand at the edge of a mossy clearing. The crumbling towers of Thornwall Keep loom before you, silent against a grey sky. Rumors say the old keep hides a treasure \u2014 and something else. Something old. You adjust your pack and push forward.",
   "author": "A. Designer",
-  "intro": "You stand at the edge of a mossy clearing. The crumbling towers of Thornwall Keep loom before you, silent against a grey sky. Rumors say the old keep hides a treasure — and something else. Something old. You adjust your pack and push forward.",
   "start_room": 1,
-  "is_beginner_adventure": true,
   "win_condition": {
     "type": "kill_monster",
     "monster_id": 5,

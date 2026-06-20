@@ -13,11 +13,15 @@
     "damage_dice": 1,
     "damage_sides": 6,
     "armor_class": 0,
+    "heal_amount": 0,
+    "value": -1,
+    "is_quest_item": false,
     "synonyms": [
       "sword",
       "blade",
       "iron sword"
-    ]
+    ],
+    "flags": {}
   },
   {
     "id": 2,
@@ -36,11 +40,15 @@
     "damage_dice": 1,
     "damage_sides": 4,
     "armor_class": 0,
+    "heal_amount": 0,
+    "value": -1,
+    "is_quest_item": false,
     "synonyms": [
       "chest",
       "box",
       "iron box"
-    ]
+    ],
+    "flags": {}
   },
   {
     "id": 3,
@@ -56,12 +64,16 @@
     "damage_dice": 1,
     "damage_sides": 4,
     "armor_class": 0,
+    "heal_amount": 0,
+    "value": -1,
+    "is_quest_item": false,
     "synonyms": [
       "pouch",
       "coins",
       "gold",
       "gold coins"
-    ]
+    ],
+    "flags": {}
   },
   {
     "id": 4,
@@ -77,12 +89,16 @@
     "damage_dice": 1,
     "damage_sides": 4,
     "armor_class": 0,
+    "heal_amount": 0,
+    "value": -1,
+    "is_quest_item": false,
     "synonyms": [
       "letter",
       "note",
       "vellum",
       "parchment"
-    ]
+    ],
+    "flags": {}
   },
   {
     "id": 5,
@@ -100,11 +116,15 @@
     "damage_dice": 1,
     "damage_sides": 4,
     "armor_class": 0,
+    "heal_amount": 0,
+    "value": -1,
+    "is_quest_item": false,
     "synonyms": [
       "satchel",
       "bag",
       "pack"
-    ]
+    ],
+    "flags": {}
   },
   {
     "id": 6,
@@ -120,13 +140,16 @@
     "damage_dice": 1,
     "damage_sides": 4,
     "armor_class": 0,
+    "heal_amount": 4,
+    "value": -1,
+    "is_quest_item": false,
     "synonyms": [
       "meat",
       "jerky",
       "venison",
       "food"
     ],
-    "heal_amount": 4
+    "flags": {}
   },
   {
     "id": 7,
@@ -142,13 +165,17 @@
     "damage_dice": 1,
     "damage_sides": 4,
     "armor_class": 0,
+    "heal_amount": 0,
+    "value": -1,
+    "is_quest_item": false,
     "synonyms": [
       "idol",
       "figurine",
       "statue",
       "figure",
       "carving"
-    ]
+    ],
+    "flags": {}
   },
   {
     "id": 8,
@@ -164,12 +191,16 @@
     "damage_dice": 1,
     "damage_sides": 4,
     "armor_class": 0,
+    "heal_amount": 0,
+    "value": -1,
+    "is_quest_item": false,
     "synonyms": [
       "tablet",
       "slate",
       "stone tablet",
       "inscription"
-    ]
+    ],
+    "flags": {}
   },
   {
     "id": 9,
@@ -185,11 +216,15 @@
     "damage_dice": 1,
     "damage_sides": 4,
     "armor_class": 0,
+    "heal_amount": 0,
+    "value": -1,
+    "is_quest_item": false,
     "synonyms": [
       "key",
       "iron key",
       "tower key"
-    ]
+    ],
+    "flags": {}
   },
   {
     "id": 10,
@@ -205,13 +240,17 @@
     "damage_dice": 1,
     "damage_sides": 4,
     "armor_class": 3,
+    "heal_amount": 0,
+    "value": -1,
+    "is_quest_item": false,
     "synonyms": [
       "chainmail",
       "mail",
       "coat",
       "armor",
       "armour"
-    ]
+    ],
+    "flags": {}
   },
   {
     "id": 11,
@@ -228,12 +267,15 @@
     "damage_sides": 4,
     "armor_class": 0,
     "heal_amount": 10,
+    "value": -1,
+    "is_quest_item": false,
     "synonyms": [
       "potion",
       "vial",
       "flask",
       "healing"
-    ]
+    ],
+    "flags": {}
   },
   {
     "id": 12,
@@ -250,11 +292,14 @@
     "damage_sides": 4,
     "armor_class": 0,
     "heal_amount": 5,
+    "value": -1,
+    "is_quest_item": false,
     "synonyms": [
       "potion",
       "vial",
       "minor potion",
       "green potion"
-    ]
+    ],
+    "flags": {}
   }
 ]

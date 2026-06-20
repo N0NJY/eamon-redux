@@ -1,0 +1,46 @@
+[
+  {
+    "id": 1,
+    "name": "Cellar Entrance",
+    "description": "A rickety wooden staircase leads down into a musty cellar. Dim light filters from above.",
+    "exits": {
+      "north": "EXIT_TAVERN",
+      "south": 2
+    },
+    "is_dark": false,
+    "first_visit": true
+  },
+  {
+    "id": 2,
+    "name": "Storage Room",
+    "description": "Dusty shelves line the walls, holding old bottles. A passage leads east into darkness.",
+    "exits": {
+      "north": 1,
+      "east": 3
+    },
+    "is_dark": false,
+    "first_visit": true
+  },
+  {
+    "id": 3,
+    "name": "The Dark Chamber",
+    "description": "Candles form a ritual circle on the floor. The air reeks of sulfur.",
+    "exits": {
+      "west": 2,
+      "southeast": 4,
+      "southwest": 4
+    },
+    "is_dark": false,
+    "first_visit": true
+  },
+  {
+    "id": 4,
+    "name": "the SW room",
+    "description": "This is another dark room.",
+    "exits": {
+      "northwest": 3
+    },
+    "is_dark": true,
+    "first_visit": true
+  }
+]

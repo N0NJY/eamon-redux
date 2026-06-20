@@ -1,0 +1,11 @@
+{
+  "title": "The Dark Cellar",
+  "intro": "A dark cellar beneath the old inn harbors a malevolent cultist. Clear it out!",
+  "author": "Rick Donaldson",
+  "start_room": 1,
+  "win_condition": {
+    "type": "kill_monster",
+    "monster_id": 2,
+    "message": "The Dark Cultist falls! The cellar is safe."
+  }
+}

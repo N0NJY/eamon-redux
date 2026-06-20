@@ -11,10 +11,15 @@
     "armor_class": 0,
     "loot_id": 0,
     "death_message": "The giant rat shrieks once and goes limp.",
+    "dialogue": "",
+    "heal_amount": 0,
+    "heal_cost": 0,
     "synonyms": [
       "rat",
       "rodent"
-    ]
+    ],
+    "xp_value": 0,
+    "flags": {}
   },
   {
     "id": 2,
@@ -28,12 +33,17 @@
     "armor_class": 2,
     "loot_id": 0,
     "death_message": "The skeletal guard's bones clatter apart and fall to the floor. At last, it is still.",
+    "dialogue": "",
+    "heal_amount": 0,
+    "heal_cost": 0,
     "synonyms": [
       "skeleton",
       "guard",
       "soldier",
       "bones"
-    ]
+    ],
+    "xp_value": 0,
+    "flags": {}
   },
   {
     "id": 3,
@@ -47,15 +57,17 @@
     "armor_class": 0,
     "loot_id": 0,
     "death_message": "",
+    "dialogue": "Aye, I know this keep well. Spent twenty years here before the wraith drove me to the wood. Watch yourself in the undercroft \u2014 that thing is old and angry. I can tend your wounds if you have coin.",
+    "heal_amount": 999,
+    "heal_cost": 2,
     "synonyms": [
       "hermit",
       "man",
       "old man",
       "cloaked man"
     ],
-    "dialogue": "Aye, I know this keep well. Spent twenty years here before the wraith drove me to the wood. Watch yourself in the undercroft \u2014 that thing is old and angry. I can tend your wounds if you have coin.",
-    "heal_amount": 999,
-    "heal_cost": 2
+    "xp_value": 0,
+    "flags": {}
   },
   {
     "id": 4,
@@ -69,10 +81,15 @@
     "armor_class": 0,
     "loot_id": 0,
     "death_message": "The cave spider curls its legs inward and drops from the wall.",
+    "dialogue": "",
+    "heal_amount": 0,
+    "heal_cost": 0,
     "synonyms": [
       "spider",
       "arachnid"
-    ]
+    ],
+    "xp_value": 0,
+    "flags": {}
   },
   {
     "id": 5,
@@ -86,12 +103,17 @@
     "armor_class": 1,
     "loot_id": 0,
     "death_message": "The wraith lets out a sound like tearing paper and dissolves into nothing. The cold lifts.",
+    "dialogue": "",
+    "heal_amount": 0,
+    "heal_cost": 0,
     "synonyms": [
       "wraith",
       "ghost",
       "spirit",
       "shade",
       "shape"
-    ]
+    ],
+    "xp_value": 0,
+    "flags": {}
   }
 ]

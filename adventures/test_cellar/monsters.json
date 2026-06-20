@@ -1,0 +1,45 @@
+[
+  {
+    "id": 1,
+    "name": "Giant Rat",
+    "description": "An enormous rat with red eyes and matted fur.",
+    "room_id": 2,
+    "attitude": "hostile",
+    "hp": 6,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "loot_id": 0,
+    "death_message": "The giant rat squeals and falls.",
+    "dialogue": "",
+    "heal_amount": 0,
+    "heal_cost": 0,
+    "synonyms": [
+      "rat"
+    ],
+    "xp_value": 15,
+    "flags": {}
+  },
+  {
+    "id": 2,
+    "name": "Dark Cultist",
+    "description": "A robed figure performing dark rituals. His eyes glow with malice.",
+    "room_id": 3,
+    "attitude": "hostile",
+    "hp": 15,
+    "damage_dice": 1,
+    "damage_sides": 6,
+    "armor_class": 1,
+    "loot_id": 0,
+    "death_message": "The cultist collapses, his ritual broken forever.",
+    "dialogue": "You dare interrupt my ritual?!",
+    "heal_amount": 0,
+    "heal_cost": 0,
+    "synonyms": [
+      "cultist",
+      "robed"
+    ],
+    "xp_value": 50,
+    "flags": {}
+  }
+]

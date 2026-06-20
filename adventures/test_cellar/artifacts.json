@@ -1,0 +1,70 @@
+[
+  {
+    "id": 1,
+    "name": "rusty sword",
+    "description": "A pitted old sword that has seen better days.",
+    "room_id": 1,
+    "artifact_type": "weapon",
+    "weight": 1,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 6,
+    "armor_class": 0,
+    "heal_amount": 0,
+    "value": 10,
+    "is_quest_item": false,
+    "synonyms": [
+      "sword"
+    ],
+    "flags": {},
+    "weapon_type": "sword"
+  },
+  {
+    "id": 2,
+    "name": "leather vest",
+    "description": "A simple leather vest offering modest protection.",
+    "room_id": 2,
+    "artifact_type": "armor",
+    "weight": 2,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 1,
+    "heal_amount": 0,
+    "value": 15,
+    "is_quest_item": false,
+    "synonyms": [
+      "vest",
+      "leather"
+    ],
+    "flags": {}
+  },
+  {
+    "id": 3,
+    "name": "healing potion",
+    "description": "A small vial of reddish liquid that smells of herbs.",
+    "room_id": 2,
+    "artifact_type": "potion",
+    "weight": 1,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "heal_amount": 8,
+    "value": 20,
+    "is_quest_item": false,
+    "synonyms": [
+      "potion"
+    ],
+    "flags": {}
+  }
+]

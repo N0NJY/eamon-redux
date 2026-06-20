@@ -8,7 +8,8 @@
       "east": 7,
       "south": 9
     },
-    "is_dark": false
+    "is_dark": false,
+    "first_visit": true
   },
   {
     "id": 2,
@@ -18,18 +19,20 @@
       "south": 1,
       "north": 3
     },
-    "is_dark": false
+    "is_dark": false,
+    "first_visit": true
   },
   {
     "id": 3,
     "name": "Outer Courtyard",
-    "description": "A broad courtyard choked with weeds. A collapsed well sits at the centre. The keep's main door is set into the north wall — heavy oak banded with iron, sealed with a heavy lock. A narrow stair climbs the east wall. The gatehouse arch is to the south.",
+    "description": "A broad courtyard choked with weeds. A collapsed well sits at the centre. The keep's main door is set into the north wall \u2014 heavy oak banded with iron, sealed with a heavy lock. A narrow stair climbs the east wall. The gatehouse arch is to the south.",
     "exits": {
       "south": 2,
       "north": 4,
       "east": 5
     },
     "is_dark": false,
+    "first_visit": true,
     "locked_exits": {
       "north": 9
     }
@@ -42,16 +45,18 @@
       "south": 3,
       "down": 6
     },
-    "is_dark": false
+    "is_dark": false,
+    "first_visit": true
   },
   {
     "id": 5,
     "name": "Wall Walk",
-    "description": "A narrow battlement running along the east wall. You can see for miles — farmland, a distant river, the dark smudge of Hallow Forest. The stair back down is to the west. An old iron chest sits wedged in a crenel.",
+    "description": "A narrow battlement running along the east wall. You can see for miles \u2014 farmland, a distant river, the dark smudge of Hallow Forest. The stair back down is to the west. An old iron chest sits wedged in a crenel.",
     "exits": {
       "west": 3
     },
-    "is_dark": false
+    "is_dark": false,
+    "first_visit": true
   },
   {
     "id": 6,
@@ -60,7 +65,8 @@
     "exits": {
       "up": 4
     },
-    "is_dark": false
+    "is_dark": false,
+    "first_visit": true
   },
   {
     "id": 7,
@@ -70,7 +76,8 @@
       "west": 1,
       "east": 8
     },
-    "is_dark": false
+    "is_dark": false,
+    "first_visit": true
   },
   {
     "id": 8,
@@ -79,7 +86,8 @@
     "exits": {
       "west": 7
     },
-    "is_dark": false
+    "is_dark": false,
+    "first_visit": true
   },
   {
     "id": 9,
@@ -89,6 +97,7 @@
       "north": 1,
       "south": "EXIT_TAVERN"
     },
-    "is_dark": false
+    "is_dark": false,
+    "first_visit": true
   }
 ]
