@@ -3,4 +3,5 @@ __pycache__/
 *.pyo
 .DS_Store
 characters/*.json
+stored_games/*.json
 backup.sh
