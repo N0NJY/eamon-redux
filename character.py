@@ -16,9 +16,9 @@ CHARACTERS_DIR = "characters"
 # ── Spell Definitions ─────────────────────────────────────────────────────────
 
 SPELL_DEFS = {
-    "blast":  {"name": "Blast",  "cost": 3000, "mana_cost": 3, "desc": "1D6 damage, bypasses armor"},
-    "heal":   {"name": "Heal",   "cost": 1000, "mana_cost": 2, "desc": "1D10 HP restore"},
-    "speed":  {"name": "Speed",  "cost": 5000, "mana_cost": 5, "desc": "Double Agility for 11-20 rounds"},
+    "blast":  {"name": "Blast",  "cost": 1000, "mana_cost": 3, "desc": "1D6 damage, bypasses armor"},
+    "heal":   {"name": "Heal",   "cost": 500,  "mana_cost": 2, "desc": "1D10 HP restore"},
+    "speed":  {"name": "Speed",  "cost": 4000, "mana_cost": 5, "desc": "Double Agility for 11-20 rounds"},
     "power":  {"name": "Power",  "cost": 100,  "mana_cost": 1, "desc": "Adventure-specific effect"},
 }
 
@@ -79,6 +79,10 @@ class Character:
     is_beginner: bool = True
     adventures_completed: list[str] = field(default_factory=list)
     equipped: dict = field(default_factory=dict)  # slot → artifact_name
+
+    # ── Main Hall services ────────────────────────────────────────────────────
+    bank_balance: int = 0       # gold stored at the Main Hall Bank
+    marie_attitude: int = 0     # Marie Laveau's persistent opinion: -3 to +3
 
     # ── Computed ──────────────────────────────────────────────────────────────
 
@@ -253,6 +257,8 @@ class Character:
             "is_beginner": self.is_beginner,
             "adventures_completed": self.adventures_completed,
             "equipped": self.equipped,
+            "bank_balance": self.bank_balance,
+            "marie_attitude": self.marie_attitude,
         }
 
     @staticmethod
@@ -277,6 +283,8 @@ class Character:
             is_beginner=d.get("is_beginner", True),
             adventures_completed=d.get("adventures_completed", []),
             equipped=d.get("equipped", {}),
+            bank_balance=d.get("bank_balance", 0),
+            marie_attitude=d.get("marie_attitude", 0),
         )
         if ch.hp <= 0:
             ch.hp = ch.hp_max

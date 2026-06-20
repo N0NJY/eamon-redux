@@ -1,16 +1,14 @@
 """
-tavern.py - The Saunter Inn and Tavern.
+tavern.py — Main Hall of the Free Adventurers.
 
-Entry point for the whole game system. Handles character creation/selection,
-adventure launching, and the tavern as a navigable space with rooms, NPCs,
-and character management commands.
+Entry point for the game system. Handles character creation/selection,
+adventure launching, and the Main Hall as a navigable space with live NPCs,
+shops, a bank, Marie Laveau's chamber, and the exit to the wider world.
 """
 
 from __future__ import annotations
 
 import os
-import sys
-import subprocess
 import json
 import random
 import time
@@ -25,7 +23,7 @@ _TAVERN_COLORS = {
     "title"  : "\033[1;33m",   # bright yellow  — headers, banners
     "border" : "\033[0;33m",   # yellow         — box borders, dividers
     "stat"   : "\033[1;36m",   # bright cyan    — stats, item lists
-    "sys"    : "\033[0;36m",   # cyan           — weight, gold, system info
+    "sys"    : "\033[0;36m",   # cyan           — gold, system info
     "error"  : "\033[1;31m",   # bright red     — errors
     "warn"   : "\033[0;33m",   # yellow         — warnings, hints
     "prompt" : "\033[1;37m",   # bright white   — input prompts
@@ -43,7 +41,18 @@ def tinput(prompt_text: str) -> str:
 def tprint(text: str, role: str = "desc") -> None:
     print(tc(text, role))
 
-# ── Tavern rooms ──────────────────────────────────────────────────────────────
+# ── Session state (resets each time the player enters the Main Hall) ──────────
+
+_session: dict = {
+    "marie_bonus":  0,       # attitude modifier from gifts given this session
+    "npc_greeted":  set(),   # room_ids where NPC has already spoken on entry
+}
+
+def _reset_session() -> None:
+    _session["marie_bonus"] = 0
+    _session["npc_greeted"] = set()
+
+# ── Main Hall rooms ────────────────────────────────────────────────────────────
 
 @dataclass
 class TavernRoom:
@@ -53,51 +62,99 @@ class TavernRoom:
     exits: dict
     npc: Optional[str] = None
 
-TAVERN_ROOMS = {
-    "entrance": TavernRoom(
-        room_id="entrance",
-        name="Tavern Entrance",
+MAIN_HALL_ROOMS = {
+    "foyer": TavernRoom(
+        room_id="foyer",
+        name="The Main Hall",
         description=(
-            " You stand in the grand foyer of the Saunter Inn, a sturdy wooden\n"
-            " structure with a low ceiling and a warm hearth. The smell of ale\n"
-            " and woodsmoke hangs in the air. Patrons of all sorts mill about.\n"
+            " You stand in the grand foyer of the Main Hall of the Free Adventurers.\n"
+            " Marble columns rise to a vaulted ceiling hung with the banners of storied\n"
+            " guilds. An enchanted map on the north wall marks known adventure sites.\n"
+            " Passages branch off in every direction. A heavy oak door to the south\n"
+            " opens onto the street beyond.\n"
         ),
-        exits={"north": "bar", "east": "guild_hall"},
+        exits={
+            "north":     "common_room",
+            "east":      "weapon_shop",
+            "west":      "bank",
+            "northeast": "guild_hall",
+            "south":     "EXIT_UNIVERSE",
+        },
     ),
-    "bar": TavernRoom(
-        room_id="bar",
-        name="The Tavern Bar",
+    "common_room": TavernRoom(
+        room_id="common_room",
+        name="The Saunter Inn — Common Room",
         description=(
-            " The bar is busy with patrons nursing drinks and swapping stories.\n"
-            " A stout man with a weathered face stands behind the bar, polishing\n"
-            " glasses. This is Horace, the keeper of this place and the guild's\n"
-            " unofficial quartermaster.\n"
+            " A warm, smoke-hazed common room thick with the smell of roasting meat and\n"
+            " spilled ale. Adventurers of every fortune crowd the long trestle tables.\n"
+            " A fire roars in the stone hearth. The passage east smells faintly of\n"
+            " incense. To the north, beads clatter softly in a draught.\n"
         ),
-        exits={"south": "entrance", "east": "backroom"},
-        npc="horace",
+        exits={
+            "south": "foyer",
+            "east":  "magic_shop",
+            "north": "witch_chamber",
+        },
     ),
-    "backroom": TavernRoom(
-        room_id="backroom",
-        name="The Back Room",
+    "weapon_shop": TavernRoom(
+        room_id="weapon_shop",
+        name="Cavielli's Weapons and Armour Shoppe",
         description=(
-            " Shelves line the walls, stocked with potions, scrolls, weapons,\n"
-            " and mysterious artifacts. A thin man with ink-stained fingers\n"
-            " sits at a cluttered desk, poring over a massive tome. This must\n"
-            " be Aldric, the wizard who trades in magical goods.\n"
+            " Weapons of every description fill racks from floor to ceiling — swords,\n"
+            " axes, maces, bows, and armour of a dozen styles. The air smells of oil\n"
+            " and fresh leather. A stocky man in a black apron looks up from the blade\n"
+            " he is honing, his eyes measuring you in an instant.\n"
         ),
-        exits={"west": "bar"},
+        exits={"west": "foyer"},
+        npc="marcus",
+    ),
+    "magic_shop": TavernRoom(
+        room_id="magic_shop",
+        name="Magic, Potions and Sundries",
+        description=(
+            " Shelves crammed with arcane curiosities line every wall, floor to ceiling.\n"
+            " Jars of strange ingredients, bundled scrolls, and crystalline vials catch\n"
+            " the candlelight. The air tastes of ozone and dried flowers. A lean man in\n"
+            " robes sits at a high desk, quill poised, peering over wire-rimmed spectacles.\n"
+        ),
+        exits={"west": "common_room"},
         npc="aldric",
+    ),
+    "witch_chamber": TavernRoom(
+        room_id="witch_chamber",
+        name="Marie Laveau's Chamber",
+        description=(
+            " You push aside a beaded curtain and step into a dim, candlelit room.\n"
+            " Dried herbs hang from the rafters. Bones, crystals, and strange tokens\n"
+            " crowd every surface. Incense smoke coils upward in lazy spirals. An\n"
+            " imposing woman in dark robes sits at the centre, a crystal ball before\n"
+            " her. Her gaze finds you before you speak a word.\n"
+        ),
+        exits={"south": "common_room"},
+        npc="marie",
+    ),
+    "bank": TavernRoom(
+        room_id="bank",
+        name="The Main Hall Bank",
+        description=(
+            " A solid stone chamber with iron-bound doors and a polished granite counter.\n"
+            " The vault behind the counter is a foot of solid steel with a brass combination\n"
+            " lock. A neat, balding man in a green coat and wire spectacles looks up\n"
+            " from a leather-bound ledger and sets down his pen.\n"
+        ),
+        exits={"east": "foyer"},
+        npc="banker",
     ),
     "guild_hall": TavernRoom(
         room_id="guild_hall",
         name="The Adventurers' Guild Hall",
         description=(
-            " This is the heart of the Guild of Free Adventurers. A large\n"
-            " bulletin board dominates the far wall, covered with notices,\n"
-            " contracts, and tales of legendary deeds. Maps and weapons\n"
-            " decorate the rest of the room.\n"
+            " The heart of the Guild of Free Adventurers. A massive brass-framed board\n"
+            " covers the far wall, thick with contracts, maps, and notices of quests both\n"
+            " available and recently completed. The guild registrar sits at a desk near\n"
+            " the door. Type ADVENTURE to browse the quest board.\n"
         ),
-        exits={"west": "entrance"},
+        exits={"southwest": "foyer"},
     ),
 }
 
@@ -117,8 +174,8 @@ BANNER = """
 ║                                                                      ║
 ║        (C) 2026, Rick Donaldson                                      ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║        ~ Saunter Inn and Tavern ~                                    ║
-║    Where adventurers gather between quests                           ║
+║     ~ Main Hall of the Free Adventurers ~                            ║
+║   Where legends begin, and gold changes hands freely                 ║
 ╚══════════════════════════════════════════════════════════════════════╝
 """
 
@@ -131,8 +188,6 @@ TYPE_VALUE_FLOOR = {
 }
 UNSELLABLE_TYPES = {"key"}
 
-# Populated after shop templates are defined; used as a fallback so items
-# bought before sell values were added to templates can still be resold.
 _SHOP_SELL_VALUES: dict = {}
 
 def sell_value(artifact) -> int:
@@ -151,55 +206,45 @@ def can_sell(artifact) -> bool:
 
 # ── Shop data ─────────────────────────────────────────────────────────────────
 
-# Spell pricing: BUG-10 fix — use actual spell keys (blast, heal, speed, power)
-_SPELL_BASE_PRICE = {"blast": 100, "heal": 50, "speed": 200, "power": 25}
-_SPELL_FIGHTER_OK = {"heal"}  # Fighters may only learn Heal
-
-def _spell_price(spell_key: str, character) -> int:
-    base  = _SPELL_BASE_PRICE.get(spell_key, 50)
-    level = character.level
-    for threshold, mult in ((2, 1), (4, 2), (6, 4), (8, 8)):
-        if level <= threshold:
-            base *= mult
-            break
-    else:
-        base *= 16
-    return base
-
-HORACE_CORE = [
-    {"name": "healing potion",       "artifact_type": "potion", "weight": 1, "heal_amount": 10, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 8,  "price": 25,  "desc": "Restores 10 HP"},
-    {"name": "minor healing potion", "artifact_type": "potion", "weight": 1, "heal_amount": 5,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 4,  "price": 12,  "desc": "Restores 5 HP"},
-    {"name": "ration",               "artifact_type": "food",   "weight": 1, "heal_amount": 4,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 2,  "price": 5,   "desc": "Restores 4 HP when eaten"},
-    {"name": "dagger",               "artifact_type": "weapon", "weight": 1, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 5,  "price": 15,  "desc": "1d4 damage"},
-    {"name": "short sword",          "artifact_type": "weapon", "weight": 2, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 10, "price": 30,  "desc": "1d6 damage"},
-    {"name": "leather armor",        "artifact_type": "armor",  "weight": 3, "heal_amount": 0,  "armor_class": 1, "damage_dice": 1, "damage_sides": 4, "value": 13, "price": 40,  "desc": "AC +1"},
-    {"name": "chainmail coat",       "artifact_type": "armor",  "weight": 6, "heal_amount": 0,  "armor_class": 3, "damage_dice": 1, "damage_sides": 4, "value": 30, "price": 100, "desc": "AC +3"},
-    {"name": "wooden shield",        "artifact_type": "shield", "weight": 3, "heal_amount": 0,  "armor_class": 1, "damage_dice": 1, "damage_sides": 4, "value": 8,  "price": 25,  "desc": "AC +1 (shield slot)"},
+MARCUS_CORE = [
+    {"name": "dagger",         "artifact_type": "weapon", "weight": 1, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 5,  "price": 15,  "desc": "1d4 (sword)"},
+    {"name": "short sword",    "artifact_type": "weapon", "weight": 2, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 10, "price": 30,  "desc": "1d6 (sword)"},
+    {"name": "leather armor",  "artifact_type": "armor",  "weight": 3, "heal_amount": 0, "armor_class": 1, "damage_dice": 1, "damage_sides": 4, "value": 13, "price": 40,  "desc": "AC +1"},
+    {"name": "chainmail coat", "artifact_type": "armor",  "weight": 6, "heal_amount": 0, "armor_class": 3, "damage_dice": 1, "damage_sides": 4, "value": 30, "price": 100, "desc": "AC +3"},
+    {"name": "wooden shield",  "artifact_type": "shield", "weight": 3, "heal_amount": 0, "armor_class": 1, "damage_dice": 1, "damage_sides": 4, "value": 8,  "price": 25,  "desc": "AC +1 (shield)"},
+    {"name": "ration",         "artifact_type": "food",   "weight": 1, "heal_amount": 4, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 2,  "price": 5,   "desc": "Restores 4 HP"},
+    {"name": "torch",          "artifact_type": "light",  "weight": 1, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 3,  "price": 8,   "desc": "Light source"},
 ]
 
-HORACE_RANDOM_POOL = [
-    {"name": "war axe",     "artifact_type": "weapon", "weight": 4, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 8, "value": 15, "price": 50,  "desc": "1d8 damage"},
-    {"name": "iron mace",   "artifact_type": "weapon", "weight": 3, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 12, "price": 35,  "desc": "1d6 damage"},
+MARCUS_RANDOM_POOL = [
+    {"name": "war axe",     "artifact_type": "weapon", "weight": 4, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 8, "value": 15, "price": 50,  "desc": "1d8 (axe)"},
+    {"name": "iron mace",   "artifact_type": "weapon", "weight": 3, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 12, "price": 35,  "desc": "1d6 (club)"},
+    {"name": "spear",       "artifact_type": "weapon", "weight": 3, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 10, "price": 28,  "desc": "1d6 (spear)"},
+    {"name": "hunting bow", "artifact_type": "weapon", "weight": 2, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 15, "price": 45,  "desc": "1d6 (bow)"},
+    {"name": "longsword",   "artifact_type": "weapon", "weight": 3, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 8, "value": 20, "price": 60,  "desc": "1d8 (sword)"},
     {"name": "scale armor", "artifact_type": "armor",  "weight": 8, "heal_amount": 0, "armor_class": 4, "damage_dice": 1, "damage_sides": 4, "value": 60, "price": 180, "desc": "AC +4"},
-    {"name": "iron shield", "artifact_type": "shield", "weight": 4, "heal_amount": 0, "armor_class": 2, "damage_dice": 1, "damage_sides": 4, "value": 18, "price": 55,  "desc": "AC +2 (shield slot)"},
-    {"name": "hunting bow", "artifact_type": "weapon", "weight": 2, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 15, "price": 45,  "desc": "1d6 damage"},
-    {"name": "torch",       "artifact_type": "light",  "weight": 1, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 3,  "price": 8,   "desc": "A light source"},
+    {"name": "iron shield", "artifact_type": "shield", "weight": 4, "heal_amount": 0, "armor_class": 2, "damage_dice": 1, "damage_sides": 4, "value": 18, "price": 55,  "desc": "AC +2 (shield)"},
+    {"name": "battle axe",  "artifact_type": "weapon", "weight": 5, "heal_amount": 0, "armor_class": 0, "damage_dice": 2, "damage_sides": 6, "value": 25, "price": 80,  "desc": "2d6 (axe)"},
 ]
 
-WIZARD_RANDOM_POOL = [
-    {"name": "greater healing potion", "artifact_type": "potion",   "weight": 1, "heal_amount": 20, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 20, "price": 60, "desc": "Restores 20 HP"},
-    {"name": "mana potion",            "artifact_type": "potion",   "weight": 1, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 15, "price": 50, "desc": "Restores 10 mana"},
-    {"name": "mystery scroll",         "artifact_type": "readable", "weight": 0, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 5,  "price": 20, "desc": "Faded writing. Hard to read."},
+ALDRIC_POTIONS = [
+    {"name": "healing potion",        "artifact_type": "potion",   "weight": 1, "heal_amount": 10, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 8,  "price": 25, "desc": "Restores 10 HP"},
+    {"name": "minor healing potion",  "artifact_type": "potion",   "weight": 1, "heal_amount": 5,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 4,  "price": 12, "desc": "Restores 5 HP"},
+    {"name": "greater healing potion","artifact_type": "potion",   "weight": 1, "heal_amount": 20, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 20, "price": 60, "desc": "Restores 20 HP"},
+    {"name": "mana potion",           "artifact_type": "potion",   "weight": 1, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 15, "price": 50, "desc": "Restores 10 mana"},
+    {"name": "mystery scroll",        "artifact_type": "readable", "weight": 0, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 5,  "price": 20, "desc": "Faded writing"},
 ]
 
 _SHOP_SELL_VALUES = {
     item["name"]: item["value"]
-    for pool in (HORACE_CORE, HORACE_RANDOM_POOL, WIZARD_RANDOM_POOL)
+    for pool in (MARCUS_CORE, MARCUS_RANDOM_POOL, ALDRIC_POTIONS)
     for item in pool
     if item["value"] > 0
 }
 
 MAX_POTIONS = 2
+
+# ── Item management helpers ───────────────────────────────────────────────────
 
 def _items_path(character) -> str:
     safe = character.name.lower().replace(" ", "_")
@@ -252,7 +297,6 @@ def _process_sell(raw: str, sellable: list, all_carried: list,
             return
         ids_to_sell = {id(a) for a in sellable}
     elif raw.startswith("s "):
-        # Format: "S 1"
         try:
             idx = int(raw[2:]) - 1
             if not (0 <= idx < len(sellable)):
@@ -262,11 +306,9 @@ def _process_sell(raw: str, sellable: list, all_carried: list,
             if tinput(f" Sell {item.name} for {price}g? (y/n): ").lower() != "y":
                 return
             ids_to_sell = {id(item)}
-            total = price
         except ValueError:
             tprint(" Usage: S <number> or SELL ALL", "error"); return
     else:
-        # Try plain number format: "1"
         try:
             idx = int(raw) - 1
             if not (0 <= idx < len(sellable)):
@@ -276,72 +318,20 @@ def _process_sell(raw: str, sellable: list, all_carried: list,
             if tinput(f" Sell {item.name} for {price}g? (y/n): ").lower() != "y":
                 return
             ids_to_sell = {id(item)}
-            total = price
         except ValueError:
             tprint(" Usage: S <number> or SELL ALL", "error"); return
 
-    sold    = [a for a in sellable if id(a) in ids_to_sell]
-    total   = sum(sell_value(a) for a in sold)
+    sold      = [a for a in sellable if id(a) in ids_to_sell]
+    total     = sum(sell_value(a) for a in sold)
     remaining = [a for a in all_carried if id(a) not in ids_to_sell]
     _save_carried(character, remaining)
     character.gold += total
     character.save()
     tprint(f" Sold for {total}g. Gold: {character.gold}g", "sys")
 
-# ── Save game management ──────────────────────────────────────────────────────
-
-SAVE_DIR = "stored_games"
-
-def _adv_title(adv_path: str) -> str:
-    meta = os.path.join(adv_path, "adventure.json")
-    if not os.path.exists(meta):
-        return adv_path or "?"
-    try:
-        with open(meta) as f:
-            return json.load(f).get("title", adv_path)
-    except Exception:
-        return adv_path
-
-def list_saves(character) -> list:
-    if not os.path.isdir(SAVE_DIR):
-        return []
-    saves = []
-    for fname in sorted(os.listdir(SAVE_DIR)):
-        if not fname.endswith(".json"):
-            continue
-        path = os.path.join(SAVE_DIR, fname)
-        try:
-            with open(path) as f:
-                data = json.load(f)
-            if data.get("player", {}).get("name") != character.name:
-                continue
-            mtime = os.path.getmtime(path)
-            saves.append({
-                "name":      data.get("save_name", fname[:-5]),
-                "path":      path,
-                "adv_path":  data.get("adv_path", ""),
-                "adv_title": _adv_title(data.get("adv_path", "")),
-                "mtime_str": time.strftime("%Y-%m-%d %H:%M", time.localtime(mtime)),
-                "mtime":     mtime,
-            })
-        except (json.JSONDecodeError, KeyError, OSError):
-            continue
-    saves.sort(key=lambda s: s["mtime"], reverse=True)
-    return saves
-
-# ── Room display & character commands ─────────────────────────────────────────
-
-def show_room(room: TavernRoom) -> None:
-    print()
-    print(tc(f" ── {room.name} ──", "border"))
-    print(tc(room.description, "desc"))
-    if room.exits:
-        dirs = ", ".join(d.upper() for d in sorted(room.exits.keys()))
-        print(tc(f" Exits: {dirs}", "border"))
-    print()
+# ── Character display ─────────────────────────────────────────────────────────
 
 def show_character_sheet(character) -> None:
-    """Display the character's complete stat sheet in bright yellow."""
     print(f"\033[1;33m{character.stat_summary()}\033[0m")
 
 def show_inventory(character) -> None:
@@ -352,20 +342,20 @@ def show_inventory(character) -> None:
     total_weight = sum(a.weight for a in carried)
     cap = character.carry_capacity
     equipped_names = set(character.equipped.values())
-    INNER = 46  # chars between ` │ ` and `│`
+    INNER = 46
     print()
     print(tc(" ┌─── Your Inventory ────────────────────────────────┐", "border"))
     for i, a in enumerate(carried, 1):
         sv = f" ({sell_value(a)}g)" if can_sell(a) else ""
         eq = " [EQUIPPED]" if a.name in equipped_names else ""
-        right = f"{a.weight:>3}g{sv:<7}"          # 11 chars
+        right = f"{a.weight:>3}g{sv:<7}"
         left  = f"{i:>2}. {a.name}{eq}"
         pad   = max(0, INNER - len(left) - len(right))
-        inner = (left + " " * pad + right)[:INNER]  # plain string, exact width
+        inner = (left + " " * pad + right)[:INNER]
         color = "title" if eq else "stat"
         print(tc(" │ ", "border") + tc(inner, color) + tc("│", "border"))
     print(tc(f" │ {'─'*INNER}│", "border"))
-    wline = f" Weight: {total_weight}/{cap} gronds"
+    wline = f" Weight: {total_weight}/{cap} gronds  |  Bank: {character.bank_balance}g"
     print(tc(" │ ", "border") + tc(f"{wline:<{INNER}}", "sys") + tc("│", "border"))
     print(tc(" └───────────────────────────────────────────────────┘", "border"))
     print()
@@ -386,7 +376,6 @@ def show_spells(character) -> None:
     print()
 
 def show_equipment(character) -> None:
-    """Display equipped items and allow unequipping in the tavern."""
     print()
     print(tc(" ┌─── Equipment ──────────────────────────────────────┐", "border"))
     active = {s: n for s, n in character.equipped.items() if n}
@@ -419,29 +408,23 @@ def show_equipment(character) -> None:
     except ValueError:
         tprint(" Invalid input.", "error")
 
-
 _EQUIP_SLOT = {"weapon": "weapon", "armor": "armor",
-               "shield": "shield", "ring":   "ring", "cloak": "cloak"}
+               "shield": "shield", "ring": "ring", "cloak": "cloak"}
 
 def cmd_equip_tavern(noun: str, character) -> None:
-    """Equip a carried item in the tavern (no combat context needed)."""
     carried    = _load_carried(character)
     equippable = [a for a in carried if a.artifact_type in _EQUIP_SLOT]
     if not equippable:
-        tprint(" You have nothing that can be equipped.", "warn")
-        return
+        tprint(" You have nothing that can be equipped.", "warn"); return
 
     equipped_names = set(character.equipped.values())
-
     target = None
     if noun:
         for a in equippable:
             if noun.lower() in a.name.lower():
-                target = a
-                break
+                target = a; break
         if not target:
-            tprint(f" You're not carrying anything called '{noun}'.", "error")
-            return
+            tprint(f" You're not carrying anything called '{noun}'.", "error"); return
     else:
         print()
         print(tc(" ─── Equippable Items ────────────────────────────────", "border"))
@@ -454,9 +437,8 @@ def cmd_equip_tavern(noun: str, character) -> None:
                   tc(f"{slot:<8}", "desc") +
                   tc(eq_tag, "title"))
         print()
-        raw = tinput(" Equip #  (0 to cancel): ").strip()
-        if not raw or raw == "0":
-            return
+        raw = tinput(" Equip # (0 to cancel): ").strip()
+        if not raw or raw == "0": return
         try:
             idx = int(raw) - 1
             if 0 <= idx < len(equippable):
@@ -467,42 +449,349 @@ def cmd_equip_tavern(noun: str, character) -> None:
             tprint(" Invalid input.", "error"); return
 
     slot = _EQUIP_SLOT[target.artifact_type]
-
-    # Refuse to swap out a cursed item
     current_name = character.equipped.get(slot)
     if current_name:
         current = next((a for a in carried if a.name == current_name), None)
         if current and current.flags.get("cursed"):
-            tprint(f" The {current_name} is cursed — it cannot be removed!", "error")
-            return
+            tprint(f" The {current_name} is cursed — it cannot be removed!", "error"); return
         msg = f" You remove the {current_name} and equip the {target.name}."
     else:
         msg = f" You equip the {target.name}."
-
     character.equipped[slot] = target.name
     character.save()
     tprint(msg, "desc")
 
+# ── Marie Laveau ──────────────────────────────────────────────────────────────
 
-# ── Shops ─────────────────────────────────────────────────────────────────────
+_STATS      = ["hardiness", "agility", "charisma", "intelligence", "strength"]
+_STAT_NAMES = {
+    "hardiness":    "Hardiness",
+    "agility":      "Agility",
+    "charisma":     "Charisma",
+    "intelligence": "Intelligence",
+    "strength":     "Strength",
+}
+_STAT_ALIASES = {
+    # Short forms
+    "hard": "hardiness", "har": "hardiness",
+    "agi":  "agility",   "ag":  "agility",
+    "cha":  "charisma",  "ch":  "charisma",
+    "int":  "intelligence",
+    "str":  "strength",  "stre": "strength",
+    # Full names
+    "hardiness": "hardiness", "agility": "agility", "charisma": "charisma",
+    "intelligence": "intelligence", "strength": "strength",
+}
 
-def run_horace_shop(character) -> None:
+def _marie_total_attitude(character) -> int:
+    """Persistent attitude + session gift bonus + charisma modifier."""
+    charisma_mod = 0
+    if character.charisma >= 16:
+        charisma_mod = 1
+    elif character.charisma <= 7:
+        charisma_mod = -1
+    return max(-3, min(3, character.marie_attitude + _session["marie_bonus"] + charisma_mod))
+
+def _marie_greeting_line(character) -> str:
+    att = _marie_total_attitude(character)
+    if att >= 2:
+        return tc(' Marie Laveau spreads her arms. "Mon cher! Marie has been expecting you. Come, sit."', "npc")
+    elif att == 1:
+        return tc(' Marie fixes you with a knowing look. "Ah. You return. Sit, child. We have business."', "npc")
+    elif att == 0:
+        return tc(' Marie regards you without expression. "You may enter. State your purpose."', "npc")
+    elif att == -1:
+        return tc(' Marie\'s eyes narrow. "You again. Marie remembers our last meeting. Be careful."', "npc")
+    else:
+        return tc(' Marie holds up a hand. "Stop. You have displeased Marie. Bring an offering first."', "npc")
+
+def _marie_lowest_stat(character) -> str:
+    return min(_STATS, key=lambda s: getattr(character, s))
+
+def _marie_give_gift(item, character) -> None:
+    """Process giving an item to Marie. Adjusts session and persistent attitude."""
+    val = item.value if item.value > 0 else 1
+    if val >= 200:
+        _session["marie_bonus"] += 2
+        character.marie_attitude = min(3, character.marie_attitude + 1)
+        print(tc(' Marie\'s eyes gleam as she turns the gift over slowly. "Now THIS is a proper', "npc"))
+        print(tc(' offering, cher. Marie is... very pleased."', "npc"))
+    elif val >= 50:
+        _session["marie_bonus"] += 1
+        print(tc(' Marie nods slowly, examining the gift. "Acceptable. Marie acknowledges', "npc"))
+        print(tc(' your... consideration."', "npc"))
+    elif val >= 10:
+        print(tc(' Marie glances at the gift, then back at you. "This is... modest."', "npc"))
+        print(tc(' "It is noted. But do not expect Marie\'s favour to come cheaply, cher."', "npc"))
+    else:
+        _session["marie_bonus"] -= 1
+        character.marie_attitude = max(-3, character.marie_attitude - 1)
+        print(tc(' Marie\'s lip curls. "You offer Marie THIS? That is an insult dressed as a gift."', "npc"))
+        print(tc(' "Take it back. And think very carefully about your next visit."', "npc"))
+    character.save()
+
+def run_marie_shop(character) -> None:
+    """Marie Laveau's stat-raising service."""
+    att = _marie_total_attitude(character)
+    print()
+    print(tc(" ─── Marie Laveau's Chamber ──────────────────────────", "border"))
+    print(_marie_greeting_line(character))
+    print()
+
+    if att >= 0:
+        print(tc(' "Marie can see what you seek. You wish to become more than you are."', "npc"))
+        print(tc(' "For the right... tribute... Marie can channel the forces of change."', "npc"))
+    else:
+        print(tc(' "You have not pleased Marie. Bring a worthy offering before you ask', "npc"))
+        print(tc(' for her gifts. GIVE <item> to make an offering."', "npc"))
+    print()
+
+    # Show current stats
+    for s in _STATS:
+        val = getattr(character, s)
+        print(tc(f"  {_STAT_NAMES[s]:<14}: {val}", "stat"))
+    print()
+    print(tc(f"  Gold: {character.gold}g  |  Bank: {character.bank_balance}g", "sys"))
+    print(tc("  Enter a stat name to request an increase, GIVE <item> to offer a gift,", "desc"))
+    print(tc("  or DONE to leave.", "desc"))
+    print()
+
+    raw = tinput(" > ").strip().lower()
+
+    if raw in ("done", "leave", "0"):
+        print(tc(' "Until next time, cher," Marie says, returning to her crystal ball.', "npc"))
+        return
+
+    if raw.startswith("give "):
+        _marie_give_gift_by_name(raw[5:].strip(), character)
+        return
+
+    stat = _STAT_ALIASES.get(raw)
+    if not stat:
+        tprint(f' Marie raises an eyebrow. "Marie knows no stat called \'{raw}\'."', "npc")
+        return
+
+    # Calculate price with charisma influence
+    base_cost = random.randint(2500, 5000)
+    if character.charisma >= 15:
+        discount = random.uniform(0.05, 0.20)
+        cost = int(base_cost * (1 - discount))
+        cost_note = f"  ({int(discount*100)}% charisma discount)"
+    elif character.charisma <= 8:
+        surcharge = random.uniform(0.05, 0.15)
+        cost = int(base_cost * (1 + surcharge))
+        cost_note = f"  ({int(surcharge*100)}% surcharge — your manner displeases)"
+    else:
+        cost = base_cost
+        cost_note = ""
+
+    stat_name = _STAT_NAMES[stat]
+    print()
+    print(tc(f' Marie studies you for a long moment. "For {stat_name}...', "npc"))
+    print(tc(f' the spirits ask {cost}g.{cost_note}"', "npc"))
+    print()
+
+    confirm = tinput(f" Pay {cost}g? (y/n): ").lower()
+    if confirm != "y":
+        print(tc(' "Come back when you are ready," Marie says without looking up.', "npc"))
+        return
+
+    if character.gold < cost:
+        print(tc(f' "You do not have {cost}g. Marie cannot work for promises."', "npc"))
+        return
+
+    character.gold -= cost
+    print()
+    print(tc(' Marie closes her eyes. Her lips move in silence. The candles flicker.', "desc"))
+    print(tc(' The air in the room grows heavy and still.', "desc"))
+    print()
+
+    # Determine outcome based on attitude
+    actual_stat = stat
+
+    if att >= 2:
+        # Loves you — guaranteed chosen stat
+        actual_stat = stat
+        outcome = f' "It is done," Marie says warmly. "Your {stat_name} grows, as you wished."'
+    elif att == 1:
+        # Likes you — 85% chance of chosen stat
+        if random.random() < 0.85:
+            actual_stat = stat
+            outcome = f' Marie opens her eyes. "Your {stat_name} has been strengthened, cher."'
+        else:
+            actual_stat = random.choice([s for s in _STATS if s != stat])
+            outcome = (f' Marie opens her eyes. "The spirits chose their own path today.'
+                       f' Your {_STAT_NAMES[actual_stat]} grows instead."')
+    elif att == 0:
+        # Neutral — raises the player's weakest stat (her choice)
+        actual_stat = _marie_lowest_stat(character)
+        if actual_stat == stat:
+            outcome = f' Marie opens her eyes. "The spirits agreed with your choice. {stat_name} grows."'
+        else:
+            outcome = (f' Marie opens her eyes. "The spirits showed Marie something different.'
+                       f' Your {_STAT_NAMES[actual_stat]} needed growth more urgently."')
+    elif att == -1:
+        # Dislikes you — unpredictable
+        r = random.random()
+        if r < 0.35:
+            actual_stat = _marie_lowest_stat(character)
+            outcome = (f' Marie opens her eyes, expression unreadable. "The spirits see your'
+                       f' weakness. Your {_STAT_NAMES[actual_stat]} is raised. Not what you'
+                       f' asked — what you needed."')
+        elif r < 0.70:
+            actual_stat = random.choice([s for s in _STATS if s != stat])
+            outcome = (f' Marie opens her eyes with a faint smile. "The spirits were'
+                       f' capricious. Your {_STAT_NAMES[actual_stat]} grows."')
+        else:
+            # Takes money, raises something random anyway
+            actual_stat = random.choice(_STATS)
+            outcome = (f' Marie opens her eyes slowly. "The spirits... wandered. Your'
+                       f' {_STAT_NAMES[actual_stat]} is altered. Perhaps next time bring'
+                       f' a worthier gift."')
+    else:
+        # Hates you — 40% chance of nothing useful
+        if random.random() < 0.40:
+            print(tc(' The candles flare and die. When they relight, Marie is watching you coldly.', "desc"))
+            print(tc(' "The spirits refused. Your gold, however, is mine."', "npc"))
+            print(tc(' "Come back when you have learned some manners — and brought a proper offering."', "npc"))
+            character.save()
+            return
+        else:
+            actual_stat = random.choice(_STATS)
+            outcome = (f' Marie opens her eyes. A cruel smile crosses her lips. "The spirits'
+                       f' gave what they wished. Your {_STAT_NAMES[actual_stat]} is changed.'
+                       f' Perhaps this teaches you to treat Marie with more respect."')
+
+    old_val = getattr(character, actual_stat)
+    setattr(character, actual_stat, old_val + 1)
+    if actual_stat == "hardiness":
+        character.hp = min(character.hp + 2, character.hp_max)
+
+    print(tc(outcome, "npc"))
+    print()
+    print(tc(f"  {_STAT_NAMES[actual_stat]}: {old_val} → {old_val + 1}", "stat"))
+    print()
+    character.save()
+
+def _marie_give_gift_by_name(name: str, character) -> None:
+    """Handle GIVE <item> in Marie's chamber."""
+    carried = _load_carried(character)
+    item = next((a for a in carried if name.lower() in a.name.lower()), None)
+    if not item:
+        tprint(f" You're not carrying anything called '{name}'.", "error"); return
+    _marie_give_gift(item, character)
+    remaining = [a for a in carried if id(a) != id(item)]
+    _save_carried(character, remaining)
+    tprint(f" You place the {item.name} before Marie.", "desc")
+
+# ── The Bank ──────────────────────────────────────────────────────────────────
+
+def run_bank(character) -> None:
+    """Reginald T. Pemberton — Main Hall Bank."""
+    print()
+    print(tc(" ─── The Main Hall Bank ──────────────────────────────", "border"))
+    print(tc(' Pemberton sets down his pen and folds his hands precisely.', "desc"))
+    print(tc(' "Reginald T. Pemberton, at your service. Your gold is safe here."', "npc"))
+    print(tc(' "DEPOSIT, WITHDRAW, BALANCE, or DONE."', "npc"))
+    _show_balance(character)
+    print()
+
+    while True:
+        raw = tinput(" > ").strip().lower()
+
+        if raw in ("done", "leave", "0", "d"):
+            print(tc(' "Good day to you. Your assets are always safe in our vault."', "npc"))
+            break
+
+        elif raw in ("balance", "bal", "b"):
+            _show_balance(character)
+
+        elif raw.startswith("deposit"):
+            _bank_deposit(raw[7:].strip(), character)
+
+        elif raw.startswith("withdraw"):
+            _bank_withdraw(raw[8:].strip(), character)
+
+        else:
+            tprint(" DEPOSIT <amount>, WITHDRAW <amount>, BALANCE, or DONE.", "warn")
+
+def _show_balance(character) -> None:
+    print()
+    print(tc(f"  Carried gold : {character.gold}g", "stat"))
+    print(tc(f"  Bank balance : {character.bank_balance}g", "stat"))
+    print()
+
+def _bank_deposit(amt_str: str, character) -> None:
+    if amt_str in ("all", ""):
+        amt = character.gold
+    else:
+        try:
+            amt = int(amt_str)
+        except ValueError:
+            tprint(' "How much? DEPOSIT <amount> or DEPOSIT ALL."', "error"); return
+    if amt <= 0:
+        tprint(' "There is nothing to deposit."', "warn"); return
+    if amt > character.gold:
+        tprint(f' "You only have {character.gold}g to deposit."', "error"); return
+    if tinput(f" Deposit {amt}g? (y/n): ").lower() != "y":
+        return
+    character.gold -= amt
+    character.bank_balance += amt
+    character.save()
+    print(tc(f' Pemberton notes it carefully in his ledger. "Deposited {amt}g."', "npc"))
+    _show_balance(character)
+
+def _bank_withdraw(amt_str: str, character) -> None:
+    if amt_str in ("all", ""):
+        amt = character.bank_balance
+    else:
+        try:
+            amt = int(amt_str)
+        except ValueError:
+            tprint(' "How much? WITHDRAW <amount> or WITHDRAW ALL."', "error"); return
+    if amt <= 0:
+        tprint(' "There is nothing to withdraw."', "warn"); return
+    if amt > character.bank_balance:
+        tprint(f' "Your balance is only {character.bank_balance}g."', "error"); return
+    if tinput(f" Withdraw {amt}g? (y/n): ").lower() != "y":
+        return
+    character.bank_balance -= amt
+    character.gold += amt
+    character.save()
+    print(tc(f' Pemberton counts out the coins with practiced efficiency. "Withdrawn {amt}g."', "npc"))
+    _show_balance(character)
+
+# ── Cavielli's Weapons and Armour Shoppe ──────────────────────────────────────
+
+def run_marcus_shop(character) -> None:
     random.seed(len(character.adventures_completed) * 7 + character.level)
-    extras = random.sample(HORACE_RANDOM_POOL, min(3, len(HORACE_RANDOM_POOL)))
+    extras = random.sample(MARCUS_RANDOM_POOL, min(4, len(MARCUS_RANDOM_POOL)))
     random.seed()
-    stock = HORACE_CORE + extras
+    stock = MARCUS_CORE + extras
+
+    # Charisma gives a small buy-price discount
+    raw_discount = (character.charisma - 10) * 0.015
+    discount = max(0.0, min(0.15, raw_discount))
 
     while True:
         show_inventory(character)
-        tprint("\n " + tc("─── Horace's Outfitters ──────────────────────────", "border"), "desc")
-        print(tc(' Horace says: "Buy, sell, or just browse. Gold talks."', "npc"))
+        tprint("\n " + tc("─── Cavielli's Weapons and Armour Shoppe ─────────", "border"), "desc")
+        if "weapon_shop" not in _session["npc_greeted"]:
+            print(tc(' Marcus looks you over with a tradesman\'s eye. "Marcus Marcos — finest', "npc"))
+            print(tc(' steel in the city. You look like someone who knows quality. What\'ll it be?"', "npc"))
+            _session["npc_greeted"].add("weapon_shop")
+        else:
+            print(tc(' Marcus nods. "Back again. Good. Let\'s do business."', "npc"))
         print()
         for i, item in enumerate(stock, 1):
+            price = max(1, int(item["price"] * (1 - discount)))
             print(tc(f" {i:>3}. ", "border") +
                   tc(f"{item['name']:<28}", "title") +
-                  tc(f" {item['price']:>4}g  ", "sys") +
+                  tc(f" {price:>4}g  ", "sys") +
                   tc(item.get("desc", ""), "desc"))
         print()
+        if discount > 0.005:
+            print(tc(f" (Charisma earns you a {int(discount*100)}% discount)", "sys"))
         print(tc(f" Gold: {character.gold}g", "stat"))
         print(tc(" B <n> — buy   S <n> / SELL ALL — sell gear   DONE — leave", "desc"))
         print()
@@ -510,23 +799,24 @@ def run_horace_shop(character) -> None:
         raw = tinput(" > ").strip().lower()
 
         if raw in ("done", "leave", "0", "d"):
+            print(tc(' "Come back anytime. Marcus Marcos always has what you need."', "npc"))
             break
 
         elif raw == "s" or raw.startswith("sell"):
             carried        = _load_carried(character)
             equipped_names = set(character.equipped.values())
-            horace_types   = {"weapon","armor","shield","ring","cloak","generic","light"}
-            eligible       = [a for a in carried if can_sell(a) and a.artifact_type in horace_types]
+            marcus_types   = {"weapon","armor","shield","ring","cloak","generic","light","food"}
+            eligible       = [a for a in carried if can_sell(a) and a.artifact_type in marcus_types]
             sellable       = [a for a in eligible if a.name not in equipped_names]
             if not eligible:
-                tprint(" Nothing here I'd buy. Try Aldric for magical items.", "warn")
+                tprint(' "Nothing here I\'d buy. Try Aldric for potions and scrolls."', "warn")
                 continue
-            print(tc(" ── Items Horace will buy ───────────────────────────", "border"))
+            print(tc(" ── Items Marcus will buy ───────────────────────────", "border"))
             n = 0
             for a in eligible:
                 is_eq = a.name in equipped_names
                 if is_eq:
-                    print(tc(f"      ", "border") +
+                    print(tc("      ", "border") +
                           tc(f"{a.name:<30}", "title") +
                           tc(f" {sell_value(a):>4}g", "sys") +
                           tc(" [EQUIPPED — unequip first]", "warn"))
@@ -539,55 +829,70 @@ def run_horace_shop(character) -> None:
                 tprint(" All sellable items are equipped. Use EQUIPMENT to unequip.", "warn")
                 continue
             sell_raw = tinput(" S <n> or SELL ALL: ").strip().lower()
-            _process_sell(sell_raw, sellable, carried, character,
-                          horace_types)
+            _process_sell(sell_raw, sellable, carried, character, marcus_types)
 
         elif raw.startswith("b "):
             try:
-                idx = int(raw[2:]) - 1
+                idx   = int(raw[2:]) - 1
                 if not (0 <= idx < len(stock)):
                     tprint(" Invalid number.", "error"); continue
                 item  = stock[idx]
-                price = item["price"]
-                if item["artifact_type"] == "potion" and _count_potions(character) >= MAX_POTIONS:
-                    tprint(f" You can only carry {MAX_POTIONS} potions.", "error"); continue
+                price = max(1, int(item["price"] * (1 - discount)))
                 if character.gold < price:
-                    tprint(f" Not enough gold. (Need {price}g, have {character.gold}g)", "error"); continue
+                    tprint(f' "That\'ll be {price}g. You\'re a bit short." ({character.gold}g carried)', "error"); continue
                 if tinput(f" Buy {item['name']} for {price}g? (y/n): ").lower() == "y":
                     character.gold -= price
                     _add_to_inventory(character, item)
                     character.save()
-                    tprint(f" Purchased. Gold: {character.gold}g", "sys")
+                    tprint(f' "Good choice." Purchased. Gold: {character.gold}g', "sys")
             except ValueError:
                 tprint(" Enter B followed by a number.", "error")
 
         else:
             tprint(" B <n> to buy, S to sell, or DONE.", "warn")
 
+# ── Aldric's Magic, Potions and Sundries ──────────────────────────────────────
 
-def run_wizard_shop(character) -> None:
+def _aldric_spell_price(spell_key: str, character) -> int:
+    """Spell base price with small Charisma modifier (random ±5-15%)."""
+    from character import SPELL_DEFS
+    base = SPELL_DEFS[spell_key]["cost"]
+    if character.charisma >= 15:
+        # High charisma: 5-15% random discount
+        return int(base * (1 - random.uniform(0.05, 0.15)))
+    elif character.charisma <= 8:
+        # Low charisma: 5-10% surcharge
+        return int(base * (1 + random.uniform(0.05, 0.10)))
+    return base
+
+def run_aldric_shop(character) -> None:
     from character import SPELL_DEFS
 
     random.seed(len(character.adventures_completed) * 13 + character.level)
-    extras = random.sample(WIZARD_RANDOM_POOL, min(2, len(WIZARD_RANDOM_POOL)))
+    extras = random.sample(ALDRIC_POTIONS, min(3, len(ALDRIC_POTIONS)))
     random.seed()
 
     while True:
         show_inventory(character)
-        tprint("\n " + tc("─── Aldric's Arcane Emporium ─────────────────────", "border"), "desc")
-        print(tc(' Aldric says: "Knowledge has a price. So does everything else."', "npc"))
+        tprint("\n " + tc("─── Magic, Potions and Sundries ──────────────────", "border"), "desc")
+        if "magic_shop" not in _session["npc_greeted"]:
+            print(tc(' Aldric sets down his quill and studies you over his spectacles.', "desc"))
+            print(tc(' "A seeker of the arcane arts, perhaps? Or merely in need of a restorative?"', "npc"))
+            print(tc(' "Either way — you have found the right establishment."', "npc"))
+            _session["npc_greeted"].add("magic_shop")
+        else:
+            print(tc(' Aldric glances up briefly. "Back already. Browse freely."', "npc"))
         print()
 
-        # All characters may learn any spell
         available_spells = [
             (k, v) for k, v in SPELL_DEFS.items()
             if character.spell_proficiencies.get(k) is None
         ]
 
-        print(tc(" ── Spells ────────────────────────────────────────", "border"))
+        print(tc(" ── Spells ─────────────────────────────────────────", "border"))
         if available_spells:
             for i, (key, spell) in enumerate(available_spells, 1):
-                price = _spell_price(key, character)
+                price = _aldric_spell_price(key, character)
                 mark  = "✦" if character.gold >= price else "✗"
                 print(tc(f" {i:>3}. ", "border") +
                       tc(f"{spell['name']:<15}", "title") +
@@ -595,10 +900,10 @@ def run_wizard_shop(character) -> None:
                       tc(spell["desc"], "desc") +
                       tc(f"  {mark}", "sys"))
         else:
-            tprint(" You know all spells available to you.", "sys")
+            tprint(" You know all available spells.", "sys")
 
         item_offset = len(available_spells)
-        print(tc("\n ── Magical Items ─────────────────────────────────", "border"))
+        print(tc("\n ── Potions and Sundries ──────────────────────────", "border"))
         for i, item in enumerate(extras, item_offset + 1):
             limit = " [at limit]" if item["artifact_type"] == "potion" and _count_potions(character) >= MAX_POTIONS else ""
             print(tc(f" {i:>3}. ", "border") +
@@ -608,15 +913,15 @@ def run_wizard_shop(character) -> None:
                   tc(limit, "error"))
 
         print()
-        print(tc(f" Gold: {character.gold}g  |  Level: {character.level}  |  XP: {character.xp}", "stat"))
         learned = [k for k, v in character.spell_proficiencies.items() if v is not None]
-        print(tc(f" Known spells: {', '.join(learned) if learned else 'none'}", "desc"))
-        print(tc(" B <n> — buy   S <n> / SELL ALL — sell magical items   DONE — leave", "desc"))
+        print(tc(f" Gold: {character.gold}g  |  Known: {', '.join(learned) if learned else 'none'}", "stat"))
+        print(tc(" B <n> — buy   S <n> / SELL ALL — sell potions/scrolls   DONE — leave", "desc"))
         print()
 
         raw = tinput(" > ").strip().lower()
 
         if raw in ("done", "leave", "0", "d"):
+            print(tc(' "Knowledge is never wasted. Return when you need more."', "npc"))
             break
 
         elif raw == "s" or raw.startswith("sell"):
@@ -626,13 +931,13 @@ def run_wizard_shop(character) -> None:
             eligible       = [a for a in carried if can_sell(a) and a.artifact_type in aldric_types]
             sellable       = [a for a in eligible if a.name not in equipped_names]
             if not eligible:
-                tprint(" Nothing magical I'd buy. Try Horace for weapons.", "warn"); continue
+                tprint(' "Nothing magical I\'d buy. Try Marcus for weapons and armour."', "warn"); continue
             print(tc(" ── Items Aldric will buy ───────────────────────────", "border"))
             n = 0
             for a in eligible:
                 is_eq = a.name in equipped_names
                 if is_eq:
-                    print(tc(f"      ", "border") +
+                    print(tc("      ", "border") +
                           tc(f"{a.name:<30}", "title") +
                           tc(f" {sell_value(a):>4}g", "sys") +
                           tc(" [EQUIPPED — unequip first]", "warn"))
@@ -642,11 +947,9 @@ def run_wizard_shop(character) -> None:
                           tc(f"{a.name:<30}", "title") +
                           tc(f" {sell_value(a):>4}g", "sys"))
             if not sellable:
-                tprint(" All sellable items are equipped. Use EQUIPMENT to unequip.", "warn")
-                continue
+                tprint(" All sellable items are equipped.", "warn"); continue
             sell_raw = tinput(" S <n> or SELL ALL: ").strip().lower()
-            _process_sell(sell_raw, sellable, carried, character,
-                          aldric_types)
+            _process_sell(sell_raw, sellable, carried, character, aldric_types)
 
         elif raw.startswith("b "):
             try:
@@ -658,15 +961,15 @@ def run_wizard_shop(character) -> None:
                 key, val, kind = all_items[idx]
 
                 if kind == "spell":
-                    price = _spell_price(key, character)
+                    price = _aldric_spell_price(key, character)
                     if character.gold < price:
-                        tprint(f" Not enough gold. (Need {price}g, have {character.gold}g)", "error"); continue
+                        tprint(f' "That spell costs {price}g. You have {character.gold}g."', "npc"); continue
                     if tinput(f" Learn {val['name']} for {price}g? (y/n): ").lower() == "y":
                         character.gold -= price
                         character.spell_proficiencies[key] = random.randint(25, 75)
                         character.save()
-                        tprint(f" You have learned {val['name']}! (starting proficiency: {character.spell_proficiencies[key]}%)", "sys")
-                        print(tc(' Aldric says: "Use it wisely. Or don\'t. I don\'t care."', "npc"))
+                        tprint(f" You have learned {val['name']}! (proficiency: {character.spell_proficiencies[key]}%)", "sys")
+                        print(tc(' "Use it wisely," Aldric says. "The arcane arts do not forgive carelessness."', "npc"))
                 else:
                     item  = val
                     price = item["price"]
@@ -685,260 +988,357 @@ def run_wizard_shop(character) -> None:
         else:
             tprint(" B <n> to buy, S to sell, or DONE.", "warn")
 
-# ── Tavern command handler ────────────────────────────────────────────────────
+# ── Room display ──────────────────────────────────────────────────────────────
 
-DIR_ABBREV = {"n":"north","s":"south","e":"east","w":"west","u":"up","d":"down"}
+def show_room(room: TavernRoom, character=None, entering: bool = False) -> None:
+    print()
+    print(tc(f" ── {room.name} ──", "border"))
+    print(tc(room.description, "desc"))
+    if room.exits:
+        dirs = []
+        for d in sorted(room.exits.keys()):
+            dirs.append("SOUTH (exit to street)" if room.exits[d] == "EXIT_UNIVERSE" else d.upper())
+        print(tc(f" Exits: {', '.join(dirs)}", "border"))
 
-def handle_tavern_command(raw: str, character, room_id: str) -> Optional[str]:
-    """Handle tavern commands with fuzzy matching. Returns new room_id, 'QUIT', or None."""
-    room = TAVERN_ROOMS[room_id]
-    
-    # Parse command with fuzzy matching
+    # NPC first-entry greeting
+    if entering and character and room.npc and room.room_id not in _session["npc_greeted"]:
+        print()
+        _print_npc_entry_greeting(room.npc, character)
+        _session["npc_greeted"].add(room.room_id)
+    print()
+
+def _print_npc_entry_greeting(npc: str, character) -> None:
+    if npc == "marcus":
+        print(tc(' Marcus Marcos looks up from his work. "Well, well — a Free Adventurer!"', "npc"))
+        print(tc(' "Marcus Marcos at your service. Finest weapons in the city. Have a look."', "npc"))
+    elif npc == "aldric":
+        print(tc(' Aldric the Mage sets down his quill and peers over his spectacles at you.', "desc"))
+        print(tc(' "Ah. A visitor. How... timely. I am Aldric. Knowledge and its tools, at a price."', "npc"))
+    elif npc == "marie":
+        print(_marie_greeting_line(character))
+        att = _marie_total_attitude(character)
+        if att < 0:
+            print(tc(' "If you have an offering, set it before Marie. Otherwise — speak quickly."', "npc"))
+        elif att == 0:
+            print(tc(' "You seek something. Marie can see it in your eyes. Speak your need."', "npc"))
+        else:
+            print(tc(' "You are always welcome here, cher. What can Marie do for you today?"', "npc"))
+    elif npc == "banker":
+        print(tc(' "Reginald T. Pemberton, Bank of the Main Hall," the man says precisely.', "npc"))
+        print(tc(' "DEPOSIT, WITHDRAW, or BALANCE. All transactions are recorded and final."', "npc"))
+
+# ── Main Hall command handler ─────────────────────────────────────────────────
+
+DIR_ABBREV = {
+    "n":"north","s":"south","e":"east","w":"west","u":"up","d":"down",
+    "ne":"northeast","nw":"northwest","se":"southeast","sw":"southwest",
+}
+
+def handle_main_hall_command(raw: str, character, room_id: str) -> Optional[str]:
+    room = MAIN_HALL_ROOMS[room_id]
     cmd, status, suggestions = parse_command(raw, "tavern")
-    
-    # Extract noun (everything after the first word)
-    parts = raw.strip().lower().split()
-    noun = " ".join(parts[1:]) if len(parts) > 1 else ""
 
-    # Handle special "talk to" syntax
-    if len(parts) >= 3 and parts[0] == "talk" and parts[1] == "to":
-        cmd = "talk"
-        noun = " ".join(parts[2:])
-    
-    # ────────────────────────────────────────────────────────────────────────────
-    # Handle parsing results
-    # ────────────────────────────────────────────────────────────────────────────
-    
-    if status == "exact" or status == "partial":
-        return _execute_tavern_command(cmd, noun, character, room)
-    
+    parts = raw.strip().lower().split()
+    noun  = " ".join(parts[1:]) if len(parts) > 1 else ""
+
+    # Special parsing: GIVE <item> TO <npc>
+    if parts and parts[0] == "give" and "to" in parts:
+        to_idx = parts.index("to")
+        cmd    = "give"
+        status = "exact"
+        noun   = " ".join(parts[1:to_idx]) + "|" + " ".join(parts[to_idx+1:])
+
+    # Special parsing: TALK TO <npc>
+    elif len(parts) >= 3 and parts[0] == "talk" and parts[1] == "to":
+        cmd    = "talk"
+        status = "exact"
+        noun   = " ".join(parts[2:])
+
+    if status in ("exact", "partial"):
+        return _execute_main_hall_command(cmd, noun, character, room)
     elif status == "ambiguous":
-        tprint(f"\n Ambiguous command: '{parts[0].upper()}'", "error")
-        tprint(f" Did you mean: {', '.join(s.upper() for s in suggestions)}?", "sys")
-        tprint(f" Type HELP for a list of commands.\n", "sys")
-        return None
-    
-    elif status == "not_found":
-        tprint(f" You don't understand that. (Type HELP for commands)", "error")
+        tprint(f"\n Ambiguous: '{parts[0].upper()}'. Did you mean: {', '.join(s.upper() for s in (suggestions or []))}?", "error")
+    else:
+        tprint(" Unknown command. Type HELP for a list.", "error")
         if suggestions:
             tprint(f" Did you mean: {', '.join(s.upper() for s in suggestions[:3])}?", "sys")
-        return None
-    
     return None
 
 
-def _execute_tavern_command(cmd: str, noun: str, character, room) -> Optional[str]:
-    """Execute a validated tavern command."""
-    
-    # ────────────────────────────────────────────────────────────────────────────
-    # Movement
-    # ────────────────────────────────────────────────────────────────────────────
-    if cmd in ("north", "south", "east", "west"):
-        if cmd in room.exits:
-            return room.exits[cmd]
-        else:
-            tprint(" You can't go that way.", "error")
-            return None
-    
+def _execute_main_hall_command(cmd: str, noun: str, character, room) -> Optional[str]:
+
+    # ── Movement ──────────────────────────────────────────────────────────────
+    if cmd in ("north","south","east","west","northeast","northwest","southeast","southwest","up","down"):
+        target = room.exits.get(cmd)
+        if target == "EXIT_UNIVERSE":
+            _temporarily_leave_universe(character); return "EXIT_GAME"
+        elif target:
+            return target
+        tprint(" You can't go that way.", "error"); return None
+
     if cmd == "go":
-        if not noun:
-            tprint(" Go where?", "error")
-            return None
-        direction = DIR_ABBREV.get(noun, noun)
-        if direction in room.exits:
-            return room.exits[direction]
-        tprint(" You can't go that way.", "error")
-        return None
-    
-    # ────────────────────────────────────────────────────────────────────────────
-    # NPC Interaction
-    # ────────────────────────────────────────────────────────────────────────────
+        direction = DIR_ABBREV.get(noun.strip().lower(), noun.strip().lower())
+        target    = room.exits.get(direction)
+        if target == "EXIT_UNIVERSE":
+            _temporarily_leave_universe(character); return "EXIT_GAME"
+        elif target:
+            return target
+        tprint(" You can't go that way.", "error"); return None
+
+    # ── LEAVE / QUIT ──────────────────────────────────────────────────────────
+    if cmd in ("leave", "quit"):
+        if room.room_id != "foyer":
+            tprint(" The exit is through the Main Hall foyer (south).", "desc"); return None
+        _temporarily_leave_universe(character); return "EXIT_GAME"
+
+    # ── NPC interaction ────────────────────────────────────────────────────────
     if cmd == "talk":
-        if not noun:
-            tprint(" Talk to whom?", "error")
-            return None
-        
-        talk_target = noun.strip().lower()
-        
-        # Handle Horace
-        if "horace" in talk_target or "shop" in talk_target:
-            if room.npc == "horace":
-                run_horace_shop(character)
+        target = noun.strip().lower()
+        if not target:
+            if room.npc:
+                target = room.npc
             else:
-                tprint(" Horace is at the bar. Head north from the entrance.", "desc")
+                tprint(" Talk to whom?", "error"); return None
+
+        if any(k in target for k in ("marcus","cavielli","weapon","shop","armour","armor")):
+            if room.npc == "marcus":
+                run_marcus_shop(character)
+            else:
+                tprint(" Cavielli's Weapons Shoppe is east of the Main Hall.", "desc")
             return None
-        
-        # Handle Aldric
-        if "aldric" in talk_target or "wizard" in talk_target or "magic" in talk_target:
+
+        if any(k in target for k in ("aldric","wizard","magic","mage","potion")):
             if room.npc == "aldric":
-                run_wizard_shop(character)
+                run_aldric_shop(character)
             else:
-                tprint(" Aldric is in the back room. Bar, then east.", "desc")
+                tprint(" Aldric's shop is in the back room — east from the Common Room.", "desc")
             return None
-        
-        tprint(f" There is no one called '{noun}' here.", "error")
-        return None
-    
-    # ────────────────────────────────────────────────────────────────────────────
-    # Shop (direct command)
-    # ────────────────────────────────────────────────────────────────────────────
+
+        if any(k in target for k in ("marie","laveau","witch")):
+            if room.npc == "marie":
+                run_marie_shop(character)
+            else:
+                tprint(" Marie Laveau's chamber is north of the Common Room.", "desc")
+            return None
+
+        if any(k in target for k in ("banker","pemberton","bank")):
+            if room.npc == "banker":
+                run_bank(character)
+            else:
+                tprint(" The bank is west of the Main Hall.", "desc")
+            return None
+
+        tprint(f" There is no one called '{noun}' here.", "error"); return None
+
+    # ── Shop shortcut commands ────────────────────────────────────────────────
     if cmd in ("buy", "sell"):
-        if room.npc == "horace":
-            run_horace_shop(character)
+        if room.npc == "marcus":
+            run_marcus_shop(character)
         elif room.npc == "aldric":
-            run_wizard_shop(character)
+            run_aldric_shop(character)
+        elif room.npc == "marie":
+            run_marie_shop(character)
+        elif room.npc == "banker":
+            run_bank(character)
         else:
-            tprint(" Visit Horace at the bar (north) or Aldric in the back room (bar → east) to trade.", "desc")
+            tprint(" No shopkeeper here. Try Marcus (east), Aldric (common room → east), or the bank (west).", "desc")
         return None
 
-    if cmd == "horace":
-        if room.npc == "horace":
-            run_horace_shop(character)
+    if cmd in ("marcus", "horace"):
+        if room.npc == "marcus":
+            run_marcus_shop(character)
         else:
-            tprint(" Horace is at the bar. Head north from the entrance.", "desc")
+            tprint(" Cavielli's Weapons Shoppe is east of the Main Hall.", "desc")
         return None
 
-    if cmd == "wizard":
+    if cmd in ("wizard", "aldric"):
         if room.npc == "aldric":
-            run_wizard_shop(character)
+            run_aldric_shop(character)
         else:
-            tprint(" Aldric is in the back room. Head to the bar, then east.", "desc")
+            tprint(" Aldric's shop is east of the Common Room.", "desc")
         return None
-    
-    # ────────────────────────────────────────────────────────────────────────────
-    # Character Management
-    # ────────────────────────────────────────────────────────────────────────────
+
+    if cmd == "marie":
+        if room.npc == "marie":
+            run_marie_shop(character)
+        else:
+            tprint(" Marie Laveau's chamber is north of the Common Room.", "desc")
+        return None
+
+    if cmd == "bank":
+        if room.npc == "banker":
+            run_bank(character)
+        else:
+            tprint(" The bank is west of the Main Hall.", "desc")
+        return None
+
+    # ── GIVE ─────────────────────────────────────────────────────────────────
+    if cmd == "give":
+        if "|" in noun:
+            item_name, npc_name = noun.split("|", 1)
+            item_name = item_name.strip()
+            npc_name  = npc_name.strip()
+        else:
+            item_name = noun.strip()
+            npc_name  = room.npc or ""
+
+        if not item_name:
+            tprint(" Give what?", "error"); return None
+
+        if any(k in npc_name for k in ("marie","laveau","witch")) or room.npc == "marie":
+            if room.npc != "marie" and not any(k in npc_name for k in ("marie","laveau","witch")):
+                tprint(" Marie Laveau is north of the Common Room.", "desc"); return None
+            _marie_give_gift_by_name(item_name, character)
+        elif room.npc in ("marcus","aldric"):
+            npc_label = "Marcus" if room.npc == "marcus" else "Aldric"
+            tprint(f' {npc_label} shakes his head. "I don\'t want gifts. Sell it to me properly."', "npc")
+        elif room.npc == "banker":
+            tprint(' Pemberton raises an eyebrow. "We deal in coin, not goods. DEPOSIT to store gold."', "npc")
+        else:
+            tprint(" There is no one here to give that to.", "error")
+        return None
+
+    # ── Bank commands ─────────────────────────────────────────────────────────
+    if cmd in ("deposit", "withdraw", "balance"):
+        if room.npc != "banker":
+            tprint(" The bank is west of the Main Hall.", "desc"); return None
+        if cmd == "deposit":
+            _bank_deposit(noun, character)
+        elif cmd == "withdraw":
+            _bank_withdraw(noun, character)
+        else:
+            _show_balance(character)
+        return None
+
+    # ── Character management ──────────────────────────────────────────────────
     if cmd == "character":
-        show_character_sheet(character)
-        return None
-    
+        show_character_sheet(character); return None
     if cmd == "inventory":
-        show_inventory(character)
-        return None
-    
+        show_inventory(character); return None
     if cmd == "spells":
-        show_spells(character)
-        return None
-
+        show_spells(character); return None
     if cmd == "equipment":
-        show_equipment(character)
-        return None
-
+        show_equipment(character); return None
     if cmd == "equip":
-        cmd_equip_tavern(noun, character)
-        return None
-
+        cmd_equip_tavern(noun, character); return None
     if cmd == "unequip":
-        show_equipment(character)   # show_equipment already prompts to unequip by number
-        return None
+        show_equipment(character); return None
 
-    # ────────────────────────────────────────────────────────────────────────────
-    # Game Control
-    # ────────────────────────────────────────────────────────────────────────────
+    # ── Game control ──────────────────────────────────────────────────────────
     if cmd == "save":
         character.save()
-        tprint(" Character saved.", "sys")
-        return None
+        tprint(" Character saved.", "sys"); return None
 
     if cmd == "look":
-        show_room(room)
-        return None
-    
+        show_room(room, character, entering=False); return None
+
     if cmd == "help":
-        show_tavern_help()
-        return None
-    
+        show_main_hall_help(); return None
+
     if cmd == "adventure":
         return "BOARD"
 
     if cmd == "resume":
-        menu_load_save(character)
-        return None
+        menu_load_save(character); return None
 
-    if cmd == "quit":
-        character.save()
-        return "EXIT_GAME"
-    
-    # Should not reach here (parser already validated command)
-    tprint(" You don't understand that. (Type HELP for commands)", "error")
+    tprint(" Unknown command. Type HELP for a list.", "error")
     return None
 
-def show_tavern_help() -> None:
+
+def _temporarily_leave_universe(character) -> None:
+    """The classic Eamon 'Temporarily Leave the Universe' exit."""
     print()
-    print(tc(" ─── Tavern Commands ──────────────────────────────────", "border"))
+    print(tc(" ─────────────────────────────────────────────────────", "border"))
+    print(tc("  You push open the heavy oak door of the Main Hall and step out", "desc"))
+    print(tc("  into the street. The city carries on around you, indifferent.", "desc"))
+    print()
+    print(tc("  Your legend is duly recorded in the Guild rolls.", "sys"))
+    print(tc("  The Free Adventurers will be here when you return.", "sys"))
+    print()
+    print(tc("  (Temporarily Leaving the Universe — character saved.)", "warn"))
+    print(tc(" ─────────────────────────────────────────────────────", "border"))
+    print()
+    character.save()
+
+# ── Help ──────────────────────────────────────────────────────────────────────
+
+def show_main_hall_help() -> None:
+    print()
+    print(tc(" ─── Main Hall Commands ───────────────────────────────", "border"))
     cmds = [
-        ("N/S/E/W",           "Move between rooms"),
-        ("GO <direction>",    "Move explicitly"),
-        ("CHARACTER / SHEET", "View character sheet"),
-        ("INVENTORY / I",     "View carried items"),
-        ("SPELLS",            "View known spells"),
-        ("EQUIPMENT / EQ",    "View equipped items and unequip"),
-        ("EQUIP <item>",      "Equip a carried weapon, armor, or accessory"),
-        ("UNEQUIP",           "Unequip an item (same menu as EQUIPMENT)"),
-        ("LOOK / L",          "Describe current room"),
-        ("HORACE / SHOP",     "Trade with Horace (at the bar)"),
-        ("ALDRIC / WIZARD",   "Trade with Aldric (bar → east)"),
-        ("BUY / SELL",        "Buy or sell at the shop in your current room"),
-        ("TALK TO <name>",    "Speak to an NPC"),
-        ("SAVE",              "Save your character to disk"),
-        ("ADVENTURE / A",     "Go to the adventure board"),
-        ("RESUME / SAVES",    "Resume a saved adventure"),
-        ("QUIT / Q",          "Save and exit the game"),
-        ("HELP / ?",          "This message"),
+        ("N/S/E/W/NE/SW/...",   "Move between rooms"),
+        ("GO <direction>",      "Move explicitly"),
+        ("LOOK / L",            "Describe current room"),
+        ("TALK TO <name>",      "Speak to the NPC in this room"),
+        ("GIVE <item> TO <npc>","Give an item to an NPC (gifts for Marie)"),
+        ("BUY / SELL",          "Open the shop in your current room"),
+        ("MARCUS / CAVIELLI",   "Cavielli's Weapons Shoppe (east of Main Hall)"),
+        ("ALDRIC / WIZARD",     "Aldric's Magic shop (common room → east)"),
+        ("MARIE / WITCH",       "Marie Laveau's chamber (common room → north)"),
+        ("BANK",                "The Main Hall Bank (west of Main Hall)"),
+        ("DEPOSIT <amount>",    "Deposit gold at the bank"),
+        ("WITHDRAW <amount>",   "Withdraw gold from the bank"),
+        ("BALANCE",             "Check your bank balance"),
+        ("INVENTORY / I",       "List carried items"),
+        ("EQUIPMENT / EQ",      "View and manage equipped items"),
+        ("EQUIP <item>",        "Equip a carried weapon, armour, or accessory"),
+        ("UNEQUIP",             "Remove an equipped item"),
+        ("CHARACTER / V",       "Full character sheet"),
+        ("SPELLS",              "Known spells and proficiencies"),
+        ("SAVE",                "Save character to disk"),
+        ("ADVENTURE / A",       "Go to the adventure board (guild hall)"),
+        ("RESUME",              "Resume a saved adventure"),
+        ("LEAVE / QUIT",        "Temporarily Leave the Universe (save and exit)"),
+        ("HELP / ?",            "This message"),
     ]
-    for cmd, desc in cmds:
-        print(tc(f" {cmd:<22}", "title") + tc(desc, "desc"))
+    for c, desc in cmds:
+        print(tc(f" {c:<26}", "title") + tc(desc, "desc"))
     print()
 
-# ✅ BUG 8 FIX: REMOVED first definition of menu_load_save (lines 323+)
-# Only keeping the second, complete definition below:
+# ── Save game management ──────────────────────────────────────────────────────
+
+SAVE_DIR = "stored_games"
+
+def _adv_title(adv_path: str) -> str:
+    meta = os.path.join(adv_path, "adventure.json")
+    if not os.path.exists(meta):
+        return adv_path or "?"
+    try:
+        with open(meta) as f:
+            return json.load(f).get("title", adv_path)
+    except Exception:
+        return adv_path
 
 def menu_load_save(character) -> None:
-    """Browse and resume saved games by adventure."""
     from character import Character
-    
     games = list_resumable_games(character.name)
-    
     if not games:
-        tprint("\n ❌ No saved games found.", "error")
+        tprint("\n No saved games found.", "error")
         tinput(" Press Enter to continue...")
         return
-    
     print(tc("\n ─── Saved Games ──────────────────────────────────", "border"))
-    
     adv_list = sorted(games.keys())
     for i, adv_name in enumerate(adv_list, 1):
         saves = games[adv_name]
         print(tc(f" {i}. {adv_name} ({len(saves)} save(s))", "title"))
         for slot, filename, meta in saves:
             print(tc(f"    └─ Slot {slot}: {meta['room']} (HP: {meta['hp']}, {meta['timestamp'][:10]})", "desc"))
-    
     print(tc(f"\n {len(adv_list) + 1}. Cancel", "border"))
-    
     choice = tinput("\n Resume which adventure? (# or name): ").strip()
-    
-    if choice == str(len(adv_list) + 1) or choice.lower() == 'cancel':
+    if choice == str(len(adv_list) + 1) or choice.lower() == "cancel":
         return
-    
     adventure = None
     try:
         adv_idx = int(choice) - 1
         if 0 <= adv_idx < len(adv_list):
             adventure = adv_list[adv_idx]
     except ValueError:
-        # Try matching by name substring
         for adv in adv_list:
             if choice.lower() in adv.lower():
-                adventure = adv
-                break
-    
+                adventure = adv; break
     if not adventure:
-        tprint(" ❌ Adventure not found.", "error")
-        return
-    
+        tprint(" Adventure not found.", "error"); return
     saves = games[adventure]
-    
-    # Prompt for slot if multiple saves
     if len(saves) == 1:
         slot = saves[0][0]
     else:
@@ -946,63 +1346,46 @@ def menu_load_save(character) -> None:
         try:
             slot = int(tinput(f"\n Which save slot? ({slot_nums}): ").strip())
             if not any(s[0] == slot for s in saves):
-                tprint(" ❌ Invalid slot.", "error")
-                return
+                tprint(" Invalid slot.", "error"); return
         except ValueError:
-            tprint(" ❌ Invalid input.", "error")
-            return
-    
-    # Load and launch adventure
+            tprint(" Invalid input.", "error"); return
     save_data = load_game_slotted(character.name, adventure, slot, interactive=False)
     if not save_data:
-        tprint(" ❌ Load failed.", "error")
-        return
-    
-    # Find adventure path
+        tprint(" Load failed.", "error"); return
     adv_path = None
     adventures = find_adventures()
-    
-    # First try exact match
     for adv in adventures:
         if adv["name"] == adventure:
-            adv_path = adv["path"]
-            break
-    
-    # If not found, try substring match (case-insensitive)
+            adv_path = adv["path"]; break
     if not adv_path:
         for adv in adventures:
             if adventure.lower() in adv["name"].lower() or adv["name"].lower() in adventure.lower():
-                adv_path = adv["path"]
-                break
-    
+                adv_path = adv["path"]; break
     if not adv_path:
-        tprint(f" ❌ Adventure path not found for: {adventure}", "error")
-        return
-    
-    # Launch engine with savefile
+        tprint(f" Adventure path not found for: {adventure}", "error"); return
     safe_name = character.name.lower().replace(" ", "_")
-    safe_adv = adventure.lower().replace(" ", "_")
-    savefile = f"{safe_name}_{safe_adv}_slot{slot}"
-    
+    safe_adv  = adventure.lower().replace(" ", "_")
+    savefile  = f"{safe_name}_{safe_adv}_slot{slot}"
     tprint(f"\n Resuming: {adventure}\n", "sys")
-    result = _launch_engine(character, adv_path, savefile)  # ✅ Now savefile is used!
-    _handle_engine_return(character, result, adv_path,
-                          adv_name=adventure,
-                          is_beginner_adv=False)
+    result = _launch_engine(character, adv_path, savefile)
+    _handle_engine_return(character, result, adv_path, adv_name=adventure, is_beginner_adv=False)
 
-def run_tavern_exploration(character) -> str:
-    """Walk the tavern. Returns 'BOARD' to go to adventure board, 'EXIT_GAME' to quit."""
-    current_room = "entrance"
-    show_room(TAVERN_ROOMS[current_room])
-    tprint(" Type HELP for commands, ADVENTURE for the board, QUIT to exit.", "sys")
+# ── Main Hall exploration loop ────────────────────────────────────────────────
+
+def run_main_hall_exploration(character) -> str:
+    """Navigate the Main Hall. Returns 'BOARD' or 'EXIT_GAME'."""
+    _reset_session()
+    current_room = "foyer"
+    show_room(MAIN_HALL_ROOMS[current_room], character, entering=True)
+    tprint(" Type HELP for commands, ADVENTURE for the board, LEAVE to exit.", "sys")
     while True:
-        raw    = tinput(f" [{TAVERN_ROOMS[current_room].name}] > ")
-        result = handle_tavern_command(raw, character, current_room)
+        raw    = tinput(f" [{MAIN_HALL_ROOMS[current_room].name}] > ")
+        result = handle_main_hall_command(raw, character, current_room)
         if result in ("BOARD", "EXIT_GAME"):
             return result
         elif result is not None:
             current_room = result
-            show_room(TAVERN_ROOMS[current_room])
+            show_room(MAIN_HALL_ROOMS[current_room], character, entering=True)
 
 # ── Character management ──────────────────────────────────────────────────────
 
@@ -1092,7 +1475,7 @@ def choose_adventure(character, adventures: list):
         done = tc(" [completed]", "sys") if adv["name"] in character.adventures_completed else ""
         print(tc(f" {i}.", "border") + tc(f" {adv['title']}", "title") + done)
     print(tc(" R. Resume a saved game", "sys"))
-    print(tc(" 0. Return to tavern", "border"))
+    print(tc(" 0. Return to Main Hall", "border"))
     print()
     while True:
         raw = tinput(" Choose: ").strip().lower()
@@ -1106,35 +1489,27 @@ def choose_adventure(character, adventures: list):
         tprint(" Invalid choice.", "error")
 
 # ── Engine launch & return ────────────────────────────────────────────────────
-# ✅ BUG 7 FIX: NOW PASSES savefile PARAMETER
-def _launch_engine(character, adv_path: str, savefile: str = ""):
-    """Launch adventure directly."""
-    from engine import run_adventure
-    result = run_adventure(character, adv_path, savefile)  # ✅ savefile passed
-    return result
 
+def _launch_engine(character, adv_path: str, savefile: str = ""):
+    from engine import run_adventure
+    return run_adventure(character, adv_path, savefile)
 
 def _handle_engine_return(character, result, adv_path: str,
                           adv_name: str = "", is_beginner_adv: bool = False) -> None:
-    """Handle return from adventure."""
-    # Character is already updated by run_adventure() - no need to reload
-    
-    completed = (result == 1)  # 1 = won
-    died      = (result == 2)  # 2 = died
-    escaped   = (result == 3)  # 3 = exited via EXIT_TAVERN
-    crashed   = result not in (0, 1, 2, 3)
+    completed = (result == 1)
+    died      = (result == 2)
+    escaped   = (result == 3)
 
     if escaped:
-        tprint("\n You return to the Saunter Inn.", "sys")
-        return
-    elif crashed:
+        tprint("\n You return to the Main Hall.", "sys"); return
+    elif result not in (0, 1, 2, 3):
         tprint("\n Something went wrong during that adventure.", "error")
     elif died:
-        tprint("\n You have fallen. The tavern healer revives you for 2 gold per HP lost.", "warn")
+        tprint("\n You have fallen. The Main Hall healer revives you for 2 gold per HP lost.", "warn")
         hp_lost = character.hp_max - character.hp
         cost = max(2, hp_lost * 2)
         character.gold = max(0, character.gold - cost)
-        character.hp = character.hp_max
+        character.hp   = character.hp_max
         character.save()
     elif completed:
         tprint("\n Welcome back, hero! Your deeds have been recorded.", "sys")
@@ -1155,23 +1530,23 @@ def run_tavern() -> None:
     first_entry = True
     while True:
         if first_entry:
-            tprint(" Welcome to the Saunter Inn and Tavern.", "sys")
+            tprint(f" Welcome to the Main Hall, {character.name}.", "sys")
             first_entry = False
 
-        action = run_tavern_exploration(character)
+        action = run_main_hall_exploration(character)
 
         if action == "EXIT_GAME":
             tprint("\n Until next time, adventurer.\n", "desc")
             break
 
-        # action == "BOARD" — proceed to adventure board
+        # action == "BOARD"
         adventures = find_adventures()
         if not adventures:
             tprint(" No adventures available.", "error"); continue
 
         adv = choose_adventure(character, adventures)
         if adv is None:
-            continue  # back to exploration
+            continue
 
         tprint(f"\n You set out for: {adv['title']}\n", "sys")
         result = _launch_engine(character, adv["path"])
@@ -1180,7 +1555,7 @@ def run_tavern() -> None:
                               is_beginner_adv=adv["is_beginner"])
 
         if result == 3:
-            continue  # Escaped — return to tavern exploration
+            continue
 
         again = tinput("\n Return to the Saunter Inn? (y/n): ").lower()
         if again != "y":
