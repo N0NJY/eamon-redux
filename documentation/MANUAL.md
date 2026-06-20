@@ -587,15 +587,38 @@ Items brought from a previous adventure are kept separate from the new adventure
 
 ---
 
+## Managing Equipment in the Tavern
+
+You can equip and unequip items while in the tavern without entering an adventure.
+
+```
+EQUIP <item>    — equip a carried weapon, armor, ring, shield, or cloak
+                  (also: WEAR, WIELD, READY)
+EQUIP           — show a numbered list of all equippable items; choose by number
+UNEQUIP         — same list, but to remove a currently equipped item
+                  (also: REMOVE, DOFF)
+EQUIPMENT       — show all five slots and what is currently in each (also: EQ)
+```
+
+Items marked **[EQUIPPED]** in your inventory are active. Equipped status carries over into adventures — if you equip chainmail in the tavern, you begin your next adventure already wearing it.
+
+Cursed items cannot be unequipped from the tavern any more than they can from inside an adventure.
+
+---
+
 ## Selling Loot
 
-After returning from an adventure, Horace will offer to buy any items you're carrying. Keys and quest items cannot be sold.
+After returning from an adventure, visit Horace (weapons/armor) or Aldric (magical items) to sell what you have collected. When you enter the sell screen your full inventory is shown first so you can see what you are carrying before deciding what to sell.
 
 ```
-S 2         — sell item number 2
-SELL ALL    — sell everything at once (with confirmation)
+S <n>       — sell the numbered item (must not be equipped)
+SELL ALL    — sell all eligible items at once, skipping equipped ones
 DONE        — leave without selling
 ```
+
+**Equipped items are protected.** They appear in the sell listing marked `[EQUIPPED — unequip first]` but cannot be numbered or sold — not even by SELL ALL. Use `UNEQUIP` or `EQUIPMENT` to remove an item before selling it.
+
+Keys and quest items cannot be sold regardless of equipped status. Items bought at Horace's are sold back at their loot value, which may be lower than the purchase price.
 
 ---
 
