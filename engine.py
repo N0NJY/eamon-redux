@@ -1545,7 +1545,7 @@ class Engine:
         print(self.tc("  CAST <spell>, SPELLS (show proficiencies)", "help"))
         print()
         print(self.tc("Status", "sys"))
-        print(self.tc("  HEALTH, REST, EQUIPMENT", "help"))
+        print(self.tc("  HEALTH, REST, EQUIPMENT, CHAR (character sheet)", "help"))
         print()
         print(self.tc("Game", "sys"))
         print(self.tc("  SAVE, LOAD, QUIT, HELP", "help"))
