@@ -134,6 +134,21 @@ Your proficiency **grows by 1% each time you successfully land a hit** with that
 
 Armor reduces incoming damage by its **armor class** value. If a monster hits you for 5 damage and you are wearing armor with armor class 3, you take only 2 damage. Shields stack with armor for greater protection.
 
+### Rings
+
+Rings fit the ring slot and may carry **stat bonuses** that take effect immediately when equipped and are removed when you take the ring off.
+
+```
+EQUIP ring      — slip the ring on; bonus shown in parentheses
+REMOVE ring     — remove it; bonus reversed
+```
+
+A ring's effect is printed when you equip it: "You equip the gold ring. (+2 Intelligence)."
+
+**Cursed rings** apply a penalty to a stat and **cannot be removed** — the `REMOVE` command will tell you the ring is cursed. You will need a special item or location to lift the curse.
+
+Stat bonuses from rings persist across save/load and carry over into new adventures as long as you are wearing the ring when the adventure ends.
+
 ---
 
 ## Combat
@@ -203,6 +218,12 @@ Minimum 1 damage always gets through.
 ### Fleeing
 
 Type `FLEE` (also: `RUN`, `ESCAPE`) to bolt in a random available direction. Each hostile monster gets one free attack as you turn to run. You cannot use normal movement while hostile monsters are present — fight or flee.
+
+### Followers in Combat
+
+Any followers travelling with you automatically join each combat round. After your attack, each follower who can fight makes their own strike against the same enemy. Monsters fight back — there is a 30% chance each round that the monster swings at a follower instead of you, so keep an eye on their health.
+
+Some followers are **non-combatants** (like a rescued prisoner). They travel with you and count toward quest objectives but do not fight.
 
 ---
 
@@ -454,10 +475,12 @@ Your carrying capacity is Hardiness × 10 gronds.
 TALK TO hermit      — speak with an NPC (also: ASK, REQUEST)
 SAY "open sesame"   — broadcast words to the room (also: YELL, SHOUT)
 SMILE               — friendly gesture (also: WAVE, GRIN, BOW)
-FREE prisoner       — release a captive creature (also: RELEASE)
+FREE prisoner       — release a captive NPC (also: RELEASE)
 ```
 
-`TALK TO` directs speech at a specific NPC and may trigger dialogue, healing offers, or quest events. `SAY` broadcasts to the room and may trigger adventure-specific reactions (passwords, secrets).
+`TALK TO` directs speech at a specific NPC and may trigger dialogue, healing offers, or follower recruitment. `SAY` broadcasts to the room and may trigger adventure-specific reactions (passwords, secrets).
+
+`FREE` releases a captive NPC and causes them to join you as a follower. If the NPC has a guard, you must defeat that guard first. Freeing a captive usually awards bonus XP.
 
 ### Examining Monsters
 
@@ -472,9 +495,38 @@ Shows the monster's description and a health status: "looks healthy," "is wounde
 
 ## Followers and Quests
 
-### Followers (Adventure-Dependent)
+### Recruiting Followers
 
-Some adventures allow you to recruit NPCs as followers — they fight alongside you in combat. Recruit them by talking to them and meeting their conditions (stats, alignment, items, quest progress). Check the adventure's intro or talk to NPCs to learn more.
+Some NPCs can be recruited as followers. To recruit one, use `TALK TO <npc>`. If that NPC is available to join, the game checks their recruitment conditions:
+
+| Condition type | What it means |
+|---|---|
+| stat | You must have a minimum score in a specific stat (e.g., Strength ≥ 12) |
+| chance | A random roll, modified by a stat such as Charisma |
+| trade | You must be carrying a specific item |
+| combat | You must have achieved a minimum kill count this adventure |
+| alignment | Your character must have a particular alignment |
+
+Some followers charge a **gold fee** to join. If you cannot pay, they decline. Once recruited, a follower stays with you, moves when you move, and fights beside you in combat.
+
+**You cannot recruit the same NPC twice** in a session — if you already have them, talking to them just acknowledges that.
+
+### Freeing Captives
+
+Some NPCs are held prisoner and cannot be recruited by talking — they must be **freed**:
+
+```
+FREE cynthia
+FREE prisoner
+```
+
+A captive usually has a **guard** that must be defeated first. Attempting to free them while the guard lives will tell you so. Once the guard is dead, `FREE` releases them and they join you as a follower.
+
+Freeing a captive often awards bonus XP and may be required to complete the adventure's win condition.
+
+### Follower Display
+
+When you `LOOK` at a room, followers appear in a separate green **Companions** section, distinct from the **Creatures** list. Recruited followers no longer appear under Creatures.
 
 ### Quests (Adventure-Dependent)
 
@@ -490,6 +542,14 @@ LOAD        — load a saved game (also: RESTORE)
 ```
 
 Saves store your full position: room, HP, mana, inventory, monster states, and artifact locations. You can have up to 3 save slots per adventure.
+
+### Item Persistence
+
+Items you carry when an adventure ends **stay with your character**. They appear in your inventory the next time you begin any adventure, and they retain all their original properties — damage dice, stat bonuses, flags. If the item is equipped (such as a ring granting +2 Intelligence), that bonus is also restored.
+
+**If you sell an item at the tavern, it is gone permanently.** There is no buyback.
+
+Items brought from a previous adventure are kept separate from the new adventure's own items, so there is no conflict if two adventures happen to contain items with the same name or ID.
 
 ---
 
@@ -586,10 +646,15 @@ All four spells are available to any character. Prices:
 ### Interaction
 | Command | Aliases | Notes |
 |---|---|---|
-| `TALK TO <npc>` | `ASK`, `REQUEST` | Speak with an NPC |
+| `TALK TO <npc>` | `ASK`, `REQUEST` | Speak with an NPC; may recruit as follower |
 | `SAY <words>` | `YELL`, `SHOUT` | Broadcast to the room |
 | `SMILE` | `WAVE`, `GRIN`, `BOW` | Friendly emote |
-| `FREE <creature>` | `RELEASE` | Release a captive |
+| `FREE <creature>` | `RELEASE` | Free a captive; guard must be dead first |
+
+### Special (adventure-specific)
+| Command | Aliases | Notes |
+|---|---|---|
+| `TROLLSFIRE` | `TF` | Toggle TrollsFire's flame (see below) |
 
 ### Status
 | Command | Aliases | Notes |
@@ -606,6 +671,30 @@ All four spells are available to any character. Prices:
 | `LOAD` | `RESTORE` | Load a saved game |
 | `HELP` | `H`, `?` | In-game command list |
 | `QUIT` | `Q`, `EXIT`, `BYE` | Return to tavern |
+
+---
+
+## Special Items
+
+### TrollsFire
+
+TrollsFire is a magical two-handed sword found in the Beginner's Cave. It has a command of its own:
+
+```
+TROLLSFIRE      — also: TF
+```
+
+**Behavior depends on whether you have it equipped:**
+
+| State | Result |
+|---|---|
+| TrollsFire not present | "TrollsFire is not here." |
+| Carried but not equipped | The sword's uncontrolled flame bursts out and **burns you for 1d4 fire damage** |
+| Equipped (weapon slot) | Toggles flame on/off |
+
+When the flame is **on**, every attack deals **+1d4 fire damage** that bypasses the monster's armor class entirely. Use `TROLLSFIRE` again to extinguish it.
+
+Fire damage from TrollsFire stacks with critical hits and spell damage. The flame stays on until you turn it off — there is no timer.
 
 ---
 
@@ -658,6 +747,80 @@ python3 designer.py adventures/my_adventure
 6. Test play
 0. Quit
 ```
+
+### Win Conditions
+
+The `win_condition` in `adventure.json` supports several types:
+
+| Type | Description |
+|---|---|
+| `reach_room` | Player reaches a specific room ID (use `"EXIT_TAVERN"` for the surface exit) |
+| `kill_monster` | A specific monster (by `monster_id`) must be dead |
+| `kill_all` | Every monster in the adventure must be dead |
+| `carry_artifact` | Player must be carrying a specific artifact (by `artifact_id`) |
+| `has_follower` | Player must have a specific NPC as a follower (by `monster_id`) |
+| `compound` | All conditions in an `all_of` list must be true simultaneously |
+
+Example compound win condition — escape with Cynthia:
+```json
+"win_condition": {
+  "type": "compound",
+  "all_of": [
+    { "type": "reach_room",   "room_id": "EXIT_TAVERN" },
+    { "type": "has_follower", "monster_id": 3 }
+  ],
+  "message": "You rescued Cynthia and escaped!"
+}
+```
+
+### Follower Flags (monsters.json)
+
+To make an NPC recruitable, add a `flags` object to their monster entry:
+
+```json
+"flags": {
+  "is_follower": true,
+  "follower_type": "stat",
+  "required_stat": "strength",
+  "required_stat_value": 12,
+  "recruit_cost": 0,
+  "follower_dialogue": "I'll fight by your side!",
+  "recruit_fail_dialogue": "You're not strong enough.",
+  "can_fight": true
+}
+```
+
+| Flag | Values | Meaning |
+|---|---|---|
+| `follower_type` | `stat`, `chance`, `trade`, `combat`, `alignment`, `quest` | Recruitment condition type |
+| `required_stat` | stat name | For `stat` type: which stat to check |
+| `required_stat_value` | integer | Minimum stat value required |
+| `chance_base` | 0.0–1.0 | For `chance` type: base probability |
+| `stat_modifier` | stat name | Stat whose value modifies the chance roll |
+| `recruit_cost` | integer | Gold required to join |
+| `can_fight` | true/false | Whether follower participates in combat |
+| `is_captive` | true/false | Must be freed with FREE, not recruited with TALK TO |
+| `guard_id` | monster id | Monster that must be killed before captive can be freed |
+| `free_dialogue` | string | Said when successfully freed |
+| `free_fail_dialogue` | string | Said when guard is still alive |
+| `free_xp_bonus` | integer | XP awarded for freeing |
+
+### Ring / Stat Bonus Flags (artifacts.json)
+
+To give an artifact a stat bonus, add `stat_bonuses` and optionally a `ring_label`:
+
+```json
+{
+  "id": 6,
+  "artifact_type": "ring",
+  "stat_bonuses": { "intelligence": 2 },
+  "flags": { "ring_label": "+2 Intelligence", "cursed": false }
+}
+```
+
+Setting `"cursed": true` makes the ring impossible to remove.
+
+Any equipment type can carry `stat_bonuses`, not just rings — a cursed gauntlet could penalise Agility, for example.
 
 ### Advanced: Custom Handlers
 
