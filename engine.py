@@ -167,6 +167,9 @@ class Engine:
         # Load character's carried items from JSON file
         self._load_character_items(character)
 
+        # Suppress body artifacts until their monster is killed
+        self._suppress_body_artifacts()
+
         # Initialize spell fatigue multipliers to 1.0
         for spell_key in self.player.spell_proficiencies:
             if self.player.spell_proficiencies[spell_key] is not None:
@@ -243,7 +246,40 @@ class Engine:
         result = self.call_hook("on_use_item", artifact_name, target)
         return result if result is not None else False
 
+    def _body_monster_name(self, artifact) -> str | None:
+        """Extract the creature name from a body artifact name, or None if not a body."""
+        name = artifact.name.lower()
+        if name.startswith("dead "):
+            return name[5:]
+        if name.endswith("'s body"):
+            return name[:-7]
+        return None
+
+    def _suppress_body_artifacts(self) -> None:
+        """Hide body artifacts that have a living monster in the same room."""
+        for artifact in self.world.artifacts.values():
+            creature = self._body_monster_name(artifact)
+            if creature is None:
+                continue
+            for monster in self.world.monsters.values():
+                if (monster.is_alive
+                        and monster.name.lower() == creature
+                        and monster.room_id == artifact.room_id):
+                    artifact.room_id = None  # hide until monster is killed
+                    break
+
+    def _reveal_body_artifact(self, monster) -> None:
+        """Place a monster's body artifact in the room when it dies."""
+        patterns = {f"dead {monster.name.lower()}", f"{monster.name.lower()}'s body"}
+        for artifact in self.world.artifacts.values():
+            if artifact.room_id is None and artifact.name.lower() in patterns:
+                artifact.room_id = monster.room_id
+                break
+
     def on_monster_defeated(self, monster_id: int) -> None:
+        monster = self.world.monsters.get(monster_id)
+        if monster:
+            self._reveal_body_artifact(monster)
         self.call_hook("on_monster_defeated", monster_id)
 
     def tc(self, text: str, style: str = "sys") -> str:
