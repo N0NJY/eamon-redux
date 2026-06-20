@@ -201,6 +201,7 @@ class Room:
     id: int
     name: str
     description: str
+    brief_description: str = ""
     exits: dict[str, int] = field(default_factory=dict)
     locked_exits: dict[str, int] = field(default_factory=dict)
     is_dark: bool = False
@@ -215,6 +216,7 @@ class Room:
     def to_dict(self) -> dict:
         d = {
             "id": self.id, "name": self.name, "description": self.description,
+            "brief_description": self.brief_description,
             "exits": self.exits, "is_dark": self.is_dark,
             "first_visit": self.first_visit,
         }
@@ -228,6 +230,7 @@ class Room:
     def from_dict(d: dict) -> "Room":
         return Room(
             id=d["id"], name=d["name"], description=d["description"],
+            brief_description=d.get("brief_description", ""),
             exits=d.get("exits", {}),
             locked_exits=d.get("locked_exits", {}),
             is_dark=d.get("is_dark", False),

@@ -197,6 +197,7 @@ class Engine:
         self.in_combat = False
         self.enemy = None
         self.running = True  # BUG-01 fix: must be set before any room-entry hooks
+        self.verbose_mode = True  # VERBOSE=full desc every entry, BRIEF=brief after first visit
 
         # Tier 1: generic flag-reading handlers
         self.base_handlers = BaseAdventureHandlers(self)
@@ -421,8 +422,8 @@ class Engine:
                 print(self.tc(f"{target.name} has fallen!", "die"))
                 self.player.followers = [f for f in self.player.followers if f.is_alive]
 
-    def look(self) -> None:
-        """Display current room."""
+    def look(self, brief: bool = False) -> None:
+        """Display current room. brief=True shows short description if available."""
         room = self.world.get_room(self.player.room_id)
         if not room:
             print(self.tc("(Room not found)", "error"))
@@ -431,7 +432,10 @@ class Engine:
         print()
         print(self.tc(room.name, "room"))
         print(self.tc("─" * 72, "exits"))
-        print(self.tc(wrap(room.description), "desc"))
+        if brief and room.brief_description:
+            print(self.tc(wrap(room.brief_description), "desc"))
+        else:
+            print(self.tc(wrap(room.description), "desc"))
 
         # Artifacts in room
         artifacts = self.world.artifacts_in_room(self.player.room_id)
@@ -516,6 +520,12 @@ class Engine:
             # ── Examination ──────────────────────────────────────────────────
             elif cmd == "look":
                 self.look()
+            elif cmd == "verbose":
+                self.verbose_mode = True
+                print(self.tc("Verbose mode on — full room descriptions every visit.", "sys"))
+            elif cmd == "brief":
+                self.verbose_mode = False
+                print(self.tc("Brief mode on — short descriptions after first visit.", "sys"))
             elif cmd == "examine":
                 self.cmd_examine(noun)
             elif cmd == "read":
@@ -699,11 +709,14 @@ class Engine:
 
         new_room = self.world.get_room(new_room_id)
         
-        if new_room and new_room.first_visit:
-            new_room.first_visit = False
-            self.look()
-        else:
-            print(self.tc(f"You go {direction}.", "sys"))
+        if new_room:
+            if new_room.first_visit:
+                new_room.first_visit = False
+                self.look()
+            elif self.verbose_mode:
+                self.look()
+            else:
+                self.look(brief=True)
         
         # Fire room-entry hooks (win conditions, event triggers)
         self.on_enter_room(new_room_id)

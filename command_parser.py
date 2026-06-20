@@ -29,6 +29,8 @@ ENGINE_COMMANDS = {
 
     # Examination & Interaction
     "look":       {"aliases": ["l"],                               "min_chars": 1, "category": "examine"},
+    "verbose":    {"aliases": ["v"],                               "min_chars": 3, "category": "examine"},
+    "brief":      {"aliases": ["br"],                              "min_chars": 2, "category": "examine"},
     "examine":    {"aliases": ["x", "ex", "exa"],                  "min_chars": 2, "category": "examine"},
     "read":       {"aliases": ["rea"],                             "min_chars": 3, "category": "examine"},
     # talk/ask/request all address an NPC

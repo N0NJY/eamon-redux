@@ -550,14 +550,15 @@ class Designer:
 
     def add_room(self) -> None:
         print(f"\n  NEW ROOM")
-        rid  = self.world.next_room_id()
-        name = prompt("Name")
+        rid   = self.world.next_room_id()
+        name  = prompt("Name")
         if not name:
             print("  Cancelled.")
             return
-        desc = prompt("Description")
-        dark = prompt_bool("Is it dark (need a light source)?", False)
-        room = Room(id=rid, name=name, description=desc, is_dark=dark)
+        desc  = prompt("Description (verbose — shown on first visit)")
+        brief = prompt("Brief description (shown in BRIEF mode after first visit; blank = use verbose)")
+        dark  = prompt_bool("Is it dark (need a light source)?", False)
+        room  = Room(id=rid, name=name, description=desc, brief_description=brief, is_dark=dark)
         self.world.rooms[rid] = room
         if len(self.world.rooms) == 1:
             self.world.start_room = rid
@@ -572,9 +573,10 @@ class Designer:
             return
         r = self.world.rooms[rid]
         print(f"\n  EDIT ROOM #{rid}")
-        r.name        = prompt("Name",        r.name)
-        r.description = prompt("Description", r.description)
-        r.is_dark     = prompt_bool("Is it dark?", r.is_dark)
+        r.name              = prompt("Name",                r.name)
+        r.description       = prompt("Description (verbose)", r.description)
+        r.brief_description = prompt("Brief description",    r.brief_description)
+        r.is_dark           = prompt_bool("Is it dark?",     r.is_dark)
         print("  Room updated.")
 
     def delete_room(self) -> None:
