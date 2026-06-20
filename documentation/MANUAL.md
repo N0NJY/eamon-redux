@@ -608,7 +608,7 @@ Cursed items cannot be unequipped from the tavern any more than they can from in
 
 ## Selling Loot
 
-After returning from an adventure, visit Horace (weapons/armor) or Aldric (magical items) to sell what you have collected. When you enter the sell screen your full inventory is shown first so you can see what you are carrying before deciding what to sell.
+Visit Horace (weapons, armor, shields, general gear) or Aldric (potions, scrolls, spellbooks) to sell items. Your full inventory is shown at the top of each shop screen so you can always see what you are carrying alongside the buy listing.
 
 ```
 S <n>       — sell the numbered item (must not be equipped)
@@ -616,9 +616,11 @@ SELL ALL    — sell all eligible items at once, skipping equipped ones
 DONE        — leave without selling
 ```
 
-**Equipped items are protected.** They appear in the sell listing marked `[EQUIPPED — unequip first]` but cannot be numbered or sold — not even by SELL ALL. Use `UNEQUIP` or `EQUIPMENT` to remove an item before selling it.
+**Sell prices** are shown in parentheses next to each item in your inventory, e.g. `short sword 2g (10g)` — the first number is carry weight, the second is what Horace or Aldric will pay. Items bought from the shops resell at roughly one-third of their purchase price. Adventure loot sells at its stated value.
 
-Keys and quest items cannot be sold regardless of equipped status. Items bought at Horace's are sold back at their loot value, which may be lower than the purchase price.
+**Equipped items are protected.** They appear in the sell listing marked `[EQUIPPED — unequip first]` and cannot be sold — not even by SELL ALL. Use `UNEQUIP` or `EQUIPMENT` to remove an item before selling it.
+
+Keys and quest items cannot be sold regardless of equipped status.
 
 ---
 
