@@ -5,3 +5,4 @@ __pycache__/
 characters/*.json
 stored_games/*.json
 backup.sh
+push.sh
