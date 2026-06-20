@@ -131,13 +131,19 @@ TYPE_VALUE_FLOOR = {
 }
 UNSELLABLE_TYPES = {"key"}
 
+# Populated after shop templates are defined; used as a fallback so items
+# bought before sell values were added to templates can still be resold.
+_SHOP_SELL_VALUES: dict = {}
+
 def sell_value(artifact) -> int:
     if artifact.is_quest_item:
         return 0
     if artifact.artifact_type in UNSELLABLE_TYPES:
         return 0
-    if artifact.value >= 0:
+    if artifact.value > 0:
         return artifact.value
+    if artifact.value == 0:
+        return _SHOP_SELL_VALUES.get(artifact.name, 0)
     return TYPE_VALUE_FLOOR.get(artifact.artifact_type, 1)
 
 def can_sell(artifact) -> bool:
@@ -161,30 +167,37 @@ def _spell_price(spell_key: str, character) -> int:
     return base
 
 HORACE_CORE = [
-    {"name": "healing potion",       "artifact_type": "potion", "weight": 1, "heal_amount": 10, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 0,  "price": 25,  "desc": "Restores 10 HP"},
-    {"name": "minor healing potion", "artifact_type": "potion", "weight": 1, "heal_amount": 5,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 0,  "price": 12,  "desc": "Restores 5 HP"},
-    {"name": "ration",               "artifact_type": "food",   "weight": 1, "heal_amount": 4,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 0,  "price": 5,   "desc": "Restores 4 HP when eaten"},
-    {"name": "dagger",               "artifact_type": "weapon", "weight": 1, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 0,  "price": 15,  "desc": "1d4 damage"},
-    {"name": "short sword",          "artifact_type": "weapon", "weight": 2, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 0,  "price": 30,  "desc": "1d6 damage"},
-    {"name": "leather armor",        "artifact_type": "armor",  "weight": 3, "heal_amount": 0,  "armor_class": 1, "damage_dice": 1, "damage_sides": 4, "value": 0,  "price": 40,  "desc": "AC +1"},
-    {"name": "chainmail coat",       "artifact_type": "armor",  "weight": 6, "heal_amount": 0,  "armor_class": 3, "damage_dice": 1, "damage_sides": 4, "value": 0,  "price": 100, "desc": "AC +3"},
-    {"name": "wooden shield",        "artifact_type": "shield", "weight": 3, "heal_amount": 0,  "armor_class": 1, "damage_dice": 1, "damage_sides": 4, "value": 0,  "price": 25,  "desc": "AC +1 (shield slot)"},
+    {"name": "healing potion",       "artifact_type": "potion", "weight": 1, "heal_amount": 10, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 8,  "price": 25,  "desc": "Restores 10 HP"},
+    {"name": "minor healing potion", "artifact_type": "potion", "weight": 1, "heal_amount": 5,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 4,  "price": 12,  "desc": "Restores 5 HP"},
+    {"name": "ration",               "artifact_type": "food",   "weight": 1, "heal_amount": 4,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 2,  "price": 5,   "desc": "Restores 4 HP when eaten"},
+    {"name": "dagger",               "artifact_type": "weapon", "weight": 1, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 5,  "price": 15,  "desc": "1d4 damage"},
+    {"name": "short sword",          "artifact_type": "weapon", "weight": 2, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 10, "price": 30,  "desc": "1d6 damage"},
+    {"name": "leather armor",        "artifact_type": "armor",  "weight": 3, "heal_amount": 0,  "armor_class": 1, "damage_dice": 1, "damage_sides": 4, "value": 13, "price": 40,  "desc": "AC +1"},
+    {"name": "chainmail coat",       "artifact_type": "armor",  "weight": 6, "heal_amount": 0,  "armor_class": 3, "damage_dice": 1, "damage_sides": 4, "value": 30, "price": 100, "desc": "AC +3"},
+    {"name": "wooden shield",        "artifact_type": "shield", "weight": 3, "heal_amount": 0,  "armor_class": 1, "damage_dice": 1, "damage_sides": 4, "value": 8,  "price": 25,  "desc": "AC +1 (shield slot)"},
 ]
 
 HORACE_RANDOM_POOL = [
-    {"name": "war axe",     "artifact_type": "weapon", "weight": 4, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 8, "value": 0, "price": 50,  "desc": "1d8 damage"},
-    {"name": "iron mace",   "artifact_type": "weapon", "weight": 3, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 0, "price": 35,  "desc": "1d6 damage"},
-    {"name": "scale armor", "artifact_type": "armor",  "weight": 8, "heal_amount": 0, "armor_class": 4, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 180, "desc": "AC +4"},
-    {"name": "iron shield", "artifact_type": "shield", "weight": 4, "heal_amount": 0, "armor_class": 2, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 55,  "desc": "AC +2 (shield slot)"},
-    {"name": "hunting bow", "artifact_type": "weapon", "weight": 2, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 0, "price": 45,  "desc": "1d6 damage"},
-    {"name": "torch",       "artifact_type": "light",  "weight": 1, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 3, "price": 8,   "desc": "A light source"},
+    {"name": "war axe",     "artifact_type": "weapon", "weight": 4, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 8, "value": 15, "price": 50,  "desc": "1d8 damage"},
+    {"name": "iron mace",   "artifact_type": "weapon", "weight": 3, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 12, "price": 35,  "desc": "1d6 damage"},
+    {"name": "scale armor", "artifact_type": "armor",  "weight": 8, "heal_amount": 0, "armor_class": 4, "damage_dice": 1, "damage_sides": 4, "value": 60, "price": 180, "desc": "AC +4"},
+    {"name": "iron shield", "artifact_type": "shield", "weight": 4, "heal_amount": 0, "armor_class": 2, "damage_dice": 1, "damage_sides": 4, "value": 18, "price": 55,  "desc": "AC +2 (shield slot)"},
+    {"name": "hunting bow", "artifact_type": "weapon", "weight": 2, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 6, "value": 15, "price": 45,  "desc": "1d6 damage"},
+    {"name": "torch",       "artifact_type": "light",  "weight": 1, "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 3,  "price": 8,   "desc": "A light source"},
 ]
 
 WIZARD_RANDOM_POOL = [
-    {"name": "greater healing potion", "artifact_type": "potion",   "weight": 1, "heal_amount": 20, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 60, "desc": "Restores 20 HP"},
-    {"name": "mana potion",            "artifact_type": "potion",   "weight": 1, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 0, "price": 50, "desc": "Restores 10 mana"},
-    {"name": "mystery scroll",         "artifact_type": "readable", "weight": 0, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 5, "price": 20, "desc": "Faded writing. Hard to read."},
+    {"name": "greater healing potion", "artifact_type": "potion",   "weight": 1, "heal_amount": 20, "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 20, "price": 60, "desc": "Restores 20 HP"},
+    {"name": "mana potion",            "artifact_type": "potion",   "weight": 1, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 15, "price": 50, "desc": "Restores 10 mana"},
+    {"name": "mystery scroll",         "artifact_type": "readable", "weight": 0, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 5,  "price": 20, "desc": "Faded writing. Hard to read."},
 ]
+
+_SHOP_SELL_VALUES = {
+    item["name"]: item["value"]
+    for pool in (HORACE_CORE, HORACE_RANDOM_POOL, WIZARD_RANDOM_POOL)
+    for item in pool
+    if item["value"] > 0
+}
 
 MAX_POTIONS = 2
 
