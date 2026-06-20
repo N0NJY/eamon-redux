@@ -12,7 +12,13 @@
     "loot_id": 0,
     "xp_value": 10,
     "death_message": "The rats shriek and go limp.",
-    "synonyms": ["huge rat", "giant rat", "black rat", "brown rat", "tan rat"]
+    "synonyms": [
+      "huge rat",
+      "giant rat",
+      "black rat",
+      "brown rat",
+      "tan rat"
+    ]
   },
   {
     "id": 2,
@@ -28,7 +34,11 @@
     "xp_value": 75,
     "death_message": "The Priest falls to the ground with a final curse.",
     "dialogue": "You dare profane this holy place?!",
-    "synonyms": ["priest", "fanatic", "holy man"]
+    "synonyms": [
+      "priest",
+      "fanatic",
+      "holy man"
+    ]
   },
   {
     "id": 3,
@@ -44,7 +54,12 @@
     "xp_value": 0,
     "death_message": "Cynthia crumples to the ground.",
     "dialogue": "Please don't hurt me!",
-    "synonyms": ["cynthia", "luxom", "girl", "daughter"]
+    "synonyms": [
+      "cynthia",
+      "luxom",
+      "girl",
+      "daughter"
+    ]
   },
   {
     "id": 4,
@@ -62,7 +77,20 @@
     "dialogue": "What do you want, intruder?",
     "heal_amount": 6,
     "heal_cost": 10,
-    "synonyms": ["hermit", "old man", "grizzled hermit"]
+    "synonyms": [
+      "hermit",
+      "old man",
+      "grizzled hermit"
+    ],
+    "flags": {
+      "is_follower": true,
+      "follower_type": "chance",
+      "chance_base": 0.4,
+      "stat_modifier": "charisma",
+      "recruit_cost": 50,
+      "follower_dialogue": "The hermit squints at you. \"You seem capable enough. I'll come along... for a price.\"",
+      "recruit_fail_dialogue": "\"Hmph. I don't think so.\""
+    }
   },
   {
     "id": 5,
@@ -77,7 +105,12 @@
     "loot_id": 0,
     "xp_value": 85,
     "death_message": "The gorilla falls with a mighty crash.",
-    "synonyms": ["gorilla", "ape", "great ape", "beast"]
+    "synonyms": [
+      "gorilla",
+      "ape",
+      "great ape",
+      "beast"
+    ]
   },
   {
     "id": 6,
@@ -92,8 +125,22 @@
     "loot_id": 4,
     "xp_value": 120,
     "death_message": "Heinrich staggers and falls.",
-    "dialogue": "Stand and fight like a warrior!",
-    "synonyms": ["heinrich", "warrior", "human", "swordsman"]
+    "dialogue": "Stand and fight like a warrior! Or perhaps... fight WITH me?",
+    "synonyms": [
+      "heinrich",
+      "warrior",
+      "human",
+      "swordsman"
+    ],
+    "flags": {
+      "is_follower": true,
+      "follower_type": "stat",
+      "required_stat": "strength",
+      "required_stat_value": 12,
+      "recruit_cost": 0,
+      "follower_dialogue": "Heinrich grins broadly. \"Ha! A worthy adventurer at last. I'll fight by your side!\"",
+      "recruit_fail_dialogue": "\"You're too weak. Come back when you've built some muscle.\""
+    }
   },
   {
     "id": 7,
@@ -109,7 +156,12 @@
     "xp_value": 60,
     "death_message": "The Mimic collapses into a formless blob.",
     "dialogue": "FEED ME!",
-    "synonyms": ["mimic", "chest", "tentacle", "monster"]
+    "synonyms": [
+      "mimic",
+      "chest",
+      "tentacle",
+      "monster"
+    ]
   },
   {
     "id": 8,
@@ -125,6 +177,11 @@
     "xp_value": 95,
     "death_message": "The Pirate falls, his sword clattering to the ground.",
     "dialogue": "Yo ho ho!",
-    "synonyms": ["pirate", "sailor", "buccaneer", "scoundrel"]
+    "synonyms": [
+      "pirate",
+      "sailor",
+      "buccaneer",
+      "scoundrel"
+    ]
   }
 ]

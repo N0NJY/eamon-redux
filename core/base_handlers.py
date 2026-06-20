@@ -70,11 +70,33 @@ class BaseAdventureHandlers:
 
         flags = npc.flags or {}
         if flags.get("is_follower"):
-            can_recruit, dialogue = self._check_follower_conditions(npc, flags)
-            if can_recruit:
-                self.engine.player.followers.append(npc)
-                print(self.engine.tc(dialogue, "desc"))
-                return
+            # Already following?
+            already = any(f.id == npc.id for f in self.engine.player.followers)
+            if already:
+                print(self.engine.tc(
+                    f"{npc.name} is already with you.", "sys"))
+            else:
+                can_recruit, dialogue = self._check_follower_conditions(npc, flags)
+                if can_recruit:
+                    # Gold cost if any
+                    cost = flags.get("recruit_cost", 0)
+                    if cost > 0:
+                        if self.engine.player.gold < cost:
+                            print(self.engine.tc(
+                                f"{npc.name} says: \"I need {cost} gold to join you.\"", "desc"))
+                            print(self.engine.tc(
+                                f"You have {self.engine.player.gold} gold.", "stat"))
+                            return
+                        self.engine.player.gold -= cost
+                        print(self.engine.tc(f"You pay {cost} gold.", "sys"))
+                    npc.room_id = self.engine.player.room_id
+                    self.engine.player.followers.append(npc)
+                    print(self.engine.tc(dialogue, "desc"))
+                    return
+                else:
+                    decline = flags.get("recruit_fail_dialogue", "")
+                    if decline:
+                        print(self.engine.tc(decline, "desc"))
 
         if npc.heal_amount > 0 and npc.heal_cost > 0:
             self._offer_healing(npc)

@@ -346,18 +346,68 @@ class Engine:
 
     # ── Room & World ──────────────────────────────────────────────────────────
 
+    # ── Follower helpers ──────────────────────────────────────────────────────
+
+    def active_followers(self) -> list:
+        """Return followers who are still alive."""
+        return [m for m in self.player.followers if m.is_alive]
+
+    def _move_followers(self, new_room_id) -> None:
+        """Move all living followers to the player's new room."""
+        for follower in self.active_followers():
+            follower.room_id = new_room_id
+
+    def _follower_combat_turn(self, enemy) -> None:
+        """Each living follower in the room attacks the enemy."""
+        for follower in self.active_followers():
+            if follower.room_id != self.player.room_id:
+                continue
+            if not enemy.is_alive:
+                break
+            hit_chance = max(5, min(95, 50 - enemy.armor_class))
+            if random.randint(1, 100) <= hit_chance:
+                dmg = max(1, roll(follower.damage_dice, follower.damage_sides) - enemy.armor_class)
+                enemy.hp -= dmg
+                print(self.tc(f"{follower.name} hits {enemy.name} for {dmg} damage!", "heal"))
+                if enemy.hp <= 0:
+                    enemy.is_alive = False
+                    print(self.tc(f"{enemy.name} {enemy.death_message}", "win"))
+                    self.on_monster_defeated(enemy.id)
+                    xp = enemy.xp_value or (enemy.hp_max * 10)
+                    self.player.xp += xp
+                    print(self.tc(f"You gain {xp} XP!", "heal"))
+            else:
+                print(self.tc(f"{follower.name} misses {enemy.name}.", "sys"))
+
+    def _monster_attacks_followers(self, monster) -> None:
+        """A hostile monster may strike a follower instead of (or after) the player."""
+        targets = [f for f in self.active_followers()
+                   if f.room_id == self.player.room_id]
+        if not targets:
+            return
+        target = random.choice(targets)
+        hit_chance = max(5, min(95, 50))
+        if random.randint(1, 100) <= hit_chance:
+            dmg = max(1, roll(monster.damage_dice, monster.damage_sides))
+            target.hp -= dmg
+            print(self.tc(f"{monster.name} strikes {target.name} for {dmg} damage!", "dmg"))
+            if target.hp <= 0:
+                target.is_alive = False
+                print(self.tc(f"{target.name} has fallen!", "die"))
+                self.player.followers = [f for f in self.player.followers if f.is_alive]
+
     def look(self) -> None:
         """Display current room."""
         room = self.world.get_room(self.player.room_id)
         if not room:
             print(self.tc("(Room not found)", "error"))
             return
-        
+
         print()
         print(self.tc(room.name, "room"))
         print(self.tc("─" * 72, "exits"))
         print(self.tc(wrap(room.description), "desc"))
-        
+
         # Artifacts in room
         artifacts = self.world.artifacts_in_room(self.player.room_id)
         if artifacts:
@@ -365,20 +415,31 @@ class Engine:
             print(self.tc("You see:", "sys"))
             for a in artifacts:
                 print(self.tc(f"  • {a.name}", "item"))
-        
-        # Monsters in room
-        monsters = self.world.monsters_in_room(self.player.room_id)
+
+        # Companions (followers in this room)
+        companions = [f for f in self.active_followers()
+                      if f.room_id == self.player.room_id]
+        if companions:
+            print()
+            print(self.tc("Companions:", "heal"))
+            for f in companions:
+                print(self.tc(f"  • {f.name} ({f.health_desc()})", "heal"))
+
+        # Monsters in room (hostile/neutral only — not followers)
+        follower_ids = {f.id for f in self.player.followers}
+        monsters = [m for m in self.world.monsters_in_room(self.player.room_id)
+                    if m.id not in follower_ids]
         if monsters:
             print()
             print(self.tc("Creatures:", "warn"))
             for m in monsters:
                 print(self.tc(f"  • {m.name} ({m.health_desc()})", "warn"))
-        
+
         # Exits
         if room.exits:
             print()
             print(self.tc(f"Exits: {room.exit_list()}", "exits"))
-        
+
         print()
 
     def handle(self, raw_input: str) -> int:
@@ -603,6 +664,7 @@ class Engine:
         # Move to new room
         new_room_id = room.exits[direction]
         self.player.room_id = new_room_id
+        self._move_followers(new_room_id)
 
         new_room = self.world.get_room(new_room_id)
         
@@ -1390,29 +1452,38 @@ class Engine:
                 new_prof = self.player.weapon_proficiencies[weapon_type]
                 print(self.tc(f"Your {weapon_type} proficiency increased: {old_prof}% → {new_prof}%", "success"))
         
+        # ── Followers attack ──────────────────────────────────────────────────
+
+        self._follower_combat_turn(monster)
+
+        if not monster.is_alive:
+            return
+
         # ── Monster attacks back ──────────────────────────────────────────────
-        
+
         print(self.tc(f"{monster.name} {monster.health_desc()}", "sys"))
         self.monster_round(monster)
 
     def monster_round(self, monster) -> None:
-        """Monster attacks the player."""
+        """Monster attacks the player (or a follower, 30% of the time)."""
         if not monster.is_alive:
             return
-        
-        # Roll for hit
-        hit_chance = 50 - self.player.agility_effective_bonus - self.player.armor_class(self.world)
-        hit_roll = random.randint(1, 100)
-        
-        if hit_roll > hit_chance:
-            print(self.tc(f"{monster.name} misses you.", "sys"))
+
+        # 30% chance monster targets a follower instead of the player
+        followers_here = [f for f in self.active_followers()
+                          if f.room_id == self.player.room_id]
+        if followers_here and random.randint(1, 100) <= 30:
+            self._monster_attacks_followers(monster)
         else:
-            damage = roll(monster.damage_dice, monster.damage_sides)
-            ac_reduction = self.player.armor_class(self.world)
-            damage = max(1, damage - ac_reduction)
-            self.player.hp -= damage
-            print(self.tc(f"{monster.name} hits you for {damage} damage!", "dmg"))
-        
+            hit_chance = 50 - self.player.agility_effective_bonus - self.player.armor_class(self.world)
+            if random.randint(1, 100) > hit_chance:
+                print(self.tc(f"{monster.name} misses you.", "sys"))
+            else:
+                damage = roll(monster.damage_dice, monster.damage_sides)
+                damage = max(1, damage - self.player.armor_class(self.world))
+                self.player.hp -= damage
+                print(self.tc(f"{monster.name} hits you for {damage} damage!", "dmg"))
+
         # Decrement speed spell duration
         if self.player.speed_active:
             self.player.tick_speed_duration()
@@ -1442,7 +1513,9 @@ class Engine:
             return
 
         print(self.tc(f"You flee {direction}!", "warn"))
-        self.player.room_id = room.exits[direction]
+        new_room_id = room.exits[direction]
+        self.player.room_id = new_room_id
+        self._move_followers(new_room_id)
 
     # ── NPC Interaction ────────────────────────────────────────────────────────
 
