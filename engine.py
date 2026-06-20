@@ -315,33 +315,35 @@ class Engine:
         from world import Artifact
         import os
         import json
-        
-        # Build path: characters/<name>_items.json
+
         safe_name = character.name.lower().replace(" ", "_")
         items_path = os.path.join("characters", f"{safe_name}_items.json")
-        
+
         if not os.path.exists(items_path):
-            return  # No items file yet
-        
+            return
+
         try:
             with open(items_path) as f:
                 items_data = json.load(f)
-            
-            # Load each item and add to world as carried
+
             for item_dict in items_data:
                 artifact = Artifact.from_dict(item_dict)
-                artifact.room_id = None  # Mark as carried (in inventory)
+                artifact.room_id = None
+                # Avoid overwriting adventure artifacts with same ID
+                if artifact.id in self.world.artifacts:
+                    artifact.id = max(self.world.artifacts.keys(), default=0) + 1
                 self.world.artifacts[artifact.id] = artifact
-        
-        except (json.JSONDecodeError, IOError, KeyError):
-            pass  # Silently skip if file is corrupted
 
-        # Restore equipped slots from character's persisted equipment
+        except (json.JSONDecodeError, IOError, KeyError):
+            pass
+
+        # Restore equipped slots by name, then re-apply any stat bonuses
         for slot, item_name in character.equipped.items():
             if item_name:
                 for artifact in self.world.artifacts.values():
                     if artifact.name == item_name and artifact.room_id is None:
                         self.player.equipped[slot] = artifact.id
+                        self.player._apply_stat_bonuses(artifact)
                         break
 
     # ── Room & World ──────────────────────────────────────────────────────────
@@ -358,12 +360,14 @@ class Engine:
             follower.room_id = new_room_id
 
     def _follower_combat_turn(self, enemy) -> None:
-        """Each living follower in the room attacks the enemy."""
+        """Each living follower in the room attacks the enemy (if they can fight)."""
         for follower in self.active_followers():
             if follower.room_id != self.player.room_id:
                 continue
             if not enemy.is_alive:
                 break
+            if (follower.flags or {}).get("can_fight") is False:
+                continue
             hit_chance = max(5, min(95, 50 - enemy.armor_class))
             if random.randint(1, 100) <= hit_chance:
                 dmg = max(1, roll(follower.damage_dice, follower.damage_sides) - enemy.armor_class)
@@ -601,20 +605,26 @@ class Engine:
         wc = self.world.win_condition
         if not wc:
             return False
-        
-        wc_type = wc.get("type")
-        
-        if wc_type == "reach_room":
-            return self.player.room_id == wc.get("room_id")
-        elif wc_type == "kill_monster":
-            monster = self.world.monsters.get(wc.get("monster_id"))
-            return monster and not monster.is_alive
-        elif wc_type == "kill_all":
+        return self._eval_condition(wc)
+
+    def _eval_condition(self, cond: dict) -> bool:
+        """Evaluate a single condition dict."""
+        ctype = cond.get("type")
+        if ctype == "reach_room":
+            return self.player.room_id == cond.get("room_id")
+        elif ctype == "kill_monster":
+            m = self.world.monsters.get(cond.get("monster_id"))
+            return bool(m and not m.is_alive)
+        elif ctype == "kill_all":
             return not any(m.is_alive for m in self.world.monsters.values())
-        elif wc_type == "carry_artifact":
-            artifact = self.world.artifacts.get(wc.get("artifact_id"))
-            return artifact and artifact.room_id is None
-        
+        elif ctype == "carry_artifact":
+            a = self.world.artifacts.get(cond.get("artifact_id"))
+            return bool(a and a.room_id is None)
+        elif ctype == "has_follower":
+            mid = cond.get("monster_id")
+            return any(f.id == mid for f in self.player.followers)
+        elif ctype == "compound":
+            return all(self._eval_condition(c) for c in cond.get("all_of", []))
         return False
 
     # ── Movement ───────────────────────────────────────────────────────────────
@@ -1417,9 +1427,18 @@ class Engine:
         
         monster.hp -= damage
         print(self.tc(f"You hit {monster.name} for {damage} damage!", "dmg"))
-        
+
+        # ── TrollsFire bonus fire damage (bypasses armor) ─────────────────────
+
+        if self.player.trollsfire_active:
+            weapon = self.player.equipped_weapon(self.world)
+            if weapon and weapon.matches("trollsfire"):
+                fire_dmg = roll(1, 4)
+                monster.hp -= fire_dmg
+                print(self.tc(f"TrollsFire's flames scorch {monster.name} for {fire_dmg} fire damage!", "spell"))
+
         # ── Monster dies? ─────────────────────────────────────────────────────
-        
+
         if monster.hp <= 0:
             print(self.tc(f"{monster.name} {monster.death_message}", "win"))
             monster.is_alive = False
@@ -1670,18 +1689,39 @@ class Engine:
             print(self.tc(f"You light the {artifact.name}.", "spell"))
 
     def cmd_trollsfire(self) -> None:
-        """Special command: examine or ready TrollsFire."""
+        """TROLLSFIRE — toggle flame on/off if equipped; burns player if only carried."""
         candidates = (self.world.artifacts_in_room(self.player.room_id)
                       + self.world.artifacts_carried())
         sword = self.world.find_artifact_by_name("trollsfire", candidates)
         if not sword:
-            print(self.tc("You don't see TrollsFire here.", "error"))
+            print(self.tc("TrollsFire is not here.", "error"))
             return
-        if sword.room_id is None:
-            print(self.tc("TrollsFire is already in your hands, ready to strike!", "spell"))
+
+        is_equipped = self.player.equipped.get("weapon") == sword.id
+        is_carried  = sword.room_id is None
+
+        if not is_carried:
+            print(self.tc(sword.description, "desc"))
+            print(self.tc("(GET TROLLSFIRE to pick it up, then EQUIP it.)", "sys"))
+            return
+
+        if not is_equipped:
+            burn = roll(1, 4)
+            self.player.hp -= burn
+            print(self.tc(
+                "TrollsFire surges with uncontrolled flame in your unready hands!", "dmg"))
+            print(self.tc(f"The fire burns you for {burn} damage!", "dmg"))
+            return
+
+        # Toggle flame
+        if self.player.trollsfire_active:
+            self.player.trollsfire_active = False
+            print(self.tc("TrollsFire's flame dies down to a cold gleam.", "sys"))
         else:
-            print(self.tc(f"{sword.description}", "desc"))
-            print(self.tc("(You can GET TROLLSFIRE to pick it up, then EQUIP it.)", "sys"))
+            self.player.trollsfire_active = True
+            print(self.tc(
+                "TrollsFire FLAMES ON! A blade of roaring fire erupts from the sword's edge!", "spell"))
+            print(self.tc("(+1d4 fire damage per strike while the blade burns)", "help"))
 
     # ── Save/Load System ───────────────────────────────────────────────────────
 

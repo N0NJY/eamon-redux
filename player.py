@@ -88,6 +88,9 @@ class Player:
     speed_active: bool = False
     speed_rounds_remaining: int = 0
 
+    # ── TrollsFire state ──────────────────────────────────────────────────────
+    trollsfire_active: bool = False
+
     # Equipment slots: slot_name -> artifact_id (or None)
     equipped: dict[str, Optional[int]] = field(default_factory=lambda: {
         "weapon": None,
@@ -249,6 +252,14 @@ class Player:
     def is_equipped(self, artifact_id: int) -> bool:
         return artifact_id in self.equipped.values()
 
+    def _apply_stat_bonuses(self, artifact, reverse: bool = False) -> None:
+        """Apply or reverse an artifact's stat_bonuses to player stats."""
+        bonuses = getattr(artifact, 'stat_bonuses', {})
+        for stat, value in bonuses.items():
+            if hasattr(self, stat):
+                delta = -value if reverse else value
+                setattr(self, stat, getattr(self, stat) + delta)
+
     def equip(self, artifact, world) -> tuple[bool, str]:
         """
         Attempt to equip an artifact. Returns (success, message).
@@ -267,6 +278,10 @@ class Player:
         if current_id is not None:
             current = world.artifacts.get(current_id)
             if current:
+                # Can't swap out a cursed item
+                if current.flags.get("cursed"):
+                    return False, f"The {current.name} is cursed — it cannot be removed!"
+                self._apply_stat_bonuses(current, reverse=True)
                 msg = f"You remove the {current.name} and equip the {artifact.name}."
             else:
                 msg = f"You equip the {artifact.name}."
@@ -274,6 +289,11 @@ class Player:
             msg = f"You equip the {artifact.name}."
 
         self.equipped[slot] = artifact.id
+        self._apply_stat_bonuses(artifact)
+
+        bonus_label = artifact.flags.get("ring_label", "")
+        if bonus_label:
+            msg += f" ({bonus_label})"
         return True, msg
 
     def unequip_slot(self, slot: str, world) -> tuple[bool, str]:
@@ -290,7 +310,10 @@ class Player:
         """Unequip a specific artifact."""
         for slot, aid in self.equipped.items():
             if aid == artifact.id:
+                if artifact.flags.get("cursed"):
+                    return False, f"The {artifact.name} is cursed — it cannot be removed!"
                 self.equipped[slot] = None
+                self._apply_stat_bonuses(artifact, reverse=True)
                 return True, f"You remove the {artifact.name}."
         return False, f"The {artifact.name} is not equipped."
 

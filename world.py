@@ -65,6 +65,7 @@ class Artifact:
     is_quest_item: bool = False  # quest items and keys cannot be sold
     synonyms: list[str] = field(default_factory=list)
     weapon_type: Optional[str] = None  # for weapons: axe, bow, club, spear, sword
+    stat_bonuses: dict = field(default_factory=dict)  # e.g. {"intelligence": 2}
     flags: dict = field(default_factory=dict)
 
     def matches(self, word: str) -> bool:
@@ -87,6 +88,8 @@ class Artifact:
         }
         if self.weapon_type:
             d["weapon_type"] = self.weapon_type
+        if self.stat_bonuses:
+            d["stat_bonuses"] = self.stat_bonuses
         return d
 
     @staticmethod
@@ -105,6 +108,7 @@ class Artifact:
             is_quest_item=d.get("is_quest_item", False),
             synonyms=d.get("synonyms", []),
             weapon_type=d.get("weapon_type"),
+            stat_bonuses=d.get("stat_bonuses", {}),
             flags=d.get("flags", {}),
         )
 

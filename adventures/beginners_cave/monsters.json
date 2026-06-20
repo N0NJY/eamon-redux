@@ -53,13 +53,21 @@
     "loot_id": 0,
     "xp_value": 0,
     "death_message": "Cynthia crumples to the ground.",
-    "dialogue": "Please don't hurt me!",
+    "dialogue": "Please help me! That mad priest kidnapped me!",
     "synonyms": [
       "cynthia",
       "luxom",
       "girl",
       "daughter"
-    ]
+    ],
+    "flags": {
+      "is_captive": true,
+      "guard_id": 2,
+      "free_fail_dialogue": "The mad Priest still guards her. Defeat him first!",
+      "free_dialogue": "Cynthia gasps with relief, tears of joy streaming down her face. \"Oh thank you! I'll come with you \u2014 I know the way out!\"",
+      "free_xp_bonus": 500,
+      "can_fight": false
+    }
   },
   {
     "id": 4,

@@ -101,6 +101,49 @@ class BaseAdventureHandlers:
         if npc.heal_amount > 0 and npc.heal_cost > 0:
             self._offer_healing(npc)
 
+    def on_free(self, target_name: str) -> None:
+        """Called when player uses FREE on a monster."""
+        room = self.engine.world.get_room(self.engine.player.room_id)
+        if not room:
+            return
+        npc = self.engine.world.find_monster_by_name(
+            target_name, self.engine.world.monsters_in_room(room.id)
+        )
+        if not npc:
+            return
+
+        flags = npc.flags or {}
+        if not flags.get("is_captive"):
+            print(self.engine.tc(f"{npc.name} doesn't need to be freed.", "sys"))
+            return
+
+        # Guard must be dead first
+        guard_id = flags.get("guard_id")
+        if guard_id:
+            guard = self.engine.world.monsters.get(guard_id)
+            if guard and guard.is_alive:
+                print(self.engine.tc(
+                    flags.get("free_fail_dialogue", "You can't free them yet."), "warn"))
+                return
+
+        # Already following?
+        if any(f.id == npc.id for f in self.engine.player.followers):
+            print(self.engine.tc(f"{npc.name} is already with you.", "sys"))
+            return
+
+        # Free them — they become a non-combatant follower
+        npc.room_id = self.engine.player.room_id
+        self.engine.player.followers.append(npc)
+        dialogue = flags.get("free_dialogue", f"You free {npc.name}!")
+        print()
+        print(self.engine.tc(dialogue, "desc"))
+
+        bonus_xp = flags.get("free_xp_bonus", 0)
+        if bonus_xp:
+            self.engine.player.xp += bonus_xp
+            print(self.engine.tc(
+                f"You gain {bonus_xp} XP for rescuing {npc.name}!", "heal"))
+
     def on_use_item(self, artifact_name: str, target: Optional[str] = None) -> bool:
         """Called when player uses an item. Returns True if handled."""
         room = self.engine.world.get_room(self.engine.player.room_id)
