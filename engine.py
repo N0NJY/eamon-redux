@@ -255,6 +255,8 @@ class Engine:
             return name[:-7]
         return None
 
+    _SUPPRESSED = -1  # sentinel room_id for body artifacts not yet revealed
+
     def _suppress_body_artifacts(self) -> None:
         """Hide body artifacts that have a living monster in the same room."""
         for artifact in self.world.artifacts.values():
@@ -265,14 +267,14 @@ class Engine:
                 if (monster.is_alive
                         and monster.name.lower() == creature
                         and monster.room_id == artifact.room_id):
-                    artifact.room_id = None  # hide until monster is killed
+                    artifact.room_id = self._SUPPRESSED
                     break
 
     def _reveal_body_artifact(self, monster) -> None:
         """Place a monster's body artifact in the room when it dies."""
         patterns = {f"dead {monster.name.lower()}", f"{monster.name.lower()}'s body"}
         for artifact in self.world.artifacts.values():
-            if artifact.room_id is None and artifact.name.lower() in patterns:
+            if artifact.room_id == self._SUPPRESSED and artifact.name.lower() in patterns:
                 artifact.room_id = monster.room_id
                 break
 
