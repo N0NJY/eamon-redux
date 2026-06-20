@@ -173,6 +173,10 @@ class BaseAdventureHandlers:
         """Called when a monster is defeated. Override in adventure handlers."""
         pass
 
+    def on_adventure_win(self) -> None:
+        """Called on adventure win, before player state is synced. Override for bonus rewards."""
+        pass
+
     # ──────────────────────────────────────────────────────────────────────────
     # HELPER METHODS
     # ──────────────────────────────────────────────────────────────────────────

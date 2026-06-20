@@ -1919,7 +1919,10 @@ def run_adventure(character, adventure_path: str, savefile: str = "") -> int:
             print(engine.tc(world.win_condition.get("message", "You have won!"), "win"))
             print(engine.tc("★ " * 36, "win"))
             print()
-            
+
+            # Adventure-specific win bonus (e.g. Cynthia rescue gold)
+            engine.call_hook("on_adventure_win")
+
             # Sync all player state back to character
             _sync_player_to_character(character, engine.player, engine.world)
             character.save()

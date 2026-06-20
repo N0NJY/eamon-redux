@@ -5,17 +5,8 @@
   "start_room": 1,
   "is_beginner_adventure": true,
   "win_condition": {
-    "type": "compound",
-    "all_of": [
-      {
-        "type": "reach_room",
-        "room_id": "EXIT_TAVERN"
-      },
-      {
-        "type": "has_follower",
-        "monster_id": 3
-      }
-    ],
-    "message": "You have rescued Cynthia Luxom and escaped the Beginner's Cave! Duke Luxom will reward you handsomely."
+    "type": "kill_monster",
+    "monster_id": 8,
+    "message": "The Pirate falls! The Beginner's Cave has been cleared. Make your way back to the surface."
   }
 }
