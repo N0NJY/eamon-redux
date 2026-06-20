@@ -119,20 +119,38 @@ def _sync_player_to_character(character, player, world) -> None:
 
 def _save_carried_items(character, world) -> None:
     """
-    Save all carried items (not in rooms) back to character's items file.
-    Called when adventure ends to persist inventory.
+    Save carried items to the character's items file.
+    Items flagged adventure_only are auto-sold for their value (min 1 gold)
+    and not persisted.
     """
     safe_name = character.name.lower().replace(" ", "_")
     items_path = os.path.join("characters", f"{safe_name}_items.json")
-    
     os.makedirs("characters", exist_ok=True)
-    
-    # Get all artifacts that are carried (room_id is None)
+
     carried = [a for a in world.artifacts.values() if a.room_id is None]
-    
-    # Convert to dicts and save
+
+    to_save = []
+    auto_sold = []   # list of (name, gold)
+
+    for a in carried:
+        if (a.flags or {}).get("adventure_only"):
+            gold = max(1, a.value if a.value > 0 else 1)
+            auto_sold.append((a.name, gold))
+            character.gold += gold
+        else:
+            to_save.append(a)
+
+    if auto_sold:
+        print()
+        print("\033[0;33mThe following items could not leave the adventure:\033[0m")
+        for name, gold in auto_sold:
+            print(f"\033[0;33m  • {name}  →  {gold} gold\033[0m")
+        total = sum(g for _, g in auto_sold)
+        print(f"\033[0;33mYou received {total} gold.\033[0m")
+        character.save()   # re-save with updated gold
+
     with open(items_path, "w") as f:
-        json.dump([a.to_dict() for a in carried], f, indent=2)
+        json.dump([a.to_dict() for a in to_save], f, indent=2)
 
 # ── Game Engine ───────────────────────────────────────────────────────────────
 
@@ -327,6 +345,9 @@ class Engine:
                 items_data = json.load(f)
 
             for item_dict in items_data:
+                # Drop adventure_only items that slipped into the save file
+                if item_dict.get("flags", {}).get("adventure_only"):
+                    continue
                 artifact = Artifact.from_dict(item_dict)
                 artifact.room_id = None
                 # Avoid overwriting adventure artifacts with same ID

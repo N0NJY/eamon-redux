@@ -132,7 +132,10 @@
     "synonyms": [
       "old book",
       "glowing book"
-    ]
+    ],
+    "flags": {
+      "adventure_only": true
+    }
   },
   {
     "id": 10,
