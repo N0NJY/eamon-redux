@@ -38,26 +38,26 @@ from command_parser import parse_command
 
 class C:
     RESET      = "\033[0m"
-    HR         = "\033[2;32m"
-    ROOM_NAME  = "\033[1;32m"
-    ROOM_DESC  = "\033[0;32m"
-    EXITS      = "\033[2;32m"
-    ITEM       = "\033[0;33m"
-    ITEM_LABEL = "\033[2;33m"
-    EQUIPPED   = "\033[1;33m"
-    SYS        = "\033[0;36m"
-    ERROR      = "\033[0;31m"
-    WARN       = "\033[0;35m"
-    COMBAT_HIT = "\033[1;31m"
-    COMBAT_DMG = "\033[0;31m"
-    COMBAT_WIN = "\033[1;33m"
-    COMBAT_DIE = "\033[1;31m"
-    SPELL      = "\033[1;36m"
-    HEAL_COLOR = "\033[0;32m"
-    MANA_COLOR = "\033[2;36m"
-    TITLE      = "\033[1;32m"
-    INTRO      = "\033[0;32m"
-    HELP       = "\033[2;36m"
+    HR         = "\033[0;32m"   # green           — room separator line
+    ROOM_NAME  = "\033[1;32m"   # bright green    — room title
+    ROOM_DESC  = "\033[0;32m"   # green           — room description
+    EXITS      = "\033[0;33m"   # yellow          — exit list
+    ITEM       = "\033[0;33m"   # yellow          — item names
+    ITEM_LABEL = "\033[1;33m"   # bright yellow   — item labels / equipped tag
+    EQUIPPED   = "\033[1;33m"   # bright yellow   — equipped marker
+    SYS        = "\033[0;36m"   # cyan            — system messages
+    ERROR      = "\033[1;31m"   # bright red      — errors
+    WARN       = "\033[1;35m"   # bright magenta  — creatures, danger, warnings
+    COMBAT_HIT = "\033[1;31m"   # bright red      — player hits monster
+    COMBAT_DMG = "\033[0;31m"   # red             — monster hits player
+    COMBAT_WIN = "\033[1;33m"   # bright yellow   — monster defeated
+    COMBAT_DIE = "\033[1;31m"   # bright red      — player death
+    SPELL      = "\033[1;36m"   # bright cyan     — spell effects
+    HEAL_COLOR = "\033[0;32m"   # green           — healing
+    MANA_COLOR = "\033[1;36m"   # bright cyan     — mana display
+    TITLE      = "\033[1;32m"   # bright green    — adventure titles
+    INTRO      = "\033[0;32m"   # green           — adventure intro text
+    HELP       = "\033[0;36m"   # cyan            — help text
 
 def c(color: str, text: str) -> str:
     return f"{color}{text}{C.RESET}"
