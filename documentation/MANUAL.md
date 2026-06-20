@@ -966,7 +966,7 @@ python3 designer.py adventures/my_adventure
 
 ```
 1. Adventure settings  — title, author, intro, starting room, win condition
-2. Rooms               — add, edit, exits, locked exits
+2. Rooms               — add, edit, exits, locked exits, fill brief descriptions
 3. Artifacts           — items, weapons, armor, rings, ...
 4. Monsters & NPCs     — enemies, followers, captives
 5. View map            — ASCII grid of room connections
@@ -980,6 +980,8 @@ python3 designer.py adventures/my_adventure
 Each room has a name, a **verbose description**, an optional **brief description**, and a set of exits. Exits can point to another room by ID, or to the special code `EXIT_TAVERN` to send the player back to the surface.
 
 The **verbose description** is shown on the first visit and whenever the player types `LOOK` or is in Verbose mode. The **brief description** is shown on re-entry when the player has enabled Brief mode — write it as a one- or two-sentence reminder of where the player is. Leaving it blank causes Brief mode to fall back to the verbose description.
+
+**Adding brief descriptions to existing adventures** — the Rooms menu shows option 7, *Fill missing brief descriptions*, whenever any rooms are still missing one. It displays a running count and streams through each unfilled room in order, showing the room name and the first 80 characters of the verbose description as context. Press Enter to skip a room for now, or type `S` to save progress and stop. The count updates each time you re-enter the Rooms menu so you can work through them in batches.
 
 **Directions supported:** north, south, east, west, up, down, northeast, northwest, southeast, southwest.
 
