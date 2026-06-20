@@ -778,7 +778,14 @@ Each room has a name, a description, and a set of exits. Exits can point to anot
 
 **Locked exits** require the player to be carrying a specific key artifact to pass through. Set them via **Rooms → 6. Edit locked exits** — pick the exit direction and the artifact ID of the key.
 
-The map viewer (option 5 from the main menu) renders a live ASCII grid of all room connections to help you spot dead ends or missing links.
+The map viewer (option 5 from the main menu) renders a live ASCII grid of all room connections:
+
+- **N/S/E/W** exits drawn with `─` and `│` line characters
+- **NE/NW/SE/SW** diagonal exits drawn with `╱` and `╲` characters
+- **UP/DOWN** exits listed as text below the grid (too vertical for the 2D grid)
+- The starting room is shown with a double border (`╔═╗`)
+
+Use it to spot dead ends, missing return exits, or rooms accidentally left disconnected.
 
 ### Artifacts
 
