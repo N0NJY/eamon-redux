@@ -11,55 +11,78 @@ from typing import Tuple, Optional, List
 # ============================================================================
 
 ENGINE_COMMANDS = {
-    # Movement (reserve single chars: n, s, e, w, u, d for directions)
-    "north": {"aliases": ["n"], "min_chars": 1, "category": "movement"},
-    "south": {"aliases": ["s"], "min_chars": 1, "category": "movement"},
-    "east": {"aliases": ["e"], "min_chars": 1, "category": "movement"},
-    "west": {"aliases": ["w"], "min_chars": 1, "category": "movement"},
-    "up": {"aliases": ["u"], "min_chars": 1, "category": "movement"},
-    "down": {"aliases": ["d"], "min_chars": 1, "category": "movement"},
-    "go": {"aliases": ["g"], "min_chars": 1, "category": "movement"},
-    
+    # Movement — cardinal
+    "north":      {"aliases": ["n"],                               "min_chars": 1, "category": "movement"},
+    "south":      {"aliases": ["s"],                               "min_chars": 1, "category": "movement"},
+    "east":       {"aliases": ["e"],                               "min_chars": 1, "category": "movement"},
+    "west":       {"aliases": ["w"],                               "min_chars": 1, "category": "movement"},
+    "up":         {"aliases": ["u"],                               "min_chars": 1, "category": "movement"},
+    "down":       {"aliases": ["d"],                               "min_chars": 1, "category": "movement"},
+    # Movement — diagonal
+    "northeast":  {"aliases": ["ne"],                              "min_chars": 2, "category": "movement"},
+    "northwest":  {"aliases": ["nw"],                              "min_chars": 2, "category": "movement"},
+    "southeast":  {"aliases": ["se"],                              "min_chars": 2, "category": "movement"},
+    "southwest":  {"aliases": ["sw"],                              "min_chars": 2, "category": "movement"},
+    "go":         {"aliases": ["g"],                               "min_chars": 1, "category": "movement"},
+    # Flee — also accepts "run" and "escape"
+    "flee":       {"aliases": ["fl", "run", "escape"],             "min_chars": 2, "category": "movement"},
+
     # Examination & Interaction
-    "look": {"aliases": ["l"], "min_chars": 1, "category": "examine"},
-    "examine": {"aliases": ["x", "ex", "exa"], "min_chars": 2, "category": "examine"},
-    "read": {"aliases": ["re"], "min_chars": 2, "category": "examine"},
-    "talk": {"aliases": ["ta"], "min_chars": 2, "category": "interact"},
-    
+    "look":       {"aliases": ["l"],                               "min_chars": 1, "category": "examine"},
+    "examine":    {"aliases": ["x", "ex", "exa"],                  "min_chars": 2, "category": "examine"},
+    "read":       {"aliases": ["rea"],                             "min_chars": 3, "category": "examine"},
+    # talk/ask/request all address an NPC
+    "talk":       {"aliases": ["ta", "ask", "request"],            "min_chars": 2, "category": "interact"},
+    # say broadcasts to the room (no target required)
+    "say":        {"aliases": ["yell", "shout"],                   "min_chars": 3, "category": "interact"},
+    "smile":      {"aliases": ["grin", "wave", "bow"],             "min_chars": 4, "category": "interact"},
+    "free":       {"aliases": ["release"],                         "min_chars": 4, "category": "interact"},
+
     # Inventory
-    "inventory": {"aliases": ["i", "inv", "in"], "min_chars": 1, "category": "inventory"},
-    "get": {"aliases": ["ge"], "min_chars": 2, "category": "inventory"},
-    "getall": {"aliases": ["ga"], "min_chars": 2, "category": "inventory"},
-    "drop": {"aliases": ["dr"], "min_chars": 2, "category": "inventory"},
-    "open": {"aliases": ["op"], "min_chars": 2, "category": "inventory"},
-    "close": {"aliases": ["cl"], "min_chars": 2, "category": "inventory"},
-    
-    # Equipment
-    "equip": {"aliases": ["wear", "wield", "eq"], "min_chars": 2, "category": "equipment"},
-    "unequip": {"aliases": ["remove", "un"], "min_chars": 2, "category": "equipment"},
-    "equipment": {"aliases": ["equ"], "min_chars": 3, "category": "equipment"},
-    
+    "inventory":  {"aliases": ["i", "inv", "in"],                  "min_chars": 1, "category": "inventory"},
+    "get":        {"aliases": ["ge", "take", "pick"],              "min_chars": 2, "category": "inventory"},
+    "getall":     {"aliases": ["ga"],                              "min_chars": 2, "category": "inventory"},
+    "drop":       {"aliases": ["dr", "place"],                     "min_chars": 2, "category": "inventory"},
+    "put":        {"aliases": ["pu"],                              "min_chars": 2, "category": "inventory"},
+    "give":       {"aliases": ["gi"],                              "min_chars": 2, "category": "inventory"},
+    "open":       {"aliases": ["op"],                              "min_chars": 2, "category": "inventory"},
+    "close":      {"aliases": ["cl"],                              "min_chars": 2, "category": "inventory"},
+    "use":        {"aliases": ["us"],                              "min_chars": 2, "category": "inventory"},
+    "light":      {"aliases": ["ignite"],                          "min_chars": 3, "category": "inventory"},
+
+    # Equipment — "ready" is classic Eamon synonym for equip
+    "equip":      {"aliases": ["wear", "wield", "eq", "ready", "wea"], "min_chars": 2, "category": "equipment"},
+    "unequip":    {"aliases": ["remove", "un", "doff"],            "min_chars": 2, "category": "equipment"},
+    "equipment":  {"aliases": ["equ"],                             "min_chars": 3, "category": "equipment"},
+
     # Combat
-    "attack": {"aliases": ["kill", "fight", "hit", "att", "a"], "min_chars": 1, "category": "combat"},
-    "flee": {"aliases": ["fl"], "min_chars": 2, "category": "combat"},
-    "cast": {"aliases": ["ca"], "min_chars": 2, "category": "combat"},
-    
+    "attack":     {"aliases": ["kill", "fight", "hit", "att", "a"], "min_chars": 1, "category": "combat"},
+    "cast":       {"aliases": ["ca"],                              "min_chars": 2, "category": "combat"},
+    # Standalone spell shortcuts — bypass "cast" prefix
+    "blast":      {"aliases": ["bla"],                             "min_chars": 3, "category": "combat"},
+    "heal":       {"aliases": ["hea"],                             "min_chars": 3, "category": "combat"},
+    "speed":      {"aliases": ["spee"],                            "min_chars": 4, "category": "combat"},
+    "power":      {"aliases": ["pow"],                             "min_chars": 3, "category": "combat"},
+
     # Status
-    "character": {"aliases": ["char", "ch", "status", "sheet", "v", "cha"], "min_chars": 2, "category": "status"},
-    "health": {"aliases": ["hp"], "min_chars": 1, "category": "status"},
-    "rest": {"aliases": ["res"], "min_chars": 2, "category": "status"},
-    "spells": {"aliases": ["spell", "sp"], "min_chars": 2, "category": "status"},
-    
-    # Items
-    "eat": {"aliases": ["ea"], "min_chars": 2, "category": "items"},
-    "drink": {"aliases": ["di"], "min_chars": 2, "category": "items"},
-    "unlock": {"aliases": ["ul"], "min_chars": 2, "category": "items"},
-    
+    "character":  {"aliases": ["char", "ch", "status", "sheet", "v", "cha"], "min_chars": 2, "category": "status"},
+    "health":     {"aliases": ["hp"],                              "min_chars": 1, "category": "status"},
+    "rest":       {"aliases": ["res"],                             "min_chars": 3, "category": "status"},
+    "spells":     {"aliases": ["spell", "sp"],                     "min_chars": 2, "category": "status"},
+
+    # Item use
+    "eat":        {"aliases": ["ea"],                              "min_chars": 2, "category": "items"},
+    "drink":      {"aliases": ["dri"],                             "min_chars": 3, "category": "items"},
+    "unlock":     {"aliases": ["ul"],                              "min_chars": 2, "category": "items"},
+
     # Game Control
-    "save": {"aliases": ["sa"], "min_chars": 2, "category": "control"},
-    "load": {"aliases": ["lo"], "min_chars": 2, "category": "control"},
-    "help": {"aliases": ["h", "?"], "min_chars": 1, "category": "control"},
-    "quit": {"aliases": ["q", "exit", "bye"], "min_chars": 1, "category": "control"},
+    "save":       {"aliases": ["sa"],                              "min_chars": 2, "category": "control"},
+    "load":       {"aliases": ["lo", "restore"],                   "min_chars": 2, "category": "control"},
+    "help":       {"aliases": ["h", "?"],                          "min_chars": 1, "category": "control"},
+    "quit":       {"aliases": ["q", "exit", "bye"],                "min_chars": 1, "category": "control"},
+
+    # Special (adventure-specific hook — falls through to call_hook)
+    "trollsfire": {"aliases": ["tf"],                              "min_chars": 4, "category": "special"},
 }
 
 # ============================================================================

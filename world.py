@@ -185,9 +185,12 @@ class Monster:
 
 # ── Room ──────────────────────────────────────────────────────────────────────
 
-DIRECTIONS = ["north", "south", "east", "west", "up", "down"]
-DIR_ABBREV = {"n": "north", "s": "south", "e": "east",
-              "w": "west",  "u": "up",    "d": "down"}
+DIRECTIONS = ["north", "south", "east", "west", "up", "down",
+              "northeast", "northwest", "southeast", "southwest"]
+DIR_ABBREV = {"n": "north",     "s": "south",     "e": "east",
+              "w": "west",      "u": "up",         "d": "down",
+              "ne": "northeast", "nw": "northwest",
+              "se": "southeast", "sw": "southwest"}
 
 @dataclass
 class Room:

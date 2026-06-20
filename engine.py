@@ -404,11 +404,14 @@ class Engine:
         
         # Handle partial/exact matches
         if status in ("partial", "exact"):
-            if cmd in ["north", "south", "east", "west", "up", "down"]:
+            noun = raw_input.split(maxsplit=1)[1].strip() if len(raw_input.split(maxsplit=1)) > 1 else ""
+
+            # ── Movement ─────────────────────────────────────────────────────
+            if cmd in ("north", "south", "east", "west", "up", "down",
+                       "northeast", "northwest", "southeast", "southwest"):
                 self.cmd_go(cmd)
                 if self.player.room_id == "EXIT_TAVERN":
                     return 3
-                # Fatigue recovery on movement
                 recovery = random.randint(5, 10)
                 self.player.recover_all_spell_fatigue(recovery)
             elif cmd == "go":
@@ -416,92 +419,113 @@ class Engine:
                 if len(parts) > 1:
                     self.cmd_go(parts[1])
                 else:
-                    print(self.tc("Go where? (north, south, east, west, up, down)", "error"))
-                    if self.player.room_id == "EXIT_TAVERN":
-                        return 3
-                    recovery = random.randint(5, 10)
-                    self.player.recover_all_spell_fatigue(recovery)
+                    print(self.tc("Go where?", "error"))
+                if self.player.room_id == "EXIT_TAVERN":
+                    return 3
+                recovery = random.randint(5, 10)
+                self.player.recover_all_spell_fatigue(recovery)
+            elif cmd == "flee":
+                self.cmd_flee()
+
+            # ── Examination ──────────────────────────────────────────────────
             elif cmd == "look":
                 self.look()
             elif cmd == "examine":
-                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
                 self.cmd_examine(noun)
             elif cmd == "read":
-                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
                 self.cmd_read(noun)
+
+            # ── Interaction ──────────────────────────────────────────────────
+            elif cmd == "talk":
+                # strip optional "to" → TALK TO <npc>
+                parts = raw_input.strip().lower().split(maxsplit=2)
+                if len(parts) >= 3 and parts[1] == "to":
+                    noun = parts[2]
+                self.cmd_talk(noun)
+            elif cmd == "say":
+                self.cmd_say(noun)
+            elif cmd == "smile":
+                self.cmd_smile(noun)
+            elif cmd == "free":
+                self.cmd_free(noun)
+
+            # ── Inventory ────────────────────────────────────────────────────
             elif cmd == "inventory":
                 self.cmd_inventory()
             elif cmd == "get":
-                parts = raw_input.split(maxsplit=1)
-                if len(parts) > 1:
-                    rest = parts[1].strip()
-                    if rest.lower() == "all":
-                        self.cmd_get_all("")
-                    elif rest.lower().startswith("all "):
-                        self.cmd_get_all(rest[4:].strip())
-                    else:
-                        self.cmd_get(rest)
-                else:
+                if not noun:
                     self.cmd_get("")
+                elif noun.lower() == "all":
+                    self.cmd_get_all("")
+                elif noun.lower().startswith("all "):
+                    self.cmd_get_all(noun[4:].strip())
+                else:
+                    self.cmd_get(noun)
             elif cmd == "drop":
-                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
                 self.cmd_drop(noun)
+            elif cmd == "put":
+                self.cmd_put(noun)
+            elif cmd == "give":
+                self.cmd_give(noun)
+            elif cmd == "use":
+                self.cmd_use(noun)
+            elif cmd == "light":
+                self.cmd_light(noun)
+            elif cmd == "open":
+                self.cmd_open(noun)
+            elif cmd == "close":
+                self.cmd_close(noun)
+            elif cmd == "unlock":
+                self.cmd_unlock(noun)
+
+            # ── Equipment ────────────────────────────────────────────────────
             elif cmd == "equip":
-                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
                 self.cmd_equip(noun)
             elif cmd == "unequip":
-                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
                 self.cmd_unequip(noun)
             elif cmd == "equipment":
                 self.cmd_equipment()
+
+            # ── Combat ───────────────────────────────────────────────────────
+            elif cmd == "attack":
+                self.cmd_attack(noun)
+            elif cmd == "cast":
+                self.cmd_cast(noun)
+            elif cmd in ("blast", "heal", "speed", "power"):
+                # Standalone spell shortcuts — treat as "cast <spell> [target]"
+                self.cmd_cast(f"{cmd} {noun}".strip())
+
+            # ── Items ────────────────────────────────────────────────────────
+            elif cmd == "eat":
+                self.cmd_eat(noun)
+            elif cmd == "drink":
+                self.cmd_drink(noun)
+
+            # ── Status ───────────────────────────────────────────────────────
+            elif cmd == "character":
+                self.cmd_status()
             elif cmd == "health":
                 self.cmd_health()
             elif cmd == "rest":
                 self.cmd_rest()
-            elif cmd == "cast":
-                args = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
-                self.cmd_cast(args)
-            elif cmd == "attack":
-                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
-                self.cmd_attack(noun)
-            elif cmd == "flee":
-                self.cmd_flee()
-            elif cmd == "eat":
-                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
-                self.cmd_eat(noun)
-            elif cmd == "drink":
-                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
-                self.cmd_drink(noun)
-            elif cmd == "open":
-                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
-                self.cmd_open(noun)
-            elif cmd == "close":
-                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
-                self.cmd_close(noun)
-            elif cmd == "unlock":
-                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
-                self.cmd_unlock(noun)
-            elif cmd == "talk":
-                # BUG-02 fix: strip "to" from "TALK TO <npc>"
-                parts = raw_input.strip().lower().split(maxsplit=2)
-                if len(parts) >= 3 and parts[1] == "to":
-                    noun = parts[2]
-                else:
-                    noun = parts[1] if len(parts) > 1 else ""
-                self.cmd_talk(noun)
             elif cmd == "spells":
                 self.cmd_spells()
-            elif cmd == "help" or cmd == "?":
-                self.cmd_help()
-            elif cmd == "character":
-                self.cmd_status()
+
+            # ── Game Control ─────────────────────────────────────────────────
             elif cmd == "save":
-                noun = raw_input.split(maxsplit=1)[1] if len(raw_input.split(maxsplit=1)) > 1 else ""
                 self.cmd_save(noun)
             elif cmd == "load":
                 self.cmd_load("")
+            elif cmd in ("help", "?"):
+                self.cmd_help()
             elif cmd == "quit":
                 return self.cmd_quit_with_confirm()
+
+            # ── Special / Adventure hooks ─────────────────────────────────────
+            elif cmd == "trollsfire":
+                self.cmd_trollsfire()
+            else:
+                self.call_hook("on_special_command", cmd, noun)
         
         # Check win condition
         if self._check_win():
@@ -1442,6 +1466,150 @@ class Engine:
         # Handler manages dialogue, follower recruitment, healing, etc.
         self.on_talk_to_npc(npc.name)
 
+    def cmd_say(self, noun: str) -> None:
+        """Broadcast speech to the room."""
+        if not noun:
+            print(self.tc("Say what?", "error"))
+            return
+        print(self.tc(f'You say, "{noun}"', "warn"))
+        # Let adventure hook react to spoken words
+        self.call_hook("on_say", noun.lower())
+
+    def cmd_smile(self, noun: str) -> None:
+        """Smile, wave, bow — friendly emote."""
+        monsters = self.world.monsters_in_room(self.player.room_id)
+        if noun:
+            target = self.world.find_monster_by_name(noun, monsters)
+            if target:
+                print(self.tc(f"You smile at the {target.name}.", "sys"))
+                if target.attitude == Attitude.HOSTILE:
+                    print(self.tc(f"The {target.name} doesn't look impressed.", "warn"))
+                return
+        print(self.tc("You smile pleasantly.", "sys"))
+
+    def cmd_free(self, noun: str) -> None:
+        """Free or release a creature or captive."""
+        if not noun:
+            print(self.tc("Free what?", "error"))
+            return
+        monsters = self.world.monsters_in_room(self.player.room_id)
+        target = self.world.find_monster_by_name(noun, monsters)
+        if target:
+            self.call_hook("on_free", target.name.lower())
+            return
+        print(self.tc(f"You don't see a {noun} here to free.", "error"))
+
+    def cmd_give(self, noun: str) -> None:
+        """Give an item to an NPC — GIVE <item> TO <npc>."""
+        if not noun:
+            print(self.tc("Give what to whom?", "error"))
+            return
+        parts = noun.lower().split(" to ", 1)
+        if len(parts) != 2:
+            print(self.tc("Usage: GIVE <item> TO <npc>", "error"))
+            return
+        item_name, npc_name = parts[0].strip(), parts[1].strip()
+        artifact = self.world.find_artifact_by_name(item_name, self.world.artifacts_carried())
+        if not artifact:
+            print(self.tc(f"You're not carrying a {item_name}.", "error"))
+            return
+        monsters = self.world.monsters_in_room(self.player.room_id)
+        npc = self.world.find_monster_by_name(npc_name, monsters)
+        if not npc:
+            print(self.tc(f"You don't see a {npc_name} here.", "error"))
+            return
+        # Let the adventure hook decide what happens; default: just drop the item
+        handled = self.call_hook("on_give", artifact.name.lower(), npc.name.lower())
+        if not handled:
+            artifact.room_id = self.player.room_id
+            print(self.tc(f"You give the {artifact.name} to the {npc.name}.", "sys"))
+
+    def cmd_put(self, noun: str) -> None:
+        """Put an item in/on a container — PUT <item> IN <container>."""
+        if not noun:
+            print(self.tc("Put what where?", "error"))
+            return
+        for prep in (" in ", " into ", " on ", " inside "):
+            if prep in noun.lower():
+                parts = noun.lower().split(prep, 1)
+                item_name, container_name = parts[0].strip(), parts[1].strip()
+                carried = self.world.artifacts_carried()
+                artifact = self.world.find_artifact_by_name(item_name, carried)
+                if not artifact:
+                    print(self.tc(f"You're not carrying a {item_name}.", "error"))
+                    return
+                room_artifacts = self.world.artifacts_in_room(self.player.room_id)
+                container = self.world.find_artifact_by_name(container_name, carried + room_artifacts)
+                if not container:
+                    print(self.tc(f"You don't see a {container_name} here.", "error"))
+                    return
+                if container.artifact_type != ArtifactType.CONTAINER:
+                    print(self.tc(f"The {container.name} isn't a container.", "error"))
+                    return
+                artifact.room_id = self.player.room_id
+                print(self.tc(f"You put the {artifact.name} in the {container.name}.", "sys"))
+                return
+        # No preposition — treat as DROP
+        self.cmd_drop(noun)
+
+    def cmd_use(self, noun: str) -> None:
+        """Generic USE — delegates to the appropriate typed command."""
+        if not noun:
+            print(self.tc("Use what?", "error"))
+            return
+        candidates = self.world.artifacts_carried() + self.world.artifacts_in_room(self.player.room_id)
+        artifact = self.world.find_artifact_by_name(noun, candidates)
+        if not artifact:
+            print(self.tc(f"You don't see a {noun} here.", "error"))
+            return
+        t = artifact.artifact_type
+        if t == ArtifactType.POTION:
+            self.cmd_drink(noun)
+        elif t == ArtifactType.FOOD:
+            self.cmd_eat(noun)
+        elif t in (ArtifactType.WEAPON, ArtifactType.SHIELD, ArtifactType.ARMOR):
+            self.cmd_equip(noun)
+        elif t == ArtifactType.READABLE:
+            self.cmd_read(noun)
+        elif t == ArtifactType.LIGHT:
+            self.cmd_light(noun)
+        else:
+            # Let adventure hook handle specialised use
+            handled = self.call_hook("on_use", artifact.name.lower())
+            if not handled:
+                print(self.tc(f"You're not sure how to use the {artifact.name}.", "sys"))
+
+    def cmd_light(self, noun: str) -> None:
+        """Light a torch, lamp, or light-source artifact."""
+        if not noun:
+            print(self.tc("Light what?", "error"))
+            return
+        candidates = self.world.artifacts_carried() + self.world.artifacts_in_room(self.player.room_id)
+        artifact = self.world.find_artifact_by_name(noun, candidates)
+        if not artifact:
+            print(self.tc(f"You don't see a {noun} here.", "error"))
+            return
+        if artifact.artifact_type != ArtifactType.LIGHT:
+            print(self.tc(f"The {artifact.name} can't be lit.", "error"))
+            return
+        handled = self.call_hook("on_light", artifact.name.lower())
+        if not handled:
+            print(self.tc(f"You light the {artifact.name}.", "spell"))
+
+    def cmd_trollsfire(self) -> None:
+        """Special command: examine or ready TrollsFire."""
+        candidates = (self.world.artifacts_in_room(self.player.room_id)
+                      + self.world.artifacts_carried())
+        sword = self.world.find_artifact_by_name("trollsfire", candidates)
+        if not sword:
+            print(self.tc("You don't see TrollsFire here.", "error"))
+            return
+        if sword.room_id is None:
+            print(self.tc("TrollsFire is already in your hands, ready to strike!", "spell"))
+        else:
+            print(self.tc(f"{sword.description}", "desc"))
+            print(self.tc("(You can GET TROLLSFIRE to pick it up, then EQUIP it.)", "sys"))
+
     # ── Save/Load System ───────────────────────────────────────────────────────
 
     def cmd_save(self, noun: str) -> None:
@@ -1530,25 +1698,32 @@ class Engine:
         print(self.tc("ADVENTURE COMMANDS", "title"))
         print()
         print(self.tc("Movement", "sys"))
-        print(self.tc("  N/S/E/W/U/D, GO <direction>, FLEE", "help"))
+        print(self.tc("  N S E W U D  NE NW SE SW  GO <dir>  FLEE / RUN", "help"))
         print()
         print(self.tc("Interaction", "sys"))
-        print(self.tc("  LOOK, EXAMINE <thing>, READ <item>, TALK TO <npc>", "help"))
+        print(self.tc("  LOOK  EXAMINE <thing>  READ <item>", "help"))
+        print(self.tc("  TALK TO <npc>  SAY <words>  SMILE  FREE <creature>", "help"))
         print()
         print(self.tc("Inventory", "sys"))
-        print(self.tc("  INVENTORY, GET <item>, DROP <item>, EQUIP <item>", "help"))
+        print(self.tc("  INVENTORY  GET <item>  DROP <item>  GIVE <item> TO <npc>", "help"))
+        print(self.tc("  PUT <item> IN <container>  USE <item>  LIGHT <item>", "help"))
+        print(self.tc("  EAT <food>  DRINK <potion>  OPEN/CLOSE <item>", "help"))
+        print()
+        print(self.tc("Equipment", "sys"))
+        print(self.tc("  EQUIP / WEAR / READY <item>  REMOVE <item>  EQUIPMENT", "help"))
         print()
         print(self.tc("Combat", "sys"))
-        print(self.tc("  ATTACK <monster>", "help"))
+        print(self.tc("  ATTACK / FIGHT / KILL / HIT <monster>", "help"))
         print()
         print(self.tc("Magic", "sys"))
-        print(self.tc("  CAST <spell>, SPELLS (show proficiencies)", "help"))
+        print(self.tc("  CAST <spell> [target]  SPELLS", "help"))
+        print(self.tc("  BLAST  HEAL  SPEED  POWER  (shortcut — no CAST needed)", "help"))
         print()
         print(self.tc("Status", "sys"))
-        print(self.tc("  HEALTH, REST, EQUIPMENT, CHAR (character sheet)", "help"))
+        print(self.tc("  HEALTH  REST  CHAR (character sheet)", "help"))
         print()
         print(self.tc("Game", "sys"))
-        print(self.tc("  SAVE, LOAD, QUIT, HELP", "help"))
+        print(self.tc("  SAVE  LOAD / RESTORE  QUIT  HELP", "help"))
         print()
 
     def cmd_quit(self) -> int:
