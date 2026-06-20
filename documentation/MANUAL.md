@@ -585,6 +585,25 @@ Items you carry when an adventure ends **stay with your character**. They appear
 
 Items brought from a previous adventure are kept separate from the new adventure's own items, so there is no conflict if two adventures happen to contain items with the same name or ID.
 
+### Quest Items and Keys
+
+Two flags control whether an item can be sold or carried out of an adventure:
+
+| Flag | Sell at tavern? | Carried to next adventure? |
+|---|---|---|
+| Normal item | Yes (if value > 0) | Yes |
+| `is_quest_item` | **No** | Yes — still in inventory after exit |
+| `adventure_only` | Yes, mid-adventure | **No** — auto-sold for gold on exit |
+| Both flags set | **No** | **No** — silently removed on exit |
+
+**`is_quest_item`** prevents the item from being sold at Horace's or Aldric's. It does not remove the item when the adventure ends — quest items follow the character into later adventures unless `adventure_only` is also set.
+
+**`adventure_only`** removes the item when the player leaves the adventure. The engine auto-sells it for its stated value (minimum 1 gold) and prints a message listing what was taken. Keys are the most common use case — a cave key should not follow the player into an unrelated dungeon.
+
+**Keys** (artifact type `key`) are never sold at the tavern regardless of flags, because the tavern's shop does not buy keys. They remain in your inventory after an adventure unless `adventure_only` is set on them.
+
+To create a key or quest item that disappears cleanly on exit, set **both** `is_quest_item` and `adventure_only` in the designer.
+
 ---
 
 ## Managing Equipment in the Tavern
@@ -838,14 +857,16 @@ All 13 artifact types are supported. Choose the type when adding an artifact and
 
 #### Artifact Flags
 
-The designer prompts for these when adding or editing an artifact (via **Edit special flags**):
+When adding or editing an artifact the designer first asks **"Quest item (cannot be sold)?"** — this sets `is_quest_item` directly. Then **"Edit special flags?"** opens the full flags menu:
 
 | Flag | Effect |
 |---|---|
-| `adventure_only` | Item cannot be carried out of the adventure; auto-sold for gold on exit |
+| `adventure_only` | Removed on exit; auto-sold for its value (min 1 gold) and gold credited |
 | `is_tradeable` | Can be given to a specific NPC for a scripted trade |
 | `is_escape_vehicle` | USE on this item ends the adventure (boat, portal, etc.) |
 | `triggers_event` | Using the item fires a named event handler |
+
+**`is_quest_item` vs `adventure_only`** — these are independent. `is_quest_item` blocks tavern sales; `adventure_only` removes the item on exit. Set both on a key or plot-critical item that should not follow the player into later adventures. See the [Quest Items and Keys](#quest-items-and-keys) section for the full behaviour table.
 
 **Rings and cloaks** also prompt for stat bonuses (per stat, positive or negative) and a label shown when the item is equipped. Setting `cursed: true` makes the item impossible to remove.
 
