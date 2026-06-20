@@ -8,7 +8,7 @@
 
 Eamon Redux is a text adventure engine inspired by the classic Eamon system originally created by Donald Brown for the Apple II in 1980. Like the original, it combines interactive fiction with a fantasy role-playing game. You create a character, journey through adventures, fight monsters, collect loot, and solve puzzles using plain English commands.
 
-Unlike the original, Eamon Redux runs in Python on any modern system, stores all adventure data as readable JSON files, and features a **classless character system** — any character can learn any spell, use any weapon, and develop any skill over time. All adventures begin and end at the **Saunter Inn and Tavern**, where your character is stored between sessions, loot can be sold, and new adventures are chosen.
+Unlike the original, Eamon Redux runs in Python on any modern system, stores all adventure data as readable JSON files, and features a **classless character system** — any character can learn any spell, use any weapon, and develop any skill over time. All adventures begin and end at the **Main Hall of the Free Adventurers**, where your character is stored between sessions, loot can be sold, new adventures are chosen, and a handful of memorable NPCs will help — or hinder — your progress.
 
 ---
 
@@ -33,7 +33,7 @@ All game data lives in the project directory. Nothing is written outside it.
 
 ```
 eamon-redux/
-├── tavern.py              # Start here — runs the Saunter Inn and Tavern
+├── tavern.py              # Start here — runs the Main Hall of the Free Adventurers
 ├── engine.py              # Adventure game loop (do not run directly)
 ├── designer.py            # Adventure designer tool
 ├── *.py                   # Other engine modules
@@ -61,9 +61,9 @@ eamon-redux/
 - Mid-adventure saves go to `stored_games/<name>_<adventure>_slot<n>.json` and can be resumed from the tavern.
 - Adventures you create with the designer are stored under `adventures/` and appear in the adventure board immediately.
 
-### The Saunter Inn and Tavern
+### The Main Hall of the Free Adventurers
 
-When you start the game with `python3 tavern.py`, you arrive at the Saunter Inn and Tavern. This is your home base. From here you can create characters, manage your inventory, buy equipment and spells, and choose your next adventure.
+When you start the game with `python3 tavern.py`, you arrive at the Main Hall of the Free Adventurers — the Guild's headquarters and your home base. Unlike a simple menu screen, the Main Hall is a **navigable space** with multiple rooms, each with its own NPC and purpose. Navigate it with the same directional commands you use inside adventures.
 
 ---
 
@@ -116,9 +116,13 @@ A character with Intelligence 14 has a +2 spell bonus and a mana pool of 28 poin
 
 ### Charisma
 
-Charisma is a measure of personality, appearance, and social grace. It affects how NPCs react to your character and the prices merchants offer for your loot.
+Charisma is a measure of personality, appearance, and social grace. It affects how NPCs react to your character and the prices merchants offer.
 
-A Charisma of 10 is average. Above 10 gives a positive reaction bonus; below 10 gives a penalty. Specific NPC reactions are adventure-dependent.
+A Charisma of 10 is average. Above 10 gives a positive reaction bonus; below 10 gives a penalty. Specific effects:
+
+- **Weapon and spell shops** — high Charisma earns a small random discount (roughly 5–15%); very low Charisma adds a surcharge of similar size.
+- **Marie Laveau** — Charisma ≥ 16 shifts her attitude one step in your favour; Charisma ≤ 7 shifts it one step against you.
+- **Adventure NPCs** — reactions are adventure-dependent.
 
 ---
 
@@ -267,7 +271,7 @@ Some followers are **non-combatants** (like a rescued prisoner). They travel wit
 
 There are no spell restrictions in Eamon Redux. Any character can learn and cast any spell. Your Intelligence determines your mana pool and your spell effectiveness.
 
-To learn spells, visit **Aldric's Arcane Emporium** in the tavern. You can also find spellbooks in adventures.
+To learn spells, visit **Aldric the Mage** in the Magic, Potions and Sundries shop (Common Room → East). You can also find spellbooks in adventures.
 
 ### Mana
 
@@ -393,9 +397,9 @@ TALK TO hermit
 TALK TO healer
 ```
 
-### The Tavern
+### The Main Hall
 
-Returning to the tavern restores your HP and mana to full. Death carries a gold penalty (2 gold per missing HP at revival), but you are never left permanently weakened.
+Returning to the Main Hall restores your HP and mana to full. Death carries a gold penalty (2 gold per missing HP at revival), but you are never left permanently weakened.
 
 ---
 
@@ -577,9 +581,9 @@ LOAD        — load a saved game (also: RESTORE)
 
 Saves store your full position: room, HP, mana, inventory, monster states, and artifact locations. You can have up to 3 save slots per adventure.
 
-### Saving in the Tavern
+### Saving in the Main Hall
 
-`SAVE` also works at any tavern prompt. There it writes your character's stats, gold, inventory, and equipped items to disk without consuming an adventure save slot. Your character is saved automatically when you quit (`QUIT`), but you can type `SAVE` at any time to force an immediate write.
+`SAVE` works at any Main Hall prompt. It writes your character's stats, gold, bank balance, inventory, and equipped items to disk without consuming an adventure save slot. Your character is also saved automatically whenever you leave a shop, use the bank, or quit. Type `SAVE` at any time to force an immediate write.
 
 ### Item Persistence
 
@@ -600,7 +604,7 @@ Two flags control whether an item can be sold or carried out of an adventure:
 | `adventure_only` | Yes, mid-adventure | **No** — auto-sold for gold on exit |
 | Both flags set | **No** | **No** — silently removed on exit |
 
-**`is_quest_item`** prevents the item from being sold at Horace's or Aldric's. It does not remove the item when the adventure ends — quest items follow the character into later adventures unless `adventure_only` is also set.
+**`is_quest_item`** prevents the item from being sold at Marcus's or Aldric's. It does not remove the item when the adventure ends — quest items follow the character into later adventures unless `adventure_only` is also set.
 
 **`adventure_only`** removes the item when the player leaves the adventure. The engine auto-sells it for its stated value (minimum 1 gold) and prints a message listing what was taken. Keys are the most common use case — a cave key should not follow the player into an unrelated dungeon.
 
@@ -631,16 +635,16 @@ Cursed items cannot be unequipped from the tavern any more than they can from in
 
 ## Selling Loot
 
-Visit Horace (weapons, armor, shields, general gear) or Aldric (potions, scrolls, spellbooks) to sell items. Your full inventory is shown at the top of each shop screen so you can always see what you are carrying alongside the buy listing.
+Visit Marcus Marcos (weapons, armor, shields, general gear) or Aldric the Mage (potions, scrolls, spellbooks) to sell items. Your full inventory is shown at the top of each shop screen so you can always see what you are carrying alongside the buy listing.
 
 You can open a shop several ways:
 
 ```
-BUY / SELL      — open the shop in your current room (Horace's bar or Aldric's back room)
-HORACE / SHOP   — open Horace's shop (must be at the bar; otherwise you get directions)
-ALDRIC / WIZARD — open Aldric's shop (must be in the back room; otherwise you get directions)
-TALK TO horace  — also opens Horace's shop
-TALK TO aldric  — also opens Aldric's shop
+BUY / SELL          — open the shop in your current room
+MARCUS / CAVIELLI   — open Marcus's shop (must be in his room; otherwise you get directions)
+ALDRIC / WIZARD     — open Aldric's shop (must be in his room; otherwise you get directions)
+TALK TO marcus      — also opens Marcus's shop
+TALK TO aldric      — also opens Aldric's shop
 ```
 
 Inside the shop, use these commands:
@@ -651,7 +655,7 @@ SELL ALL    — sell all eligible items at once, skipping equipped ones
 DONE        — leave without selling
 ```
 
-**Sell prices** are shown in parentheses next to each item in your inventory, e.g. `short sword 2g (10g)` — the first number is carry weight, the second is what Horace or Aldric will pay. Items bought from the shops resell at roughly one-third of their purchase price. Adventure loot sells at its stated value.
+**Sell prices** are shown in parentheses next to each item in your inventory, e.g. `short sword 2g (10g)` — the first number is carry weight, the second is what Marcus or Aldric will pay. Items bought from the shops resell at roughly one-third of their purchase price. Adventure loot sells at its stated value.
 
 **Equipped items are protected.** They appear in the sell listing marked `[EQUIPPED — unequip first]` and cannot be sold — not even by SELL ALL. Use `UNEQUIP` or `EQUIPMENT` to remove an item before selling it.
 
@@ -661,20 +665,137 @@ Keys and quest items cannot be sold regardless of equipped status.
 
 ## Buying Equipment and Spells
 
-### Horace's Outfitters
+### Cavielli's Weapons and Armour Shoppe
 
-Weapons, armor, shields, food, and potions. Stock varies by your level and adventures completed.
+Marcus Marcos runs the weapon shop east of the Main Hall. His **core stock** — daggers, short swords, leather armor, chainmail, wooden shields, rations, and torches — is always available. A rotating selection of additional weapons and armor appears each session based on your level and completed adventures.
 
-### Aldric's Arcane Emporium
+High Charisma earns you a small random discount (up to 15%) on everything Marcus sells.
 
-All four spells are available to any character. Prices:
+### Magic, Potions and Sundries
 
-| Spell | Approximate Cost |
+Aldric the Mage operates the magic shop east of the Common Room. He sells all four spells (any character can learn any spell), a rotating selection of potions, and the occasional scroll.
+
+**Spell prices (flat, before Charisma adjustment):**
+
+| Spell | Cost | Effect |
+|---|---|---|
+| Power  | 100g  | Adventure-specific effect |
+| Heal   | 500g  | 1d10 HP restored |
+| Blast  | 1000g | 1d6 damage, bypasses armor |
+| Speed  | 4000g | Double Agility for 11–20 rounds |
+
+Spells are not cheap — plan accordingly. Charisma ≥ 15 earns a random 5–15% discount; Charisma ≤ 8 adds a 5–10% surcharge.
+
+You may carry a maximum of **2 potions** at a time.
+
+---
+
+## The Main Hall
+
+### Layout and Navigation
+
+The Main Hall is a navigable space with seven distinct rooms. Move between them using the same directional commands you use inside adventures.
+
+```
+              [Marie Laveau's Chamber]
+                        │ N
+               [Common Room]
+               │ S        │ E
+           [Main Hall] ─────── [Magic, Potions & Sundries]
+           │ W    │ NE
+        [Bank]  [Guild Hall]
+           │ E
+           │ (back to Main Hall)
+
+         S from Main Hall → EXIT (save and leave)
+         E from Main Hall → [Cavielli's Weapons & Armour Shoppe]
+```
+
+| Room | Direction from Main Hall | NPC |
+|---|---|---|
+| Main Hall (foyer) | — | — |
+| Common Room | North | — |
+| Cavielli's Weapons & Armour Shoppe | East | Marcus Marcos |
+| Magic, Potions and Sundries | Common Room → East | Aldric the Mage |
+| Marie Laveau's Chamber | Common Room → North | Marie Laveau |
+| The Main Hall Bank | West | Reginald T. Pemberton |
+| Adventurers' Guild Hall | Northeast | (quest board) |
+
+When you first enter a room each session, the NPC there greets you. On subsequent visits you get a shorter acknowledgment.
+
+### Main Hall Commands
+
+Most Main Hall commands are the same as in adventures. A few are unique to this space:
+
+```
+ADVENTURE / A       — go to the guild hall and choose an adventure
+RESUME / R          — resume a saved adventure from the load menu
+LEAVE / QUIT        — Temporarily Leave the Universe (save and exit)
+```
+
+Directional shortcuts also work: typing `S` from the Main Hall foyer goes south, triggering the exit. You do not need to type LEAVE explicitly — just walk out.
+
+### Marie Laveau — The Witch
+
+Marie Laveau's chamber is north of the Common Room. For a steep fee (2500–5000 gold, chosen randomly), she will attempt to raise one of your five stats by 1 point. She will never raise a stat by more than 1 per visit.
+
+The key word is *attempt*. Marie keeps track of how she feels about you — her **attitude** ranges from -3 (hostile) to +3 (devoted). Her attitude is shaped by:
+
+- **Persistent attitude** (`marie_attitude` on your character file) — adjusts permanently based on gifts you give her.
+- **Session gift bonus** — resets each time you enter the Main Hall; rises and falls with gifts given during that session.
+- **Charisma modifier** — Charisma ≥ 16 adds +1; Charisma ≤ 7 subtracts 1.
+
+**Attitude outcomes:**
+
+| Total Attitude | What happens |
 |---|---|
-| Power | Cheap |
-| Heal | Moderate |
-| Blast | Moderate |
-| Speed | Expensive |
+| +2 or higher | You get exactly the stat you asked for |
+| +1 | 85% chance of your chosen stat, 15% random |
+| 0 (neutral) | She raises your *lowest* stat — her call, not yours |
+| -1 | Unpredictable: weakest stat, wrong stat, or wrong stat with commentary |
+| -2 or lower | 40% chance she takes your gold and does nothing; 60% raises a random stat |
+
+**Changing her attitude** — give her gifts:
+
+```
+GIVE <item> TO MARIE    — give her an item as an offering
+GIVE <item> TO LAVEAU   — same thing
+```
+
+She values items by their sell price:
+
+| Item value | Session bonus | Permanent shift |
+|---|---|---|
+| 200g or more | +2 this session | +1 permanent |
+| 50–199g | +1 this session | none |
+| 10–49g | no bonus | none (she notes the effort) |
+| under 10g | -1 this session | -1 permanent (she is insulted) |
+
+### The Main Hall Bank
+
+The bank is west of the Main Hall. Reginald T. Pemberton will hold your gold between sessions. Your balance is saved on your character and persists across all adventures.
+
+```
+DEPOSIT <amount>    — move gold from your purse to the vault
+DEPOSIT ALL         — deposit everything you're carrying
+WITHDRAW <amount>   — take gold from the vault
+WITHDRAW ALL        — withdraw your entire balance
+BALANCE             — show carried gold and vault balance
+```
+
+These commands only function inside the bank room. You can also type `BANK` from any room to get directions.
+
+### Temporarily Leaving the Universe
+
+The classic Eamon exit. Walk south from the Main Hall foyer, or type `LEAVE` from the foyer, to save your character and exit the game.
+
+```
+S       — from the Main Hall foyer: save and exit
+LEAVE   — same effect from the foyer
+QUIT    — same effect from anywhere in the Main Hall
+```
+
+Your character is saved to disk, your bank balance is preserved, and the game exits cleanly. Everything waits for you when you return.
 
 ---
 
@@ -761,10 +882,25 @@ All four spells are available to any character. Prices:
 ### Game Control
 | Command | Aliases | Notes |
 |---|---|---|
-| `SAVE` | `SA` | Save mid-adventure (3 slots) |
+| `SAVE` | `SA` | Save mid-adventure (3 slots); also saves character in Main Hall |
 | `LOAD` | `RESTORE` | Load a saved game |
 | `HELP` | `H`, `?` | In-game command list |
-| `QUIT` | `Q`, `EXIT`, `BYE` | Return to tavern |
+| `QUIT` | `Q`, `EXIT`, `BYE` | Return to the Main Hall |
+
+### Main Hall Only
+| Command | Aliases | Notes |
+|---|---|---|
+| `ADVENTURE` | `A`, `ADV` | Go to the guild hall and pick an adventure |
+| `RESUME` | `R`, `LOAD` | Resume a saved adventure |
+| `MARCUS` | `CAVIELLI` | Open Marcus's weapon shop (must be in his room) |
+| `ALDRIC` | `WIZARD`, `MAGIC` | Open Aldric's magic shop (must be in his room) |
+| `MARIE` | `WITCH`, `LAVEAU` | Enter Marie Laveau's stat-raising service |
+| `BANK` | `BA` | Go to the bank (or type from the bank room to interact) |
+| `DEPOSIT <amount>` | `DEP` | Deposit gold in the bank |
+| `WITHDRAW <amount>` | `WITH`, `WD` | Withdraw gold from the bank |
+| `BALANCE` | `BAL` | Show carried gold and bank balance |
+| `GIVE <item> TO <npc>` | `GI` | Give an item to an NPC (gifts for Marie) |
+| `LEAVE` | `LE`, `EXIT`, `OUTSIDE` | Temporarily Leave the Universe (save and exit) |
 
 ---
 
@@ -969,7 +1105,7 @@ Eamon was created by Donald Brown and first published in 1980 for the Apple II. 
 
 Eamon Redux is a spiritual successor — rebuilt from scratch in Python, with a modern stat system, a classless character system, persistent characters, a proficiency-based magic system, critical hits and fumbles in combat, diagonal movement, and a modular adventure format. The soul of the original is the same: a world where you can go anywhere, fight anything, and tell your own story.
 
-The name "Saunter Inn and Tavern" is a nod to the AppleVenture BBS, where adventurers once gathered in a virtual tavern of the same name.
+The Common Room of the Main Hall — still called the Saunter Inn in the game — is a nod to the AppleVenture BBS, where adventurers once gathered in a virtual tavern of the same name.
 
 ---
 
