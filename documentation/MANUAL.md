@@ -577,6 +577,10 @@ LOAD        — load a saved game (also: RESTORE)
 
 Saves store your full position: room, HP, mana, inventory, monster states, and artifact locations. You can have up to 3 save slots per adventure.
 
+### Saving in the Tavern
+
+`SAVE` also works at any tavern prompt. There it writes your character's stats, gold, inventory, and equipped items to disk without consuming an adventure save slot. Your character is saved automatically when you quit (`QUIT`), but you can type `SAVE` at any time to force an immediate write.
+
 ### Item Persistence
 
 Items you carry when an adventure ends **stay with your character**. They appear in your inventory the next time you begin any adventure, and they retain all their original properties — damage dice, stat bonuses, flags. If the item is equipped (such as a ring granting +2 Intelligence), that bonus is also restored.
@@ -628,6 +632,18 @@ Cursed items cannot be unequipped from the tavern any more than they can from in
 ## Selling Loot
 
 Visit Horace (weapons, armor, shields, general gear) or Aldric (potions, scrolls, spellbooks) to sell items. Your full inventory is shown at the top of each shop screen so you can always see what you are carrying alongside the buy listing.
+
+You can open a shop several ways:
+
+```
+BUY / SELL      — open the shop in your current room (Horace's bar or Aldric's back room)
+HORACE / SHOP   — open Horace's shop (must be at the bar; otherwise you get directions)
+ALDRIC / WIZARD — open Aldric's shop (must be in the back room; otherwise you get directions)
+TALK TO horace  — also opens Horace's shop
+TALK TO aldric  — also opens Aldric's shop
+```
+
+Inside the shop, use these commands:
 
 ```
 S <n>       — sell the numbered item (must not be equipped)
