@@ -118,6 +118,7 @@ TAVERN_COMMANDS = {
     "new": {"aliases": ["ne"], "min_chars": 2, "category": "character"},
     
     # Game Control
+    "save": {"aliases": ["sa"], "min_chars": 2, "category": "control"},
     "help": {"aliases": ["h", "?"], "min_chars": 1, "category": "control"},
     "quit": {"aliases": ["q"], "min_chars": 1, "category": "control"},
 }

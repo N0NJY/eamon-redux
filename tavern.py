@@ -782,11 +782,27 @@ def _execute_tavern_command(cmd: str, noun: str, character, room) -> Optional[st
     # ────────────────────────────────────────────────────────────────────────────
     # Shop (direct command)
     # ────────────────────────────────────────────────────────────────────────────
-    if cmd == "buy" or cmd == "sell":
+    if cmd in ("buy", "sell"):
+        if room.npc == "horace":
+            run_horace_shop(character)
+        elif room.npc == "aldric":
+            run_wizard_shop(character)
+        else:
+            tprint(" Visit Horace at the bar (north) or Aldric in the back room (bar → east) to trade.", "desc")
+        return None
+
+    if cmd == "horace":
         if room.npc == "horace":
             run_horace_shop(character)
         else:
             tprint(" Horace is at the bar. Head north from the entrance.", "desc")
+        return None
+
+    if cmd == "wizard":
+        if room.npc == "aldric":
+            run_wizard_shop(character)
+        else:
+            tprint(" Aldric is in the back room. Head to the bar, then east.", "desc")
         return None
     
     # ────────────────────────────────────────────────────────────────────────────
@@ -819,6 +835,11 @@ def _execute_tavern_command(cmd: str, noun: str, character, room) -> Optional[st
     # ────────────────────────────────────────────────────────────────────────────
     # Game Control
     # ────────────────────────────────────────────────────────────────────────────
+    if cmd == "save":
+        character.save()
+        tprint(" Character saved.", "sys")
+        return None
+
     if cmd == "look":
         show_room(room)
         return None
@@ -856,8 +877,10 @@ def show_tavern_help() -> None:
         ("UNEQUIP",           "Unequip an item (same menu as EQUIPMENT)"),
         ("LOOK / L",          "Describe current room"),
         ("HORACE / SHOP",     "Trade with Horace (at the bar)"),
-        ("ALDRIC / WIZARD",   "Visit Aldric (bar → east)"),
+        ("ALDRIC / WIZARD",   "Trade with Aldric (bar → east)"),
+        ("BUY / SELL",        "Buy or sell at the shop in your current room"),
         ("TALK TO <name>",    "Speak to an NPC"),
+        ("SAVE",              "Save your character to disk"),
         ("ADVENTURE / A",     "Go to the adventure board"),
         ("RESUME / SAVES",    "Resume a saved adventure"),
         ("QUIT / Q",          "Save and exit the game"),
