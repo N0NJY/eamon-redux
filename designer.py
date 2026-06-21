@@ -11,6 +11,7 @@ import json
 import os
 import sys
 from world import World, Room, Artifact, ArtifactType, Monster, Attitude, DIRECTIONS
+from import_eamon import import_adventure as _import_edx
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -1265,6 +1266,27 @@ class Designer:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+def _import_edx_interactive(adventures_dir: str) -> str | None:
+    """Prompt for an EDX JSON file and import it. Returns the new adventure path, or None."""
+    print(f"\n  IMPORT FROM EAMON DELUXE (EDX)")
+    print(f"  {hr('─', 40)}")
+    print("  Enter the path to an EDX fixture JSON file (blank to go back).")
+    src = input("  Path: ").strip()
+    if not src:
+        return None
+    if not os.path.isfile(src):
+        print(f"  File not found: {src}")
+        return None
+    slug = input("  Slug/directory name (blank = auto from title): ").strip() or None
+    try:
+        adv_dir = _import_edx(src, slug, dest_dir=adventures_dir)
+        input("  Press Enter to open in the Designer...")
+        return adv_dir
+    except Exception as exc:
+        print(f"  Import failed: {exc}")
+        return None
+
+
 def _choose_or_create(adventures_dir: str = "adventures") -> str:
     """Interactive startup: pick an existing adventure or create a new one."""
     existing = []
@@ -1292,10 +1314,12 @@ def _choose_or_create(adventures_dir: str = "adventures") -> str:
             print(f"  {i:>3}. {title}  ({path})")
         print()
         print(f"    N. New adventure")
+        print(f"    I. Import from Eamon Deluxe (EDX) JSON")
         print(f"    0. Quit")
     else:
         print(f"  No adventures found in '{adventures_dir}'.")
         print(f"    N. New adventure")
+        print(f"    I. Import from Eamon Deluxe (EDX) JSON")
         print(f"    0. Quit")
 
     while True:
@@ -1303,6 +1327,10 @@ def _choose_or_create(adventures_dir: str = "adventures") -> str:
         if raw == "0":
             print("\n  Goodbye!\n")
             sys.exit(0)
+        elif raw == "i":
+            path = _import_edx_interactive(adventures_dir)
+            if path:
+                return path
         elif raw == "n":
             # New adventure sub-flow — blank title or 'back' returns to this menu
             print(f"\n  {hr()}")
