@@ -3,7 +3,7 @@
     "id": 1,
     "name": "You are below the trap door. (S)",
     "description": "You are at the bottom of a long shaft.  There is no way to climb back up.  The natural light is very dim here, but you can see an exit to the south.",
-    "brief_description": "",
+    "brief_description": "Bottom of a long shaft. No way back up. Exit south.",
     "exits": {
       "south": 2
     },
@@ -13,7 +13,7 @@
     "id": 2,
     "name": "You are in a T-intersection; N and E/W.",
     "description": "You are at an intersection with an east/west corridor and a north-bound passage.",
-    "brief_description": "",
+    "brief_description": "T-intersection. Tunnels lead north, east, and west.",
     "exits": {
       "east": 7,
       "west": 3,
@@ -25,7 +25,7 @@
     "id": 3,
     "name": "You are in a T-intersection; E and N/S.",
     "description": "You are at an intersection with an east-bound corridor going into a north/south passage.",
-    "brief_description": "",
+    "brief_description": "T-intersection. Dark tunnels east, north, and south.",
     "exits": {
       "east": 2,
       "north": 4,
@@ -37,7 +37,7 @@
     "id": 4,
     "name": "You are in the coffin room. (S)",
     "description": "You are in a small chamber with the only exit to the south.  Standing in the middle of the chamber is a coffin.",
-    "brief_description": "",
+    "brief_description": "Small dark chamber with a coffin. Exit south.",
     "exits": {
       "south": 3
     },
@@ -47,7 +47,7 @@
     "id": 5,
     "name": "You are in the stone room. (N)",
     "description": "You are in a small chamber with the only exit to the north.  A large stone stands in the room and a mirror is embedded in the wall.  In the mirror you see the word \"CIGAM\".",
-    "brief_description": "",
+    "brief_description": "Small dark chamber. A mirror on the wall shows \"CIGAM\". Exit north.",
     "exits": {
       "north": 3
     },
@@ -57,7 +57,7 @@
     "id": 6,
     "name": "You are on the north beach. (S/E)",
     "description": "You are on the north end of a very long beach.  To the east is a river which flows swiftly southward.",
-    "brief_description": "",
+    "brief_description": "North beach. Swift river to the east. Beach continues south.",
     "exits": {
       "south": 7,
       "east": 9
@@ -68,7 +68,7 @@
     "id": 7,
     "name": "You are on the middle beach. (N/S/E/W)",
     "description": "You are in the middle of a long beach which runs north and south.  You cannot tell if there is anything at either end.  A tunnel leads back to the west.  To the east is a river which runs swiftly southward.",
-    "brief_description": "",
+    "brief_description": "Middle of the long beach. Tunnel west, river east.",
     "exits": {
       "north": 6,
       "east": 10,
@@ -81,7 +81,7 @@
     "id": 8,
     "name": "You are on the south beach. (N/E)",
     "description": "You are on the south end of a very long beach.  To the east is a river which flows swiftly southward.",
-    "brief_description": "",
+    "brief_description": "South beach. Swift river to the east. Beach north.",
     "exits": {
       "east": 11,
       "north": 7
@@ -92,7 +92,7 @@
     "id": 9,
     "name": "You are on the river, near the north beach. (S/W)",
     "description": "You are sailing the river in your rickety old boat.  To the east is a cliff wall--Can't land there.  You may land on the north beach to the west or follow the river south.  The strong current prevents travel north.",
-    "brief_description": "",
+    "brief_description": "On the river near the north beach. Cliff east, beach west, current south.",
     "exits": {
       "west": 6,
       "south": 10
@@ -103,7 +103,7 @@
     "id": 10,
     "name": "You are on the river, near the middle beach. (S/W)",
     "description": "You are sailing the river in your rickety old boat.  To the west is the middle of the long beach.  The river continues south.",
-    "brief_description": "",
+    "brief_description": "On the river near the middle beach. Beach west, river south.",
     "exits": {
       "south": 11,
       "west": 7
@@ -114,7 +114,7 @@
     "id": 11,
     "name": "You are on the river, near the south beach. (S/W)",
     "description": "You are sailing the river in your rickety old boat.  To the west is the south end of the long beach.  If you continue taking the boat south you will go into a tunnel where you cannot make out any details.",
-    "brief_description": "",
+    "brief_description": "On the river near the south beach. Beach west, dark tunnel south.",
     "exits": {
       "south": 12,
       "west": 8
@@ -125,7 +125,7 @@
     "id": 12,
     "name": "You are sailing the river, in a tunnel. (S)",
     "description": "You are drifting through a tunnel, with no beaches on either side of the river to land on.  You can only continue downstream to the south.",
-    "brief_description": "",
+    "brief_description": "Drifting through a river tunnel. No banks — current carries you south.",
     "exits": {
       "south": 13
     },
@@ -135,7 +135,7 @@
     "id": 13,
     "name": "You are sailing the river, near the north grotto. (S/W)",
     "description": "Cliff walls keep you from landing to the east.  To the west is a small grotto, called 'North Grotto'.  The river continues south and appears to ride next to other grottos.",
-    "brief_description": "",
+    "brief_description": "River passage. North Grotto to the west. River continues south.",
     "exits": {
       "west": 17,
       "south": 14
@@ -146,7 +146,7 @@
     "id": 14,
     "name": "You are sailing the river, near the middle grotto. (S/W)",
     "description": "To the west is a small grotto with a sign saying, 'Middle Grotto'.  The river continues south, going next to another grotto.",
-    "brief_description": "",
+    "brief_description": "River passage. Middle Grotto to the west. River continues south.",
     "exits": {
       "south": 15,
       "west": 23
@@ -157,7 +157,7 @@
     "id": 15,
     "name": "You are sailing the river, near the south grotto. (S/W)",
     "description": "To the west is a small grotto with a sign saying, 'South Grotto'.  The river continues south, turning into a tunnel where you cannot make out any details.",
-    "brief_description": "",
+    "brief_description": "River passage. South Grotto to the west. Grate ahead to the south — do not continue.",
     "exits": {
       "south": 16,
       "west": 27
@@ -168,7 +168,7 @@
     "id": 16,
     "name": "You are crashing into a grate!",
     "description": "As you enter the tunnel, you see light ahead.  It is coming through a grate which blocks the river.  You boat smashes into it, is destroyed, and you drown.",
-    "brief_description": "",
+    "brief_description": "The iron grate! Your boat smashes into it. This is death.",
     "exits": {},
     "is_dark": false
   },
@@ -176,7 +176,7 @@
     "id": 17,
     "name": "You are in the north grotto. (E/W)",
     "description": "You are in a small grotto.  To the east is a swiftly flowing river.  A tunnel leads into blackness to the west.",
-    "brief_description": "",
+    "brief_description": "North Grotto. River to the east, dark tunnel west.",
     "exits": {
       "east": 13,
       "west": 18
@@ -187,7 +187,7 @@
     "id": 18,
     "name": "You are in an east/west corridor.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Twisty east/west corridor. Darkness in both directions.",
     "exits": {
       "east": 17,
       "west": 19
@@ -198,7 +198,7 @@
     "id": 19,
     "name": "You are at a bend in the corridor. (S/E)",
     "description": "You are at a sharp bend in the corridor, with exits leading east and south.",
-    "brief_description": "",
+    "brief_description": "Sharp bend. Dark corridor leads east and south.",
     "exits": {
       "south": 20,
       "east": 18
@@ -209,7 +209,7 @@
     "id": 20,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor. Darkness north and south.",
     "exits": {
       "south": 21,
       "north": 19
@@ -220,7 +220,7 @@
     "id": 21,
     "name": "You are in a cross of two corridors. (N/S/E/W)",
     "description": "You are at a large opening with exits in all four directions.  You see the remains of a campfire here.",
-    "brief_description": "",
+    "brief_description": "Four-way crossing. Remains of a campfire here. Tunnels N/S/E/W.",
     "exits": {
       "east": 22,
       "west": 28,
@@ -233,7 +233,7 @@
     "id": 22,
     "name": "You are in an east/west corridor.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Twisty east/west corridor. Darkness east and west.",
     "exits": {
       "east": 23,
       "west": 21
@@ -244,7 +244,7 @@
     "id": 23,
     "name": "You are in the middle grotto. (E/W)",
     "description": "You are in a small grotto.  To the east is a swiftly flowing river.  A tunnel leads into blackness to the west.",
-    "brief_description": "",
+    "brief_description": "Middle Grotto. River to the east, dark tunnel west.",
     "exits": {
       "west": 22,
       "east": 14
@@ -255,7 +255,7 @@
     "id": 24,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor. Darkness north and south.",
     "exits": {
       "north": 21,
       "south": 25
@@ -266,7 +266,7 @@
     "id": 25,
     "name": "You are at a bend in the corridor. (N/E)",
     "description": "You are at a sharp bend in the corridor, with exits leading north and east.",
-    "brief_description": "",
+    "brief_description": "Sharp bend. Dark corridor leads north and east.",
     "exits": {
       "north": 24,
       "east": 26
@@ -277,7 +277,7 @@
     "id": 26,
     "name": "You are in an east/west corridor.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Twisty east/west corridor. Darkness east and west.",
     "exits": {
       "east": 27,
       "west": 25
@@ -288,7 +288,7 @@
     "id": 27,
     "name": "You are in the south grotto. (E/W)",
     "description": "You are in a small grotto.  To the east is a swiftly flowing river.  A tunnel leads into blackness to the west.  The ground here looks as if it has been recently dug up.",
-    "brief_description": "",
+    "brief_description": "South Grotto. River east, tunnel west. The ground here looks freshly dug.",
     "exits": {
       "east": 15,
       "west": 26
@@ -299,7 +299,7 @@
     "id": 28,
     "name": "You are in an east/west corridor.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Twisty east/west corridor. Darkness east and west.",
     "exits": {
       "east": 21,
       "west": 29
@@ -310,7 +310,7 @@
     "id": 29,
     "name": "You are at a four-way intersection. (N/S/E/W)",
     "description": "You are at a four-way intersection, with exits leading into darkness.  You feel a cool breeze here, but you can't tell where it is coming from.",
-    "brief_description": "",
+    "brief_description": "Four-way intersection. A cool breeze drifts through — source unknown.",
     "exits": {
       "north": 30,
       "east": 28,
@@ -323,7 +323,7 @@
     "id": 30,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor. Darkness north and south.",
     "exits": {
       "south": 29,
       "north": 31
@@ -334,7 +334,7 @@
     "id": 31,
     "name": "You are in a T-intersection; S and E/W.",
     "description": "You are at an intersection with an east/west corridor and a south-bound passage.",
-    "brief_description": "",
+    "brief_description": "T-intersection. Dark corridors lead east, south, and west.",
     "exits": {
       "east": 32,
       "south": 30,
@@ -346,7 +346,7 @@
     "id": 32,
     "name": "You are in an east/west corridor.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Twisty east/west corridor. Darkness east and west.",
     "exits": {
       "west": 31,
       "east": 33
@@ -357,7 +357,7 @@
     "id": 33,
     "name": "You are in the bag room. (W)",
     "description": "You are in a small, featureless chamber with the only exit to the west.",
-    "brief_description": "",
+    "brief_description": "Small featureless chamber — the bag room. Exit west.",
     "exits": {
       "west": 32
     },
@@ -367,7 +367,7 @@
     "id": 34,
     "name": "You are at a bend in the corridor. (N/E)",
     "description": "You are at a sharp bend in the corridor, with exits leading north and east.",
-    "brief_description": "",
+    "brief_description": "Sharp bend. Dark corridor leads north and east.",
     "exits": {
       "north": 35,
       "east": 31
@@ -378,7 +378,7 @@
     "id": 35,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor. Darkness north and south.",
     "exits": {
       "north": 36,
       "south": 34
@@ -389,7 +389,7 @@
     "id": 36,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor. Darkness north and south.",
     "exits": {
       "south": 35,
       "north": 37
@@ -400,7 +400,7 @@
     "id": 37,
     "name": "You are at Witt's End. (N/S)",
     "description": "A sign on the wall says, \"STOP!  GO NO FURTHER!  DUNGEON UNDER CONSTRUCTION BEYOND HERE.  DANGER!  --- Witt Construction Company\".",
-    "brief_description": "",
+    "brief_description": "Witt's End. A construction warning sign blocks the north passage. Exit south.",
     "exits": {
       "north": 38,
       "south": 36
@@ -411,7 +411,7 @@
     "id": 38,
     "name": "You are in the insanity room.",
     "description": "You are in a room designed to attack your very mind.  Exits go off in >>all<< directions, and mad scrawlings on the wall threaten to reduce you to a babbling idiot if you look at them too long.",
-    "brief_description": "",
+    "brief_description": "The insanity room. Mad scrawlings cover the walls. Every exit loops back here.",
     "exits": {
       "east": 38,
       "west": 37,
@@ -426,7 +426,7 @@
     "id": 39,
     "name": "You are in a north/south corridor.",
     "description": "You are in a very well-built corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Well-built north/south corridor. Leads north toward the temple entrance.",
     "exits": {
       "south": 40,
       "north": 29
@@ -437,7 +437,7 @@
     "id": 40,
     "name": "You are at the temple entrance. (N/S)",
     "description": "To the south is a huge, open door with a sign over it reading, \"Temple of Kalimar\".  Scratched beside the door is the saying, \"ABANDON HOPE ALL YE WHO ENTER HERE\".",
-    "brief_description": "",
+    "brief_description": "Temple entrance. The door of the Temple of Kalimar lies to the south.",
     "exits": {
       "north": 39,
       "south": 41
@@ -448,7 +448,7 @@
     "id": 41,
     "name": "You are at a four-way intersection. (N/S/E/W)",
     "description": "You are at a four-way intersection, with very well-built tunnels going off in all four directions.",
-    "brief_description": "",
+    "brief_description": "Four-way intersection inside the Temple of Kalimar. Tunnels N/S/E/W.",
     "exits": {
       "north": 40,
       "south": 46,
@@ -461,7 +461,7 @@
     "id": 42,
     "name": "You are in an east/west corridor.",
     "description": "You are in a well-built corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Temple corridor running east and west.",
     "exits": {
       "east": 41,
       "west": 43
@@ -472,7 +472,7 @@
     "id": 43,
     "name": "You are in the jewel room. (E)",
     "description": "You are in a small room with the only exit to the east.  A stand here has written on it, \"JEWEL OF MOLINAR -- DO NOT TOUCH!\"",
-    "brief_description": "",
+    "brief_description": "Jewel room. A stand warns \"DO NOT TOUCH\" the Jewel of Molinar. Exit east.",
     "exits": {
       "east": 42
     },
@@ -482,7 +482,7 @@
     "id": 44,
     "name": "You are in an east/west corridor.",
     "description": "You are in a well-built corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Temple corridor running east and west.",
     "exits": {
       "east": 45,
       "west": 41
@@ -493,7 +493,7 @@
     "id": 45,
     "name": "You are in the supplies room. (W)",
     "description": "You are in what appears to be a storage room.  The floor is littered with odds and ends which are valueless to you.",
-    "brief_description": "",
+    "brief_description": "Supplies room. Littered with worthless junk. Exit west.",
     "exits": {
       "west": 44
     },
@@ -503,7 +503,7 @@
     "id": 46,
     "name": "You are in a north/south corridor.",
     "description": "You are in a well-built corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Well-built temple corridor running north and south.",
     "exits": {
       "north": 41,
       "south": 47
@@ -514,7 +514,7 @@
     "id": 47,
     "name": "You are at a four-way intersection. (N/S/E/W)",
     "description": "You are at a four-way intersection, with very well-built tunnels going off in all four directions.",
-    "brief_description": "",
+    "brief_description": "Four-way intersection in the temple complex. Tunnels N/S/E/W.",
     "exits": {
       "north": 46,
       "south": 52,
@@ -527,7 +527,7 @@
     "id": 48,
     "name": "You are in an east/west corridor.",
     "description": "You are in a well-built corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Temple corridor running east and west.",
     "exits": {
       "west": 49,
       "east": 47
@@ -538,7 +538,7 @@
     "id": 49,
     "name": "You are in the high priest's room. (E)",
     "description": "You are in a bedroom garishly decorated by purple drapes and sequins (which are magically held in place and cannot be gotten).  There is a faint scent of incense in the air.",
-    "brief_description": "",
+    "brief_description": "High Priest's bedroom. Purple drapes, sequins, and incense. Exit east.",
     "exits": {
       "east": 48
     },
@@ -548,7 +548,7 @@
     "id": 50,
     "name": "You are in an east/west corridor.",
     "description": "You are in a well-built corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Temple corridor running east and west.",
     "exits": {
       "east": 51,
       "west": 47
@@ -559,7 +559,7 @@
     "id": 51,
     "name": "You are in the priest's treasury. (W)",
     "description": "You are in what was once a treasury, with empty bags marked \"FOR HOLDING GREAT TREASURE\" on the floor.  They disintegrate when you try to pick them up.",
-    "brief_description": "",
+    "brief_description": "Priest's treasury. Empty bags line the floor — once held great wealth. Exit west.",
     "exits": {
       "west": 50
     },
@@ -569,7 +569,7 @@
     "id": 52,
     "name": "You are in the chapel. (N)",
     "description": "You are in a huge chamber.  On the south wall stands a huge leering idol.  In the center of the room is a sacrificial altar, stained with the blood of past victims.",
-    "brief_description": "",
+    "brief_description": "Chapel. A leering idol looms on the south wall above a blood-stained altar. Exit north.",
     "exits": {
       "north": 47
     },
@@ -579,7 +579,7 @@
     "id": 53,
     "name": "You are in an east/west corridor.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Twisty east/west corridor. Darkness east and west.",
     "exits": {
       "west": 54,
       "east": 29
@@ -590,7 +590,7 @@
     "id": 54,
     "name": "You are in an east/west corridor with a grate to the west.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "East/west corridor. A grate blocks the passage to the west.",
     "exits": {
       "east": 53,
       "west": 55
@@ -601,7 +601,7 @@
     "id": 55,
     "name": "You are in the blacksmith's room. (N/S/E/W)",
     "description": "You are in a hot and steamy blacksmith's workshop.  His tools are welded to an anvil that is too heavy to lift.",
-    "brief_description": "",
+    "brief_description": "Blacksmith's workshop. Hot, steamy, smells of iron. Exits N/S/E/W.",
     "exits": {
       "south": 65,
       "north": 56,
@@ -614,7 +614,7 @@
     "id": 56,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor. Darkness north and south.",
     "exits": {
       "north": 57,
       "south": 55
@@ -625,7 +625,7 @@
     "id": 57,
     "name": "You are at a bend in the corridor. (S/W)",
     "description": "You are at a sharp bend in the corridor, with exits leading south and west.",
-    "brief_description": "",
+    "brief_description": "Sharp bend. Dark corridor leads south and west.",
     "exits": {
       "south": 56,
       "west": 58
@@ -636,7 +636,7 @@
     "id": 58,
     "name": "You are in an east/west corridor.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Twisty east/west corridor. Darkness east and west.",
     "exits": {
       "east": 57,
       "west": 59
@@ -647,7 +647,7 @@
     "id": 59,
     "name": "You are at a four-way intersection. (N/S/E/W)",
     "description": "You are at a four-way intersection, with exits leading into darkness.",
-    "brief_description": "",
+    "brief_description": "Four-way intersection. Labyrinth tunnels lead into darkness in all directions.",
     "exits": {
       "east": 58,
       "west": 71,
@@ -660,7 +660,7 @@
     "id": 60,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor in the labyrinth.",
     "exits": {
       "north": 61,
       "south": 59
@@ -671,7 +671,7 @@
     "id": 61,
     "name": "You are in a T-intersection; W and N/S.",
     "description": "You are at an intersection with a north/south corridor and a west-bound passage.",
-    "brief_description": "",
+    "brief_description": "T-intersection in the labyrinth. Tunnels lead north, south, and west.",
     "exits": {
       "north": 62,
       "south": 60,
@@ -683,7 +683,7 @@
     "id": 62,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor in the labyrinth.",
     "exits": {
       "north": 63,
       "south": 61
@@ -694,7 +694,7 @@
     "id": 63,
     "name": "You are at a four-way intersection. (N/S/E/W)",
     "description": "You are still in the labyrinth, at a four-way intersection. All four exits lead into darkness.",
-    "brief_description": "",
+    "brief_description": "Four-way intersection deep in the labyrinth. Tunnels N/S/E/W.",
     "exits": {
       "north": 66,
       "south": 62,
@@ -707,7 +707,7 @@
     "id": 64,
     "name": "You are in an east/west corridor.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Twisty east/west corridor in the labyrinth.",
     "exits": {
       "east": 65,
       "west": 63
@@ -718,7 +718,7 @@
     "id": 65,
     "name": "You are at a bend in the corridor. (N/W)",
     "description": "You are at a sharp bend in the corridor, with exits leading north and west.",
-    "brief_description": "",
+    "brief_description": "Sharp bend. Dark corridor leads north and west.",
     "exits": {
       "west": 64,
       "north": 55
@@ -729,7 +729,7 @@
     "id": 66,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor in the labyrinth.",
     "exits": {
       "south": 63,
       "north": 67
@@ -740,7 +740,7 @@
     "id": 67,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor in the labyrinth.",
     "exits": {
       "north": 68,
       "south": 66
@@ -751,7 +751,7 @@
     "id": 68,
     "name": "You are at a four-way intersection. (N/S/E/W)",
     "description": "You are deep in the labyrinth. You wish you had a piece of string to mark your way. Tunnels lead north, south, east, and west into darkness.",
-    "brief_description": "",
+    "brief_description": "Deep four-way intersection. You wish you had string to mark your trail. Tunnels N/S/E/W.",
     "exits": {
       "south": 67,
       "north": 70,
@@ -764,7 +764,7 @@
     "id": 69,
     "name": "You are in an east/west corridor.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Twisty east/west corridor in the labyrinth.",
     "exits": {
       "east": 55,
       "west": 68
@@ -775,7 +775,7 @@
     "id": 70,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor in the labyrinth.",
     "exits": {
       "north": 59,
       "south": 68
@@ -786,7 +786,7 @@
     "id": 71,
     "name": "You are in an east/west corridor.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Twisty east/west corridor in the labyrinth.",
     "exits": {
       "west": 82,
       "east": 59
@@ -797,7 +797,7 @@
     "id": 72,
     "name": "You are in an east/west corridor.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Twisty east/west corridor in the labyrinth.",
     "exits": {
       "east": 68,
       "west": 80
@@ -808,7 +808,7 @@
     "id": 73,
     "name": "You are in an east/west corridor.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Twisty east/west corridor in the labyrinth.",
     "exits": {
       "east": 63,
       "west": 77
@@ -819,7 +819,7 @@
     "id": 74,
     "name": "You are in an east/west corridor.",
     "description": "You are in a twisty corridor going from east to west.",
-    "brief_description": "",
+    "brief_description": "Twisty east/west corridor in the labyrinth.",
     "exits": {
       "east": 61,
       "west": 75
@@ -830,7 +830,7 @@
     "id": 75,
     "name": "You are in a T-intersection; N and E/W.",
     "description": "You are at an intersection with an east/west corridor and a north-bound passage.",
-    "brief_description": "",
+    "brief_description": "T-intersection in the labyrinth. Tunnels lead north, east, and west.",
     "exits": {
       "north": 76,
       "east": 74,
@@ -842,7 +842,7 @@
     "id": 76,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor in the labyrinth.",
     "exits": {
       "north": 77,
       "south": 75
@@ -853,7 +853,7 @@
     "id": 77,
     "name": "You are in a T-intersection; E and N/S.",
     "description": "You are at an intersection with a north/south corridor and a east-bound passage.",
-    "brief_description": "",
+    "brief_description": "T-intersection in the labyrinth. Tunnels lead north, south, and east.",
     "exits": {
       "north": 78,
       "south": 76,
@@ -865,7 +865,7 @@
     "id": 78,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor in the labyrinth.",
     "exits": {
       "north": 79,
       "south": 77
@@ -876,7 +876,7 @@
     "id": 79,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor in the labyrinth.",
     "exits": {
       "south": 78,
       "north": 80
@@ -887,7 +887,7 @@
     "id": 80,
     "name": "You are in a T-intersection; E and N/S.",
     "description": "You are at an intersection with a north/south corridor and a east-bound passage.",
-    "brief_description": "",
+    "brief_description": "T-intersection in the labyrinth. Tunnels lead north, south, and east.",
     "exits": {
       "north": 81,
       "south": 79,
@@ -899,7 +899,7 @@
     "id": 81,
     "name": "You are in a north/south corridor.",
     "description": "You are in a twisty corridor going from north to south.",
-    "brief_description": "",
+    "brief_description": "Twisty north/south corridor in the labyrinth.",
     "exits": {
       "north": 82,
       "south": 80
@@ -910,7 +910,7 @@
     "id": 82,
     "name": "You are at a bend in the corridor. (S/E)",
     "description": "You are at a sharp bend in the corridor, with exits leading east and south.",
-    "brief_description": "",
+    "brief_description": "Sharp bend. Dark corridor leads south and east.",
     "exits": {
       "south": 81,
       "east": 71
@@ -921,7 +921,7 @@
     "id": 83,
     "name": "You are in a rough east/west corridor.",
     "description": "You are in a very rough corridor going from east to west.  it appears as if it may have been carved naturally, and a slight breeze comes from the west.",
-    "brief_description": "",
+    "brief_description": "Rough natural corridor running east/west. A breeze drifts in from the west.",
     "exits": {
       "east": 75,
       "west": 84
@@ -932,7 +932,7 @@
     "id": 84,
     "name": "You are at a bend in the corridor. (N/E)",
     "description": "The rough corridor takes a sharp bend here, going north and east.",
-    "brief_description": "",
+    "brief_description": "Rough corridor bends sharply — exits north and east.",
     "exits": {
       "north": 85,
       "east": 83
@@ -943,7 +943,7 @@
     "id": 85,
     "name": "You are in a rough north/south corridor.",
     "description": "You are in a very rough corridor going from north to south.  It seems as if there is a slight slant of the corridor, rising up to the north!",
-    "brief_description": "",
+    "brief_description": "Rough north/south corridor with a noticeable upward slope to the north.",
     "exits": {
       "north": 86,
       "south": 84
@@ -954,7 +954,7 @@
     "id": 86,
     "name": "You are in a rough north/south corridor.",
     "description": "You are in a very rough corridor going from north to south, with a definite rise to the north.",
-    "brief_description": "",
+    "brief_description": "Rough north/south corridor rising steeply toward the north.",
     "exits": {
       "north": 87,
       "south": 85
@@ -965,7 +965,7 @@
     "id": 87,
     "name": "You are in the minotaur's lair!",
     "description": "You are in a large chamber, with tunnels exiting to the north and south.  The odor of minotaur droppings fills the air.",
-    "brief_description": "",
+    "brief_description": "Minotaur's lair. A large chamber reeking of dung. Exits north and south.",
     "exits": {
       "north": 88,
       "south": 86
@@ -976,7 +976,7 @@
     "id": 88,
     "name": "You are in a rough north/south corridor.",
     "description": "You are in a very rough north to south corridor that rises up to the north.",
-    "brief_description": "",
+    "brief_description": "Rough north/south corridor rising toward the north. The lair is behind you.",
     "exits": {
       "north": 89,
       "south": 87
@@ -987,7 +987,7 @@
     "id": 89,
     "name": "You are at the tunnel entrance. (N/S)",
     "description": "You are at the entrance to the tunnel, hidden from view by some bushes.  To the south is the entrance back into the caves.  To the north is a large clearing.",
-    "brief_description": "",
+    "brief_description": "Tunnel entrance concealed by bushes. Clearing north, cave south.",
     "exits": {
       "north": 90,
       "south": 88
@@ -998,7 +998,7 @@
     "id": 90,
     "name": "You are in the Gypsy camp. (N/S/E/W)",
     "description": "You are in a large clearing.  To the east and west is thick forest.  A road stretches off to the north.  To the south you can make out the cave entrance.",
-    "brief_description": "",
+    "brief_description": "Gypsy camp clearing. Forest east and west. Road north, cave entrance south.",
     "exits": {
       "north": 91,
       "east": 92,
@@ -1011,7 +1011,7 @@
     "id": 91,
     "name": "You are on the road to town.  (N/S/E/W)",
     "description": "The road leads south back to the Gypsy camp, and north to the Main Hall.",
-    "brief_description": "",
+    "brief_description": "Road to town. South leads back to the Gypsy camp. North goes to the Main Hall.",
     "exits": {
       "south": 90,
       "east": 92,
@@ -1024,7 +1024,7 @@
     "id": 92,
     "name": "You are in the forest.  (N/S/E/W)",
     "description": "You are in a dark, thick forest.  You may walk in any direction, but you cannot be sure of where you are wandering.",
-    "brief_description": "",
+    "brief_description": "Dense forest. You can wander any direction but will circle back to the clearing.",
     "exits": {
       "west": 90,
       "north": 92,
