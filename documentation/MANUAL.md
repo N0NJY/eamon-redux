@@ -945,13 +945,58 @@ Adventures are plain folders containing four JSON files. Launch the designer wit
 python3 designer.py
 ```
 
-The menu lists all existing adventures by number. Choose one to open it, `N` to create a new adventure (the designer prompts for a title and creates the directory automatically), or `0` to quit.
+The menu lists all existing adventures by number. Choose one to open it, `N` to create a new adventure (the designer prompts for a title and creates the directory automatically), `I` to import an adventure from an Eamon Deluxe JSON file, or `0` to quit.
 
 You can also pass a path directly to skip the chooser — useful for scripting or opening an adventure by name:
 
 ```bash
 python3 designer.py adventures/my_adventure
 ```
+
+### Importing Adventures from Eamon Deluxe
+
+The original Eamon community produced hundreds of adventures for the Eamon Deluxe (EDX) web system, stored as Django fixture JSON files. The importer converts these into Eamon Redux format automatically.
+
+**From the designer startup menu**, choose `I. Import from Eamon Deluxe (EDX) JSON`. You will be prompted for:
+
+1. **Path to the source JSON file** — e.g., `original_adventures_json/002-lair-of-the-minotaur.json`
+2. **Slug / directory name** — the folder name for the imported adventure. Leave blank to auto-generate from the adventure title.
+
+The importer creates `adventures/<slug>/` with `adventure.json`, `rooms.json`, `artifacts.json`, and `monsters.json`, then opens the result in the designer.
+
+You can also run the importer directly from the command line (useful for scripting multiple imports):
+
+```bash
+python3 import_eamon.py <source.json> [adventure_slug]
+```
+
+**What gets imported automatically:**
+
+| EDX data | Eamon Redux result |
+|---|---|
+| Adventure title, intro text, author | `adventure.json` metadata |
+| Rooms (name, description, `is_dark`) | `rooms.json` — exits resolved from the separate roomexit records |
+| Room exits | Direction expanded: n/s/e/w/u/d → north/south/east/west/up/down |
+| Artifacts (type codes 0–13) | `artifacts.json` with mapped `artifact_type` |
+| Artifact weapon type (1–5) | sword / axe / club / spear / bow |
+| Monsters (stats, room, friendliness) | `monsters.json` — hostile/friend/random → hostile/friendly/neutral |
+
+**Items flagged for manual follow-up** are printed at the end of the import. The designer opens the adventure with these requiring attention:
+
+| Situation | Flag message | What to do |
+|---|---|---|
+| Artifact belongs to a monster (`monster_id` set) | "set as monster loot manually" | Use **Monsters → Edit monster** and set the loot artifact ID |
+| Artifact is inside a container (`container_id` set) | "place manually" | Use **Artifacts → Move artifact to room** |
+| Artifact is a bound captive (EDX type 10) | "convert to NPC/monster manually" | The captive was a special EDX construct — add an equivalent monster with `is_captive` flags |
+| Monster has no room (`room_id` is null or 0) | "place manually" | The monster starts in a container or is spawned by a script — use **Monsters → Move monster to room** |
+
+**After importing, plan to:**
+
+1. Fill in **brief descriptions** — imported rooms have none. Use **Rooms → 7. Fill missing brief descriptions**.
+2. Assign **monster loot** — any weapons carried by monsters in EDX need their artifact IDs entered in the monster's loot field.
+3. Set the **win condition** — the importer does not infer one from the EDX data.
+4. Set a **starting room** — the importer defaults to room 1; verify this is correct in Adventure Settings.
+5. Review **room names** — EDX room names are partial phrases ("below the trap door. (S)"); the importer prepends "You are" to each. Review and reword if needed.
 
 ### Recommended Workflow
 
