@@ -471,49 +471,64 @@ class Engine:
 
         print()
 
+    _COMMANDS_REQUIRING_NOUN = frozenset({
+        "attack", "examine", "read", "talk", "get", "drop", "equip", "unequip",
+        "use", "eat", "drink", "cast", "light", "open", "close", "give", "put",
+        "free", "unlock",
+    })
+
     def handle(self, raw_input: str) -> int:
         """
         Handle a player command.
-        Returns: 0=continue, 1=win, 2=die
+        Returns: 0=quit, 1=win, 2=die, 3=tavern, -1=continue
         """
         self.turn += 1
-        
-        # Parse command
-        cmd, status, suggestions = parse_command(raw_input, "engine")
-        
+
+        # ── Parse command ────────────────────────────────────────────────────
+        try:
+            cmd, status, suggestions = parse_command(raw_input, "engine")
+        except Exception as e:
+            print(self.tc(f"Command parser error: {e}", "error"))
+            return -1
+
         if status == "empty":
-            return -1  # Continue playing (don't quit)
+            return -1
         elif status == "not_found":
             print(self.tc("Unknown command. Type HELP for available commands.", "error"))
-            return -1  # Continue playing (don't quit)
-            
-        
+            return -1
         elif status == "ambiguous":
             print(self.tc(f"Ambiguous: {', '.join(suggestions)}. Be more specific.", "warn"))
-            return -1  # Continue playing (don't quit)
-        
-        # Handle partial/exact matches
-        if status in ("partial", "exact"):
-            noun = raw_input.split(maxsplit=1)[1].strip() if len(raw_input.split(maxsplit=1)) > 1 else ""
+            return -1
 
+        if status not in ("partial", "exact"):
+            return -1
+
+        # ── Safe argument extraction ─────────────────────────────────────────
+        input_parts = raw_input.split(maxsplit=1)
+        noun = input_parts[1].strip() if len(input_parts) > 1 else ""
+
+        if not noun and cmd in self._COMMANDS_REQUIRING_NOUN:
+            print(self.tc(f"{cmd.upper()} what?", "error"))
+            return -1
+
+        # ── Command dispatch with error wrapping ─────────────────────────────
+        try:
             # ── Movement ─────────────────────────────────────────────────────
             if cmd in ("north", "south", "east", "west", "up", "down",
                        "northeast", "northwest", "southeast", "southwest"):
                 self.cmd_go(cmd)
                 if self.player.room_id == "EXIT_TAVERN":
                     return 3
-                recovery = random.randint(5, 10)
-                self.player.recover_all_spell_fatigue(recovery)
+                self.player.recover_all_spell_fatigue(random.randint(5, 10))
             elif cmd == "go":
-                parts = raw_input.split()
-                if len(parts) > 1:
-                    self.cmd_go(parts[1])
+                go_parts = raw_input.split()
+                if len(go_parts) > 1:
+                    self.cmd_go(go_parts[1])
                 else:
                     print(self.tc("Go where?", "error"))
                 if self.player.room_id == "EXIT_TAVERN":
                     return 3
-                recovery = random.randint(5, 10)
-                self.player.recover_all_spell_fatigue(recovery)
+                self.player.recover_all_spell_fatigue(random.randint(5, 10))
             elif cmd == "flee":
                 self.cmd_flee()
 
@@ -533,10 +548,9 @@ class Engine:
 
             # ── Interaction ──────────────────────────────────────────────────
             elif cmd == "talk":
-                # strip optional "to" → TALK TO <npc>
-                parts = raw_input.strip().lower().split(maxsplit=2)
-                if len(parts) >= 3 and parts[1] == "to":
-                    noun = parts[2]
+                talk_parts = raw_input.strip().lower().split(maxsplit=2)
+                if len(talk_parts) >= 3 and talk_parts[1] == "to":
+                    noun = talk_parts[2]
                 self.cmd_talk(noun)
             elif cmd == "say":
                 self.cmd_say(noun)
@@ -576,7 +590,7 @@ class Engine:
 
             # ── Equipment ────────────────────────────────────────────────────
             elif cmd == "equip":
-                self.cmd_equip(noun)
+                self.cmd_equip_safe(noun)
             elif cmd == "unequip":
                 self.cmd_unequip(noun)
             elif cmd == "equipment":
@@ -584,12 +598,11 @@ class Engine:
 
             # ── Combat ───────────────────────────────────────────────────────
             elif cmd == "attack":
-                self.cmd_attack(noun)
+                self.cmd_attack_safe(noun)
             elif cmd == "cast":
-                self.cmd_cast(noun)
+                self.cmd_cast_safe(noun)
             elif cmd in ("blast", "heal", "speed", "power"):
-                # Standalone spell shortcuts — treat as "cast <spell> [target]"
-                self.cmd_cast(f"{cmd} {noun}".strip())
+                self.cmd_cast_safe(f"{cmd} {noun}".strip())
 
             # ── Items ────────────────────────────────────────────────────────
             elif cmd == "eat":
@@ -622,15 +635,20 @@ class Engine:
                 self.cmd_trollsfire()
             else:
                 self.call_hook("on_special_command", cmd, noun)
-        
-        # Check win condition
+
+        except Exception as e:
+            print(self.tc(f"Error executing command: {e}", "error"))
+            return -1
+
+        # ── Check win/death ──────────────────────────────────────────────────
         if self._check_win():
             return 1
-        
-        # Check death
         if not self.player.is_alive:
             return 2
-        
+
+        return -1
+
+
     def _check_win(self) -> bool:
         """Check if player has achieved win condition."""
         wc = self.world.win_condition
@@ -852,6 +870,34 @@ class Engine:
         
         success, msg = self.player.equip(artifact, self.world)
         print(self.tc(msg, "sys" if success else "error"))
+
+    def cmd_equip_safe(self, noun: str) -> None:
+        """cmd_equip with pre-flight validation."""
+        if not noun:
+            print(self.tc("Equip what?", "error"))
+            return
+
+        try:
+            artifacts = self.world.artifacts_carried()
+
+            if not artifacts:
+                print(self.tc("You're not carrying anything to equip.", "error"))
+                return
+
+            artifact = self.world.find_artifact_by_name(noun, artifacts)
+
+            if not artifact:
+                print(self.tc(f"You're not carrying a {noun}.", "error"))
+                return
+
+            if not hasattr(artifact, "artifact_type"):
+                print(self.tc(f"Invalid item: {noun}.", "error"))
+                return
+
+            self.cmd_equip(noun)
+
+        except Exception as e:
+            print(self.tc(f"Equipment error: {e}", "error"))
 
     def cmd_unequip(self, noun: str) -> None:
         """Unequip an item."""
@@ -1223,6 +1269,34 @@ class Engine:
             if hasattr(self, spell_method):
                 getattr(self, spell_method)(target_name)
 
+    def cmd_cast_safe(self, args: str) -> None:
+        """cmd_cast with pre-flight validation."""
+        if not args:
+            print(self.tc("Cast what? (CAST BLAST, CAST HEAL, CAST SPEED, CAST POWER)", "error"))
+            return
+
+        try:
+            cast_parts = args.split(maxsplit=1)
+            spell_name = cast_parts[0].lower()
+            target_name = cast_parts[1] if len(cast_parts) > 1 else None
+
+            valid_spells = {"blast", "heal", "speed", "power"}
+            if spell_name not in valid_spells:
+                print(self.tc(f"Unknown spell: '{spell_name}'. Try: BLAST, HEAL, SPEED, POWER", "error"))
+                return
+
+            # Only validate target for blast (the only targeting spell)
+            if spell_name == "blast" and target_name:
+                monsters = self.world.monsters_in_room(self.player.room_id)
+                if not self.world.find_monster_by_name(target_name, monsters):
+                    print(self.tc(f"No creature named '{target_name}' here.", "error"))
+                    return
+
+            self.cmd_cast(args)
+
+        except Exception as e:
+            print(self.tc(f"Spell error: {e}", "error"))
+
     def _cast_blast(self, target_name: str = None) -> None:
         """
         Blast spell: 1D6 + Intelligence bonus damage, bypasses armor.
@@ -1516,6 +1590,37 @@ class Engine:
 
         print(self.tc(f"{monster.name} {monster.health_desc()}", "sys"))
         self.monster_round(monster)
+
+    def cmd_attack_safe(self, noun: str) -> None:
+        """cmd_attack with pre-flight validation."""
+        if not noun:
+            print(self.tc("Attack what?", "error"))
+            return
+
+        try:
+            monsters = self.world.monsters_in_room(self.player.room_id)
+
+            if not monsters:
+                print(self.tc("There are no creatures here to attack.", "error"))
+                return
+
+            monster = self.world.find_monster_by_name(noun, monsters)
+
+            if not monster:
+                print(self.tc(f"You don't see a {noun} here.", "error"))
+                return
+
+            if not getattr(monster, "is_alive", True) or monster.hp <= 0:
+                monster.is_alive = False
+                print(self.tc(f"The {monster.name} is already dead.", "error"))
+                return
+
+            self.cmd_attack(noun)
+
+        except AttributeError as e:
+            print(self.tc(f"Invalid creature state: {e}", "error"))
+        except Exception as e:
+            print(self.tc(f"Combat error: {e}", "error"))
 
     def monster_round(self, monster) -> None:
         """Monster attacks the player (or a follower, 30% of the time)."""
@@ -1879,10 +1984,10 @@ class Engine:
 
     def cmd_quit_with_confirm(self) -> int:
         """Quit with confirmation."""
-        response = input(self.tc("Really quit? (y/n): ", "warn"))
-        if response.lower() == 'y':
+        from core.input_validator import prompt_bool
+        if prompt_bool("Really quit?", default=False):
             return 0
-        return -1  # Continue
+        return -1
 
 
 # ── Game Runner ───────────────────────────────────────────────────────────────
