@@ -763,7 +763,10 @@ class Engine:
                 a = self.world.artifacts.get(aid)
                 if a:
                     self.character.equipped[slot] = a.name
-        print(f"\033[1;33m{self.character.stat_summary()}\033[0m")
+        # Pass player's current stats so equipment bonuses show on the sheet
+        effective = {s: getattr(self.player, s)
+                     for s in ('hardiness', 'agility', 'charisma', 'intelligence', 'strength')}
+        print(f"\033[1;33m{self.character.stat_summary(effective_stats=effective)}\033[0m")
 
     # ── Inventory & Equipment ─────────────────────────────────────────────────
 

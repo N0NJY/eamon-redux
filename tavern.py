@@ -345,8 +345,25 @@ def _process_sell(raw: str, sellable: list, all_carried: list,
 
 # ── Character display ─────────────────────────────────────────────────────────
 
+def _tavern_effective_stats(character) -> dict:
+    """Compute effective stats for character sheet by summing stat_bonuses of equipped items."""
+    items = _load_carried(character)
+    bonuses: dict[str, int] = {}
+    for item_name in character.equipped.values():
+        if item_name:
+            for item in items:
+                if item.name == item_name:
+                    for stat, val in (item.stat_bonuses or {}).items():
+                        bonuses[stat] = bonuses.get(stat, 0) + val
+                    break
+    if not bonuses:
+        return {}
+    return {stat: getattr(character, stat, 0) + bonus
+            for stat, bonus in bonuses.items()}
+
 def show_character_sheet(character) -> None:
-    print(f"\033[1;33m{character.stat_summary()}\033[0m")
+    effective = _tavern_effective_stats(character)
+    print(f"\033[1;33m{character.stat_summary(effective_stats=effective or None)}\033[0m")
 
 def show_inventory(character) -> None:
     carried = _load_carried(character)

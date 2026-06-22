@@ -302,6 +302,8 @@ class Player:
         if aid is None:
             return False, f"Nothing equipped in {slot} slot."
         a = world.artifacts.get(aid)
+        if a:
+            self._apply_stat_bonuses(a, reverse=True)
         self.equipped[slot] = None
         name = a.name if a else f"item #{aid}"
         return True, f"You remove the {name}."

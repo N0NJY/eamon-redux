@@ -139,15 +139,31 @@ class Character:
 
     # ── Display ───────────────────────────────────────────────────────────────
 
-    def stat_summary(self) -> str:
-        """Return a clean, fully-bordered character sheet."""
+    def stat_summary(self, effective_stats: dict = None) -> str:
+        """Return a clean, fully-bordered character sheet.
+
+        effective_stats: optional dict of stat→current_value reflecting equipment
+                         bonuses (e.g. from Player after _apply_stat_bonuses).
+        """
         W = 54  # inner width between ║ chars
+        es = effective_stats or {}
 
         def top():      return f"  ╔{'═'*W}╗"
         def bot():      return f"  ╚{'═'*W}╝"
         def sep():      return f"  ╠{'═'*W}╣"
         def row(s=""):  return f"  ║  {s:<{W-2}}║"
         def hdr(s):     return f"  ║  {s.upper():<{W-2}}║"
+
+        def _eff_display(name, base):
+            """Return display string: 'base+N' when equipment modifies, else str(base)."""
+            v = es.get(name, base)
+            if v != base:
+                diff = v - base
+                return f"{base}{'+'if diff>0 else ''}{diff}"
+            return str(base)
+
+        def _ev(name, base):
+            return es.get(name, base)
 
         # ── Header ───────────────────────────────────────────────────────────
         lines = [
@@ -162,16 +178,31 @@ class Character:
         lines.append(sep())
 
         def stat(label, val, right=""):
-            left = f"{label:<13}: {val:<3}"
-            return row(f"{left}   {right}" if right else left)
+            left = f"{label:<13}: {val:<5}"
+            return row(f"{left}  {right}" if right else left)
+
+        eff_hard = _ev('hardiness',    self.hardiness)
+        eff_agi  = _ev('agility',      self.agility)
+        eff_str  = _ev('strength',     self.strength)
+        eff_int  = _ev('intelligence', self.intelligence)
+        eff_cha  = _ev('charisma',     self.charisma)
 
         lines += [
-            stat("Hardiness",    self.hardiness,    f"HP:  {self.hp}/{self.hp_max}   Carry: {self.carry_capacity} gronds"),
-            stat("Agility",      self.agility,      f"Combat bonus: {self.agility_bonus:+d}"),
-            stat("Strength",     self.strength,     f"Damage bonus: {self.strength_bonus:+d}"),
-            stat("Intelligence", self.intelligence,  f"Mana: {self.mana_max}"),
-            stat("Charisma",     self.charisma,     f"Reaction:    {self.charisma_bonus:+d}"),
+            stat("Hardiness",    _eff_display('hardiness',    self.hardiness),
+                 f"HP:  {self.hp}/{eff_hard*2}   Carry: {eff_hard*10} gronds"),
+            stat("Agility",      _eff_display('agility',      self.agility),
+                 f"Combat bonus: {(eff_agi-10)//2:+d}"),
+            stat("Strength",     _eff_display('strength',     self.strength),
+                 f"Damage bonus: {(eff_str-10)//2:+d}"),
+            stat("Intelligence", _eff_display('intelligence', self.intelligence),
+                 f"Mana: {eff_int*2}"),
+            stat("Charisma",     _eff_display('charisma',     self.charisma),
+                 f"Reaction:    {(eff_cha-10)//2:+d}"),
         ]
+
+        _STATS = ('hardiness', 'agility', 'charisma', 'intelligence', 'strength')
+        if any(es.get(s, getattr(self, s)) != getattr(self, s) for s in _STATS):
+            lines.append(row("  * base+N indicates active equipment bonus"))
 
         # ── Weapon Skills ─────────────────────────────────────────────────────
         lines.append(sep())
