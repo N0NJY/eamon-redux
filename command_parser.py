@@ -113,8 +113,22 @@ TAVERN_COMMANDS = {
 
     # Main Hall Actions
     "look":      {"aliases": ["l"],                                   "min_chars": 1, "category": "explore"},
+    "verbose":   {"aliases": [],                                      "min_chars": 3, "category": "explore"},
+    "brief":     {"aliases": ["br"],                                  "min_chars": 2, "category": "explore"},
+    "examine":   {"aliases": ["x", "ex", "exa"],                     "min_chars": 2, "category": "explore"},
+    "read":      {"aliases": ["rea"],                                 "min_chars": 3, "category": "explore"},
     "talk":      {"aliases": ["ta"],                                  "min_chars": 2, "category": "explore"},
     "give":      {"aliases": ["gi"],                                  "min_chars": 2, "category": "explore"},
+    # Inventory in the tavern
+    "drop":      {"aliases": ["dr"],                                  "min_chars": 2, "category": "inventory"},
+    "get":       {"aliases": ["ge", "take", "pick"],                  "min_chars": 2, "category": "inventory"},
+    "use":       {"aliases": ["us"],                                  "min_chars": 2, "category": "inventory"},
+    "eat":       {"aliases": ["ea"],                                  "min_chars": 2, "category": "inventory"},
+    "drink":     {"aliases": ["dri"],                                 "min_chars": 3, "category": "inventory"},
+    "light":     {"aliases": ["ignite"],                              "min_chars": 3, "category": "inventory"},
+    # Status in the tavern
+    "health":    {"aliases": ["hp"],                                  "min_chars": 4, "category": "status"},
+    "rest":      {"aliases": [],                                      "min_chars": 3, "category": "status"},
     "buy":       {"aliases": ["b"],                                   "min_chars": 1, "category": "shop"},
     "sell":      {"aliases": [],                                      "min_chars": 4, "category": "shop"},
     "marcus":    {"aliases": ["cavielli", "shop", "ma"],             "min_chars": 2, "category": "shop"},

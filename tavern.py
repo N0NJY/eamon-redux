@@ -46,11 +46,17 @@ def tprint(text: str, role: str = "desc") -> None:
 _session: dict = {
     "marie_bonus":  0,       # attitude modifier from gifts given this session
     "npc_greeted":  set(),   # room_ids where NPC has already spoken on entry
+    "verbose":      True,    # verbose mode: show full desc every visit (like engine)
+    "visited":      set(),   # room_ids seen this session (for brief mode)
+    "floor_items":  {},      # room_id → list of Artifact dropped this session
 }
 
 def _reset_session() -> None:
     _session["marie_bonus"] = 0
     _session["npc_greeted"] = set()
+    _session["verbose"]     = True
+    _session["visited"]     = set()
+    _session["floor_items"] = {}
 
 # ── Main Hall rooms ────────────────────────────────────────────────────────────
 
@@ -59,6 +65,7 @@ class TavernRoom:
     room_id: str
     name: str
     description: str
+    brief_description: str
     exits: dict
     npc: Optional[str] = None
 
@@ -73,6 +80,7 @@ MAIN_HALL_ROOMS = {
             " Passages branch off in every direction. A heavy oak door to the south\n"
             " opens onto the street beyond.\n"
         ),
+        brief_description=" The Main Hall foyer. Marble columns, enchanted map north. Exits: N, E, W, NE, S (street).",
         exits={
             "north":     "common_room",
             "east":      "weapon_shop",
@@ -90,6 +98,7 @@ MAIN_HALL_ROOMS = {
             " A fire roars in the stone hearth. The passage east smells faintly of\n"
             " incense. To the north, beads clatter softly in a draught.\n"
         ),
+        brief_description=" Saunter Inn common room. Smoke, fire, and adventurers. Exits: S, E, N (beads).",
         exits={
             "south": "foyer",
             "east":  "magic_shop",
@@ -105,6 +114,7 @@ MAIN_HALL_ROOMS = {
             " and fresh leather. A stocky man in a black apron looks up from the blade\n"
             " he is honing, his eyes measuring you in an instant.\n"
         ),
+        brief_description=" Cavielli's Weapons Shoppe. Racks of arms and armour. Marcus Marcos is here.",
         exits={"west": "foyer"},
         npc="marcus",
     ),
@@ -117,6 +127,7 @@ MAIN_HALL_ROOMS = {
             " the candlelight. The air tastes of ozone and dried flowers. A lean man in\n"
             " robes sits at a high desk, quill poised, peering over wire-rimmed spectacles.\n"
         ),
+        brief_description=" Aldric's shop. Arcane goods on every shelf, ozone in the air. Aldric is here.",
         exits={"west": "common_room"},
         npc="aldric",
     ),
@@ -130,6 +141,7 @@ MAIN_HALL_ROOMS = {
             " imposing woman in dark robes sits at the centre, a crystal ball before\n"
             " her. Her gaze finds you before you speak a word.\n"
         ),
+        brief_description=" Marie Laveau's candlelit chamber. Incense, crystals, bones. She watches you.",
         exits={"south": "common_room"},
         npc="marie",
     ),
@@ -142,6 +154,7 @@ MAIN_HALL_ROOMS = {
             " lock. A neat, balding man in a green coat and wire spectacles looks up\n"
             " from a leather-bound ledger and sets down his pen.\n"
         ),
+        brief_description=" The Main Hall Bank. Granite counter, steel vault. Pemberton is here.",
         exits={"east": "foyer"},
         npc="banker",
     ),
@@ -154,6 +167,7 @@ MAIN_HALL_ROOMS = {
             " available and recently completed. The guild registrar sits at a desk near\n"
             " the door. Type ADVENTURE to browse the quest board.\n"
         ),
+        brief_description=" The Guild Hall. Quest board on the far wall. Type ADVENTURE to browse.",
         exits={"southwest": "foyer"},
     ),
 }
@@ -990,10 +1004,21 @@ def run_aldric_shop(character) -> None:
 
 # ── Room display ──────────────────────────────────────────────────────────────
 
-def show_room(room: TavernRoom, character=None, entering: bool = False) -> None:
+def show_room(room: TavernRoom, character=None, entering: bool = False, brief: bool = False) -> None:
     print()
     print(tc(f" ── {room.name} ──", "border"))
-    print(tc(room.description, "desc"))
+    if brief and room.brief_description:
+        print(tc(room.brief_description, "desc"))
+    else:
+        print(tc(room.description, "desc"))
+
+    # Items dropped on the floor this session
+    floor = _session["floor_items"].get(room.room_id, [])
+    if floor:
+        print()
+        for a in floor:
+            tprint(f"  {a.name} is here on the floor.", "warn")
+
     if room.exits:
         dirs = []
         for d in sorted(room.exits.keys()):
@@ -1063,6 +1088,236 @@ def handle_main_hall_command(raw: str, character, room_id: str) -> Optional[str]
         if suggestions:
             tprint(f" Did you mean: {', '.join(s.upper() for s in suggestions[:3])}?", "sys")
     return None
+
+
+# ── Tavern item helpers ───────────────────────────────────────────────────────
+
+def _find_item_by_name(noun: str, items: list):
+    """Return first item whose name contains noun (case-insensitive), or None."""
+    noun_l = noun.strip().lower()
+    for item in items:
+        if noun_l in item.name.lower() or item.name.lower().startswith(noun_l):
+            return item
+    return None
+
+
+_NPC_DESCRIPTIONS = {
+    "marcus":  ("Marcus Marcos",
+                "A stocky man in a black apron, blade half-honed in hand. His eyes"
+                " measure you like a potential customer — which, he hopes, you are."),
+    "aldric":  ("Aldric the Mage",
+                "A lean, pale scholar in wire spectacles and ink-stained robes. His quill"
+                " is always poised. He looks faintly irritated by existence in general."),
+    "marie":   ("Marie Laveau",
+                "An imposing woman in dark robes, seated before a crystal ball. Her gaze"
+                " is ancient and knowing. She does not smile — but she does not need to."),
+    "banker":  ("Reginald T. Pemberton",
+                "A neat, balding man in a green coat, every hair in place. He radiates"
+                " the particular calm of someone who has never lost track of a single coin."),
+}
+
+def _cmd_tavern_examine(noun: str, character, room) -> None:
+    noun_l = noun.strip().lower()
+    if not noun_l:
+        show_room(room, character, entering=False); return
+
+    # Check carried items
+    carried = _load_carried(character)
+    target  = _find_item_by_name(noun, carried)
+    if not target:
+        # Check floor items
+        floor  = _session["floor_items"].get(room.room_id, [])
+        target = _find_item_by_name(noun, floor)
+
+    if target:
+        print()
+        print(tc(f" {target.name}", "title"))
+        print(tc(f" {target.description}", "desc"))
+        atype = getattr(target, "artifact_type", "")
+        extras = []
+        if atype == "weapon":
+            extras.append(f"Damage: {target.damage_dice}d{target.damage_sides}")
+        elif atype in ("armor", "shield"):
+            extras.append(f"Armor class: {target.armor_class}")
+        elif atype in ("potion", "food"):
+            if target.heal_amount:
+                extras.append(f"Heals: {target.heal_amount} HP")
+        if extras:
+            print(tc(f" [{', '.join(extras)}]", "stat"))
+        sv = sell_value(target)
+        if sv > 0:
+            print(tc(f" Value: ~{sv}g", "sys"))
+        print()
+        return
+
+    # Check NPC in room
+    if room.npc and room.npc in _NPC_DESCRIPTIONS:
+        npc_key = room.npc
+        name, desc = _NPC_DESCRIPTIONS[npc_key]
+        if (noun_l in npc_key or noun_l in name.lower()
+                or any(noun_l in k for k in ("marcus","aldric","marie","banker","pemberton","laveau","cavielli")
+                       if k in (npc_key + name.lower()))):
+            print()
+            print(tc(f" {name}", "title"))
+            print(tc(f" {desc}", "desc"))
+            print()
+            return
+
+    # Check room features
+    if noun_l in ("room", "area", "here", "around"):
+        show_room(room, character, entering=False); return
+    if noun_l in ("map", "board", "notice") and room.room_id == "guild_hall":
+        tprint(" The quest board lists every adventure available to Guild members. Type ADVENTURE to browse.", "desc"); return
+    if noun_l in ("map",) and room.room_id == "foyer":
+        tprint(" The enchanted map shimmers faintly. Known adventure sites pulse with soft light.", "desc"); return
+
+    tprint(f" You don't see a '{noun}' here.", "error")
+
+
+def _cmd_tavern_read(noun: str, character, room) -> None:
+    carried = _load_carried(character)
+    floor   = _session["floor_items"].get(room.room_id, [])
+    target  = _find_item_by_name(noun, carried) or _find_item_by_name(noun, floor)
+    if not target:
+        tprint(f" You don't see a '{noun}' to read.", "error"); return
+    if getattr(target, "artifact_type", "") not in ("readable", "spellbook"):
+        tprint(f" There is nothing to read on the {target.name}.", "error"); return
+    text = getattr(target, "read_text", None) or getattr(target, "description", "(The page is blank.)")
+    print()
+    print(tc(f" [{target.name}]", "title"))
+    print(tc(f" {text}", "desc"))
+    print()
+
+
+def _cmd_tavern_drop(noun: str, character, room) -> None:
+    if not noun:
+        tprint(" Drop what?", "error"); return
+    carried = _load_carried(character)
+    target  = _find_item_by_name(noun, carried)
+    if not target:
+        tprint(f" You're not carrying a '{noun}'.", "error"); return
+    equipped_names = set(character.equipped.values())
+    if target.name in equipped_names:
+        tprint(f" Unequip the {target.name} before dropping it.", "warn"); return
+    remaining = [a for a in carried if id(a) != id(target)]
+    _save_carried(character, remaining)
+    floor = _session["floor_items"].setdefault(room.room_id, [])
+    floor.append(target)
+    tprint(f" You drop the {target.name} on the floor.", "desc")
+
+
+def _cmd_tavern_get(noun: str, character, room) -> None:
+    floor = _session["floor_items"].get(room.room_id, [])
+    if not floor:
+        tprint(" There is nothing here to pick up.", "error"); return
+    if not noun:
+        tprint(" Pick up what?", "error"); return
+    target = _find_item_by_name(noun, floor)
+    if not target:
+        tprint(f" You don't see a '{noun}' on the floor here.", "error"); return
+    carried = _load_carried(character)
+    carried.append(target)
+    _save_carried(character, carried)
+    _session["floor_items"][room.room_id] = [a for a in floor if id(a) != id(target)]
+    tprint(f" You pick up the {target.name}.", "desc")
+
+
+def _cmd_tavern_use(noun: str, character, room) -> None:
+    if not noun:
+        tprint(" Use what?", "error"); return
+    carried = _load_carried(character)
+    floor   = _session["floor_items"].get(room.room_id, [])
+    target  = _find_item_by_name(noun, carried) or _find_item_by_name(noun, floor)
+    if not target:
+        tprint(f" You don't have or see a '{noun}' here.", "error"); return
+    atype = getattr(target, "artifact_type", "")
+    if atype == "potion":
+        _cmd_tavern_drink(target.name, character)
+    elif atype == "food":
+        _cmd_tavern_eat(target.name, character)
+    elif atype in ("weapon", "armor", "shield", "ring", "cloak"):
+        cmd_equip_tavern(target.name, character)
+    elif atype in ("readable", "spellbook"):
+        _cmd_tavern_read(target.name, character, room)
+    elif atype == "light":
+        _cmd_tavern_light(target.name, character, room)
+    else:
+        tprint(f" You're not sure how to use the {target.name} here.", "desc")
+
+
+def _cmd_tavern_eat(noun: str, character) -> None:
+    if not noun:
+        tprint(" Eat what?", "error"); return
+    carried = _load_carried(character)
+    target  = _find_item_by_name(noun, carried)
+    if not target:
+        tprint(f" You're not carrying a '{noun}'.", "error"); return
+    if getattr(target, "artifact_type", "") != "food":
+        tprint(f" You can't eat the {target.name}.", "error"); return
+    healing = getattr(target, "heal_amount", 0) or 0
+    old_hp  = character.hp
+    character.hp = min(character.hp + healing, character.hp_max)
+    gained  = character.hp - old_hp
+    tprint(f" You eat the {target.name}.{' (+' + str(gained) + ' HP)' if gained else ''}", "desc")
+    _save_carried(character, [a for a in carried if id(a) != id(target)])
+    character.save()
+
+
+def _cmd_tavern_drink(noun: str, character) -> None:
+    if not noun:
+        tprint(" Drink what?", "error"); return
+    carried = _load_carried(character)
+    target  = _find_item_by_name(noun, carried)
+    if not target:
+        tprint(f" You're not carrying a '{noun}'.", "error"); return
+    if getattr(target, "artifact_type", "") != "potion":
+        tprint(f" You can't drink the {target.name}.", "error"); return
+    healing = getattr(target, "heal_amount", 0) or 0
+    if healing > 0:
+        old_hp = character.hp
+        character.hp = min(character.hp + healing, character.hp_max)
+        gained = character.hp - old_hp
+        tprint(f" You drink the {target.name}. (+{gained} HP)", "desc")
+    else:
+        tprint(f" You drink the {target.name}. (Mana restored — takes effect at your next adventure.)", "desc")
+    _save_carried(character, [a for a in carried if id(a) != id(target)])
+    character.save()
+
+
+def _cmd_tavern_health(character) -> None:
+    bar_len = 20
+    filled  = int(bar_len * character.hp / max(1, character.hp_max))
+    bar     = "█" * filled + "░" * (bar_len - filled)
+    print()
+    print(tc(f" HP:   {character.hp}/{character.hp_max}  [{bar}]", "stat"))
+    print(tc(f" Gold: {character.gold}g  |  Bank: {character.bank_balance}g", "sys"))
+    active = {s: n for s, n in character.equipped.items() if n}
+    if active:
+        estr = ", ".join(f"{s}: {n}" for s, n in active.items())
+        print(tc(f" Equipped: {estr}", "desc"))
+    print()
+
+
+def _cmd_tavern_rest(character) -> None:
+    if character.hp >= character.hp_max:
+        tprint(" You are already fully rested.", "desc"); return
+    healed = character.hp_max - character.hp
+    character.hp = character.hp_max
+    character.save()
+    tprint(f" You rest at the inn. All wounds are healed. (+{healed} HP)", "desc")
+
+
+def _cmd_tavern_light(noun: str, character, room) -> None:
+    if not noun:
+        tprint(" Light what?", "error"); return
+    carried = _load_carried(character)
+    floor   = _session["floor_items"].get(room.room_id, [])
+    target  = _find_item_by_name(noun, carried) or _find_item_by_name(noun, floor)
+    if not target:
+        tprint(f" You don't have or see a '{noun}' here.", "error"); return
+    if getattr(target, "artifact_type", "") != "light":
+        tprint(f" The {target.name} can't be lit.", "error"); return
+    tprint(f" You light the {target.name}. The {room.name} brightens a little.", "desc")
 
 
 def _execute_main_hall_command(cmd: str, noun: str, character, room) -> Optional[str]:
@@ -1232,6 +1487,49 @@ def _execute_main_hall_command(cmd: str, noun: str, character, room) -> Optional
     if cmd == "look":
         show_room(room, character, entering=False); return None
 
+    # ── Verbose / Brief mode ──────────────────────────────────────────────────
+    if cmd == "verbose":
+        _session["verbose"] = True
+        tprint(" Verbose mode on — full room descriptions every visit.", "sys"); return None
+
+    if cmd == "brief":
+        _session["verbose"] = False
+        tprint(" Brief mode on — short descriptions after first visit.", "sys"); return None
+
+    # ── Examine / Read ────────────────────────────────────────────────────────
+    if cmd == "examine":
+        _cmd_tavern_examine(noun, character, room); return None
+
+    if cmd == "read":
+        _cmd_tavern_read(noun, character, room); return None
+
+    # ── Item handling ─────────────────────────────────────────────────────────
+    if cmd == "drop":
+        _cmd_tavern_drop(noun, character, room); return None
+
+    if cmd == "get":
+        _cmd_tavern_get(noun, character, room); return None
+
+    if cmd == "use":
+        _cmd_tavern_use(noun, character, room); return None
+
+    if cmd == "eat":
+        _cmd_tavern_eat(noun, character); return None
+
+    if cmd == "drink":
+        _cmd_tavern_drink(noun, character); return None
+
+    if cmd == "light":
+        _cmd_tavern_light(noun, character, room); return None
+
+    # ── Status ────────────────────────────────────────────────────────────────
+    if cmd == "health":
+        _cmd_tavern_health(character); return None
+
+    if cmd == "rest":
+        _cmd_tavern_rest(character); return None
+
+    # ── Game control ──────────────────────────────────────────────────────────
     if cmd == "help":
         show_main_hall_help(); return None
 
@@ -1268,7 +1566,19 @@ def show_main_hall_help() -> None:
     cmds = [
         ("N/S/E/W/NE/SW/...",   "Move between rooms"),
         ("GO <direction>",      "Move explicitly"),
-        ("LOOK / L",            "Describe current room"),
+        ("LOOK / L",            "Describe current room (always full)"),
+        ("VERBOSE",             "Full room descriptions on every visit"),
+        ("BRIEF",               "Short descriptions after first visit"),
+        ("EXAMINE / X <thing>", "Examine an item, NPC, or room feature"),
+        ("READ <item>",         "Read a scroll, book, or sign"),
+        ("DROP <item>",         "Drop a carried item on the floor"),
+        ("GET <item>",          "Pick up an item from the floor"),
+        ("USE <item>",          "Use an item (drink potion, equip weapon, etc.)"),
+        ("EAT <item>",          "Eat a food item"),
+        ("DRINK <item>",        "Drink a potion"),
+        ("HEALTH / HP",         "Quick health and gold summary"),
+        ("REST",                "Rest at the inn to restore HP"),
+        ("LIGHT <item>",        "Light a torch or lamp"),
         ("TALK TO <name>",      "Speak to the NPC in this room"),
         ("GIVE <item> TO <npc>","Give an item to an NPC (gifts for Marie)"),
         ("BUY / SELL",          "Open the shop in your current room"),
@@ -1376,6 +1686,7 @@ def run_main_hall_exploration(character) -> str:
     """Navigate the Main Hall. Returns 'BOARD' or 'EXIT_GAME'."""
     _reset_session()
     current_room = "foyer"
+    _session["visited"].add(current_room)
     show_room(MAIN_HALL_ROOMS[current_room], character, entering=True)
     tprint(" Type HELP for commands, ADVENTURE for the board, LEAVE to exit.", "sys")
     while True:
@@ -1385,7 +1696,11 @@ def run_main_hall_exploration(character) -> str:
             return result
         elif result is not None:
             current_room = result
-            show_room(MAIN_HALL_ROOMS[current_room], character, entering=True)
+            room = MAIN_HALL_ROOMS[current_room]
+            # First visit always full; subsequent: full if verbose, brief otherwise
+            is_first = current_room not in _session["visited"]
+            _session["visited"].add(current_room)
+            show_room(room, character, entering=True, brief=not is_first and not _session["verbose"])
 
 # ── Character management ──────────────────────────────────────────────────────
 
@@ -1534,8 +1849,14 @@ def run_tavern() -> None:
             first_entry = False
 
         action = run_main_hall_exploration(character)
+        # SAVE ①: checkpoint after every tavern session — catches any in-hall
+        # mutation that didn't call save() and ensures disk matches memory
+        # before we branch to EXIT or to the adventure engine.
+        character.save()
 
         if action == "EXIT_GAME":
+            # _temporarily_leave_universe() already saved; SAVE ① above is
+            # the belt-and-suspenders copy for this exit path.
             tprint("\n Until next time, adventurer.\n", "desc")
             break
 
@@ -1549,10 +1870,17 @@ def run_tavern() -> None:
             continue
 
         tprint(f"\n You set out for: {adv['title']}\n", "sys")
+        # SAVE ②: pre-engine checkpoint — guarantees disk = in-memory state
+        # (gold, bank_balance, equipped, spells) before the engine takes over.
+        character.save()
         result = _launch_engine(character, adv["path"])
         _handle_engine_return(character, result, adv["path"],
                               adv_name=adv["name"],
                               is_beginner_adv=adv["is_beginner"])
+        # SAVE ③: post-engine checkpoint — _handle_engine_return saves for
+        # died (result 2) and completed (result 1) but NOT for escaped (result 3).
+        # This covers all remaining paths so no engine-modified state is lost.
+        character.save()
 
         if result == 3:
             continue
