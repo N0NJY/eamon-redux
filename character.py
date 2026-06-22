@@ -11,6 +11,8 @@ import random
 from dataclasses import dataclass, field
 from typing import Optional
 
+from core.data_validator import CharacterValidator
+
 CHARACTERS_DIR = "characters"
 
 # ── Spell Definitions ─────────────────────────────────────────────────────────
@@ -263,6 +265,13 @@ class Character:
 
     @staticmethod
     def from_dict(d: dict) -> "Character":
+        # Validate and repair before building — handles corrupted or legacy files
+        is_valid, repairs, d = CharacterValidator.validate(d)
+        if repairs:
+            print(f"  [Character data repaired: {len(repairs)} issue(s)]")
+            for r in repairs:
+                print(f"    • {r}")
+
         ch = Character(
             name=d["name"],
             hardiness=d.get("hardiness", 10),
@@ -295,8 +304,12 @@ class Character:
         path = Character._path(name)
         if not os.path.exists(path):
             return None
-        with open(path) as f:
-            return Character.from_dict(json.load(f))
+        try:
+            with open(path) as f:
+                return Character.from_dict(json.load(f))
+        except json.JSONDecodeError as e:
+            print(f"  [Warning: Character file for '{name}' is corrupted: {e}]")
+            return None
 
     @staticmethod
     def delete(name: str) -> bool:
@@ -323,26 +336,44 @@ class Character:
     @staticmethod
     def create_interactive() -> "Character":
         from tavern import tc
+        from core.input_validator import prompt_string, prompt_int, prompt_bool, safe_input
 
-        print(tc("\n  Enter your character's name: ", "prompt"), end="")
-        name = input().strip()
-        if not name:
-            name = "Adventurer"
+        print(tc("\n  ═" * 36 + "═", "border"))
+        print(tc("  CHARACTER CREATION", "title"))
+        print(tc("  ═" * 36 + "═\n", "border"))
 
-        existing = Character.load(name)
-        if existing:
-            print(tc(f"\n  A character named '{name}' already exists.", "error"))
-            print(tc("  Load them instead, or choose a different name.", "warn"))
-            return existing
+        # ── Name ─────────────────────────────────────────────────────────────────
+        while True:
+            name = prompt_string("Enter your character's name", default="Adventurer", allow_empty=False)
 
-        # ── Stat rolling loop ─────────────────────────────────────────────────
+            if not name:
+                name = "Adventurer"
+
+            existing = Character.load(name)
+            if existing:
+                print(tc(f"\n  A character named '{name}' already exists.", "error"))
+                response = prompt_bool("Load that character instead?", default=True)
+                if response:
+                    return existing
+                continue
+
+            break
+
+        # ── Stat rolling loop ────────────────────────────────────────────────────
         roll_number = 1
         while True:
+            # Roll all stats
             hardiness    = roll3d6()
             agility      = roll3d6()
             charisma     = roll3d6()
             intelligence = roll3d6()
             strength     = roll3d6()
+
+            # Validate rolls (paranoia)
+            for stat in [hardiness, agility, charisma, intelligence, strength]:
+                if stat < 3 or stat > 18:
+                    print(tc("  (Invalid stat roll — rerolling)", "error"))
+                    continue
 
             ch = Character(
                 name=name,
@@ -351,7 +382,7 @@ class Character:
             )
             ch.hp = ch.hp_max
 
-            # Inner content width = 47 chars (49 dashes minus 2 leading spaces inside box)
+            # ── Display roll ─────────────────────────────────────────────────────
             _W = 47
             def _r(text, color="stat"):
                 return tc(f"  │  {text:<{_W}.{_W}}│", color)
@@ -370,13 +401,19 @@ class Character:
             print(tc("  └─────────────────────────────────────────────────┘", "border"))
             print()
 
-            answer = input(tc("  Keep these stats? (y/n): ", "prompt")).strip().lower()
-            if answer == "y":
+            response = prompt_bool("Keep these stats?", default=False)
+            if response:
                 break
+
             roll_number += 1
             print(tc("  Re-rolling...", "sys"))
 
-        ch.save()
-        print(tc(f"\n  Character '{name}' saved. Starting with 200 gold.", "sys"))
-        print(tc(f"  Visit the tavern to buy weapons, armor, and spells!", "sys"))
-        return ch
+        # ── Save and return ──────────────────────────────────────────────────────
+        try:
+            ch.save()
+            print(tc(f"\n  Character '{name}' saved. Starting with 200 gold.", "sys"))
+            print(tc(f"  Visit the tavern to buy weapons, armor, and spells!", "sys"))
+            return ch
+        except Exception as e:
+            print(tc(f"  ERROR: Could not save character: {e}", "error"))
+            return ch
