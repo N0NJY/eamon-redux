@@ -11,6 +11,9 @@ import os
 from datetime import datetime
 from typing import Optional, Tuple, Dict, List
 
+from core.data_validator import SaveFileValidator
+from core.input_validator import safe_input
+
 
 SAVES_DIR = 'stored_games'
 MAX_SAVES_PER_ADVENTURE = 3
@@ -74,8 +77,7 @@ def prompt_save_slot(character_name: str, adventure_name: str) -> Optional[int]:
         if not any(s[0] == slot for s in existing):
             print(f"  Slot {slot}: [EMPTY]")
     
-    print("\nSave to which slot? (1-3, or 'cancel'): ", end='')
-    choice = input().strip()
+    choice = safe_input("\nSave to which slot? (1-3, or 'cancel')")
     
     if choice.lower() == 'cancel':
         return None
@@ -135,18 +137,32 @@ def save_game(
         'player': player_state,
         'world': world_state,
     }
-    
+
+    # Warn on any structural issues (data still saved as-is)
+    is_valid, errors, _ = SaveFileValidator.validate(save_data)
+    if not is_valid and interactive:
+        for err in errors:
+            print(f"  ⚠ {err}")
+
+    # Atomic write: write to .tmp then rename so a crash mid-write
+    # never leaves the slot in a half-written state.
+    temp_path = filepath + ".tmp"
     try:
-        with open(filepath, 'w') as f:
+        with open(temp_path, 'w') as f:
             json.dump(save_data, f, indent=2, separators=(',', ': '))
-        
+        os.replace(temp_path, filepath)
+
         if interactive:
             print(f"✅ Game saved to slot {slot} ({filename})")
         return True
-    
+
     except IOError as e:
         if interactive:
             print(f"❌ Save failed: {e}")
+        try:
+            os.remove(temp_path)
+        except OSError:
+            pass
         return False
 
 
@@ -177,13 +193,12 @@ def load_game(
         for slot_num, filename, meta in existing:
             print(f"  Slot {slot_num}: {meta['room']} (HP: {meta['hp']}, {meta['timestamp']})")
         
-        print("\nLoad which slot? (1-3, or 'cancel'): ", end='')
-        choice = input().strip()
-        
+        choice = safe_input("\nLoad which slot? (1-3, or 'cancel')")
+
         if choice.lower() == 'cancel':
             print("⊘ Load cancelled.")
             return None
-        
+
         try:
             slot = int(choice)
         except ValueError:
@@ -203,13 +218,24 @@ def load_game(
     
     try:
         with open(filepath, 'r') as f:
-            save_data = json.load(f)
-        
+            raw_data = json.load(f)
+
+        # Validate and repair structural issues
+        is_valid, errors, save_data = SaveFileValidator.validate(raw_data)
+        if not is_valid and interactive:
+            print("⚠ Save file was corrupted. Repairs made:")
+            for err in errors:
+                print(f"  • {err}")
+
         if interactive:
-            print(f"✅ Loaded from slot {slot} ({save_data['timestamp']})")
+            print(f"✅ Loaded from slot {slot} ({save_data.get('timestamp', 'unknown time')})")
         return save_data
-    
-    except (json.JSONDecodeError, IOError) as e:
+
+    except json.JSONDecodeError as e:
+        if interactive:
+            print(f"❌ Save file is corrupted (invalid JSON): {e}")
+        return None
+    except IOError as e:
         if interactive:
             print(f"❌ Load failed: {e}")
         return None
