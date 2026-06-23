@@ -28,12 +28,13 @@ def slot_for_type(artifact_type: str) -> Optional[str]:
 class Player:
     name: str = "Adventurer"
     room_id: int = 1
-    # Stats
-    hardiness:    int = 10
-    agility:      int = 10
-    charisma:     int = 10
-    intelligence: int = 10
-    strength:     int = 10
+    # Stats (D&D-style)
+    strength:     int = 10   # STR — melee damage, carry
+    dex:          int = 10   # DEX — hit chance, AC, initiative
+    con:          int = 10   # CON — HP pool
+    intelligence: int = 10   # INT — mana, spell power
+    wis:          int = 10   # WIS — saves, heal bonus
+    charisma:     int = 10   # CHA — NPC reactions
 
     # Runtime pools
     hp:   int = 0
@@ -134,36 +135,44 @@ class Player:
 
     @property
     def hp_max(self) -> int:
-        return self.hardiness * 2
+        return self.con * 2
 
     @property
     def mana_max(self) -> int:
         return self.intelligence * 2
 
     @property
-    def agility_bonus(self) -> int:
-        return (self.agility - 10) // 2
+    def strength_bonus(self) -> int:
+        return (self.strength - 10) // 2
 
     @property
-    def agility_effective(self) -> int:
-        """Current agility including speed spell bonus."""
-        base = self.agility
+    def dex_bonus(self) -> int:
+        return (self.dex - 10) // 2
+
+    @property
+    def dex_effective(self) -> int:
+        """Current DEX including Speed spell bonus."""
+        base = self.dex
         if self.speed_active:
             base *= 2
         return base
 
     @property
-    def agility_effective_bonus(self) -> int:
-        """Combat agility bonus, doubled while speed spell is active."""
-        return (self.agility_effective - 10) // 2
-
-    @property
-    def strength_bonus(self) -> int:
-        return (self.strength - 10) // 2
+    def dex_effective_bonus(self) -> int:
+        """DEX combat bonus, doubled while Speed spell is active."""
+        return (self.dex_effective - 10) // 2
 
     @property
     def intelligence_bonus(self) -> int:
         return (self.intelligence - 10) // 2
+
+    @property
+    def wis_bonus(self) -> int:
+        return (self.wis - 10) // 2
+
+    @property
+    def charisma_bonus(self) -> int:
+        return (self.charisma - 10) // 2
 
     @property
     def is_alive(self) -> bool:

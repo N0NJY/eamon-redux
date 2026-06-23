@@ -20,7 +20,7 @@ CHARACTERS_DIR = "characters"
 SPELL_DEFS = {
     "blast":  {"name": "Blast",  "cost": 1000, "mana_cost": 3, "desc": "1D6 damage, bypasses armor"},
     "heal":   {"name": "Heal",   "cost": 500,  "mana_cost": 2, "desc": "1D10 HP restore"},
-    "speed":  {"name": "Speed",  "cost": 4000, "mana_cost": 5, "desc": "Double Agility for 11-20 rounds"},
+    "speed":  {"name": "Speed",  "cost": 4000, "mana_cost": 5, "desc": "Double DEX for 11-20 rounds"},
     "power":  {"name": "Power",  "cost": 100,  "mana_cost": 1, "desc": "Adventure-specific effect"},
 }
 
@@ -42,12 +42,13 @@ def roll3d6() -> int:
 @dataclass
 class Character:
     name: str
-    # ── Core stats ────────────────────────────────────────────────────────────
-    hardiness:    int = 10
-    agility:      int = 10
-    charisma:     int = 10
-    intelligence: int = 10
-    strength:     int = 10
+    # ── Core stats (D&D-style) ────────────────────────────────────────────────
+    strength:     int = 10   # STR — melee damage, carrying capacity
+    dex:          int = 10   # DEX — hit chance, AC bonus, initiative
+    con:          int = 10   # CON — HP pool
+    intelligence: int = 10   # INT — mana pool, spell power
+    wis:          int = 10   # WIS — saving throws, heal bonus, spell resistance
+    charisma:     int = 10   # CHA — NPC reactions, shop prices
 
     # ── Runtime ───────────────────────────────────────────────────────────────
     hp:   int = 0
@@ -90,7 +91,7 @@ class Character:
 
     @property
     def hp_max(self) -> int:
-        return self.hardiness * 2
+        return self.con * 2
 
     @property
     def mana_max(self) -> int:
@@ -98,23 +99,27 @@ class Character:
 
     @property
     def carry_capacity(self) -> int:
-        return self.hardiness * 10
+        return self.strength * 10
 
     @property
-    def agility_bonus(self) -> int:
-        return (self.agility - 10) // 2
+    def strength_bonus(self) -> int:
+        return (self.strength - 10) // 2
 
     @property
-    def charisma_bonus(self) -> int:
-        return (self.charisma - 10) // 2
+    def dex_bonus(self) -> int:
+        return (self.dex - 10) // 2
 
     @property
     def intelligence_bonus(self) -> int:
         return (self.intelligence - 10) // 2
 
     @property
-    def strength_bonus(self) -> int:
-        return (self.strength - 10) // 2
+    def wis_bonus(self) -> int:
+        return (self.wis - 10) // 2
+
+    @property
+    def charisma_bonus(self) -> int:
+        return (self.charisma - 10) // 2
 
     # ── Spell Learning ────────────────────────────────────────────────────────
 
@@ -178,29 +183,32 @@ class Character:
         lines.append(sep())
 
         def stat(label, val, right=""):
-            left = f"{label:<13}: {val:<5}"
+            left = f"{label:<5}: {val:<5}"
             return row(f"{left}  {right}" if right else left)
 
-        eff_hard = _ev('hardiness',    self.hardiness)
-        eff_agi  = _ev('agility',      self.agility)
         eff_str  = _ev('strength',     self.strength)
+        eff_dex  = _ev('dex',          self.dex)
+        eff_con  = _ev('con',          self.con)
         eff_int  = _ev('intelligence', self.intelligence)
+        eff_wis  = _ev('wis',          self.wis)
         eff_cha  = _ev('charisma',     self.charisma)
 
         lines += [
-            stat("Hardiness",    _eff_display('hardiness',    self.hardiness),
-                 f"HP:  {self.hp}/{eff_hard*2}   Carry: {eff_hard*10} gronds"),
-            stat("Agility",      _eff_display('agility',      self.agility),
-                 f"Combat bonus: {(eff_agi-10)//2:+d}"),
-            stat("Strength",     _eff_display('strength',     self.strength),
-                 f"Damage bonus: {(eff_str-10)//2:+d}"),
-            stat("Intelligence", _eff_display('intelligence', self.intelligence),
-                 f"Mana: {eff_int*2}"),
-            stat("Charisma",     _eff_display('charisma',     self.charisma),
-                 f"Reaction:    {(eff_cha-10)//2:+d}"),
+            stat("STR", _eff_display('strength',     self.strength),
+                 f"Damage: {(eff_str-10)//2:+d}   Carry: {eff_str*10} gronds"),
+            stat("DEX", _eff_display('dex',          self.dex),
+                 f"Hit: {(eff_dex-10)//2:+d}   AC bonus: {(eff_dex-10)//2:+d}   Init: {(eff_dex-10)//2:+d}"),
+            stat("CON", _eff_display('con',          self.con),
+                 f"HP:  {self.hp}/{eff_con*2}"),
+            stat("INT", _eff_display('intelligence', self.intelligence),
+                 f"Mana: {eff_int*2}   Spell power: {(eff_int-10)//2:+d}"),
+            stat("WIS", _eff_display('wis',          self.wis),
+                 f"Save: {(eff_wis-10)//2*5:+d}%   Heal bonus: {(eff_wis-10)//2:+d}"),
+            stat("CHA", _eff_display('charisma',     self.charisma),
+                 f"Reaction: {(eff_cha-10)//2:+d}"),
         ]
 
-        _STATS = ('hardiness', 'agility', 'charisma', 'intelligence', 'strength')
+        _STATS = ('strength', 'dex', 'con', 'intelligence', 'wis', 'charisma')
         if any(es.get(s, getattr(self, s)) != getattr(self, s) for s in _STATS):
             lines.append(row("  * base+N indicates active equipment bonus"))
 
@@ -276,11 +284,12 @@ class Character:
     def to_dict(self) -> dict:
         return {
             "name": self.name,
-            "hardiness": self.hardiness,
-            "agility": self.agility,
-            "charisma": self.charisma,
-            "intelligence": self.intelligence,
             "strength": self.strength,
+            "dex": self.dex,
+            "con": self.con,
+            "intelligence": self.intelligence,
+            "wis": self.wis,
+            "charisma": self.charisma,
             "hp": self.hp,
             "gold": self.gold,
             "spell_proficiencies": self.spell_proficiencies,
@@ -305,11 +314,12 @@ class Character:
 
         ch = Character(
             name=d["name"],
-            hardiness=d.get("hardiness", 10),
-            agility=d.get("agility", 10),
-            charisma=d.get("charisma", 10),
-            intelligence=d.get("intelligence", 10),
             strength=d.get("strength", 10),
+            dex=d.get("dex", 10),
+            con=d.get("con", 10),
+            intelligence=d.get("intelligence", 10),
+            wis=d.get("wis", 10),
+            charisma=d.get("charisma", 10),
             hp=d.get("hp", 0),
             gold=d.get("gold", 200),
             spell_proficiencies=d.get("spell_proficiencies", {
@@ -393,23 +403,24 @@ class Character:
         # ── Stat rolling loop ────────────────────────────────────────────────────
         roll_number = 1
         while True:
-            # Roll all stats
-            hardiness    = roll3d6()
-            agility      = roll3d6()
-            charisma     = roll3d6()
-            intelligence = roll3d6()
+            # Roll all 6 stats
             strength     = roll3d6()
+            dex          = roll3d6()
+            con          = roll3d6()
+            intelligence = roll3d6()
+            wis          = roll3d6()
+            charisma     = roll3d6()
 
             # Validate rolls (paranoia)
-            for stat in [hardiness, agility, charisma, intelligence, strength]:
-                if stat < 3 or stat > 18:
+            for s in [strength, dex, con, intelligence, wis, charisma]:
+                if s < 3 or s > 18:
                     print(tc("  (Invalid stat roll — rerolling)", "error"))
                     continue
 
             ch = Character(
                 name=name,
-                hardiness=hardiness, agility=agility, charisma=charisma,
-                intelligence=intelligence, strength=strength,
+                strength=strength, dex=dex, con=con,
+                intelligence=intelligence, wis=wis, charisma=charisma,
             )
             ch.hp = ch.hp_max
 
@@ -423,12 +434,13 @@ class Character:
             print(_r(name, "title"))
             print(_r(f"Roll #{roll_number}", "desc"))
             print(tc("  ├─────────────────────────────────────────────────┤", "border"))
-            print(_r(f"Hardiness    : {hardiness:<3}  HP: {ch.hp_max}"))
-            print(_r(f"Agility      : {agility:<3}  (combat bonus: {ch.agility_bonus:+d})"))
-            print(_r(f"Strength     : {strength:<3}  (damage bonus: {ch.strength_bonus:+d})"))
-            print(_r(f"Intelligence : {intelligence:<3}  (spell bonus: {ch.intelligence_bonus:+d}, mana: {ch.mana_max})"))
-            print(_r(f"Charisma     : {charisma:<3}  (reaction: {ch.charisma_bonus:+d})"))
-            print(_r("Gold         : 200  (starting capital)"))
+            print(_r(f"STR : {strength:<3}  Damage bonus: {ch.strength_bonus:+d}   Carry: {ch.carry_capacity} gronds"))
+            print(_r(f"DEX : {dex:<3}  Hit/AC bonus: {ch.dex_bonus:+d}"))
+            print(_r(f"CON : {con:<3}  HP: {ch.hp_max}"))
+            print(_r(f"INT : {intelligence:<3}  Spell power: {ch.intelligence_bonus:+d}   Mana: {ch.mana_max}"))
+            print(_r(f"WIS : {wis:<3}  Save bonus: {ch.wis_bonus*5:+d}%   Heal bonus: {ch.wis_bonus:+d}"))
+            print(_r(f"CHA : {charisma:<3}  Reaction: {ch.charisma_bonus:+d}"))
+            print(_r("Gold: 200  (starting capital)"))
             print(tc("  └─────────────────────────────────────────────────┘", "border"))
             print()
 

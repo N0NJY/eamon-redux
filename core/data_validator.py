@@ -16,17 +16,18 @@ class CharacterValidator:
     """Validate and repair character data."""
 
     REQUIRED_FIELDS = [
-        "name", "hardiness", "agility", "charisma", "intelligence", "strength",
+        "name", "strength", "dex", "con", "intelligence", "wis", "charisma",
         "hp", "gold", "spell_proficiencies", "weapon_proficiencies",
         "xp", "level", "is_beginner", "adventures_completed", "equipped"
     ]
 
     STAT_BOUNDS = {
-        "hardiness":    (3, 18),
-        "agility":      (3, 18),
-        "charisma":     (3, 18),
-        "intelligence": (3, 18),
         "strength":     (3, 18),
+        "dex":          (3, 18),
+        "con":          (3, 18),
+        "intelligence": (3, 18),
+        "wis":          (3, 18),
+        "charisma":     (3, 18),
     }
 
     @staticmethod
@@ -68,8 +69,8 @@ class CharacterValidator:
                     char[stat] = 10
 
         # ── HP validation ────────────────────────────────────────────────────
-        if "hp" in char and "hardiness" in char:
-            hp_max = int(char.get("hardiness", 10)) * 2
+        if "hp" in char and "con" in char:
+            hp_max = int(char.get("con", 10)) * 2
             try:
                 hp = int(char["hp"])
                 if hp > hp_max:
@@ -161,11 +162,12 @@ class CharacterValidator:
         """Return safe default for a missing field."""
         defaults = {
             "name":                 "Adventurer",
-            "hardiness":            10,
-            "agility":              10,
-            "charisma":             10,
-            "intelligence":         10,
             "strength":             10,
+            "dex":                  10,
+            "con":                  10,
+            "intelligence":         10,
+            "wis":                  10,
+            "charisma":             10,
             "hp":                   20,
             "gold":                 200,
             "spell_proficiencies":  {"blast": None, "heal": None, "speed": None, "power": None},

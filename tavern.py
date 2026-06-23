@@ -494,24 +494,23 @@ def cmd_equip_tavern(noun: str, character) -> None:
 
 # ── Marie Laveau ──────────────────────────────────────────────────────────────
 
-_STATS      = ["hardiness", "agility", "charisma", "intelligence", "strength"]
+_STATS      = ["strength", "dex", "con", "intelligence", "wis", "charisma"]
 _STAT_NAMES = {
-    "hardiness":    "Hardiness",
-    "agility":      "Agility",
-    "charisma":     "Charisma",
-    "intelligence": "Intelligence",
-    "strength":     "Strength",
+    "strength":     "STR (Strength)",
+    "dex":          "DEX (Dexterity)",
+    "con":          "CON (Constitution)",
+    "intelligence": "INT (Intelligence)",
+    "wis":          "WIS (Wisdom)",
+    "charisma":     "CHA (Charisma)",
 }
 _STAT_ALIASES = {
     # Short forms
-    "hard": "hardiness", "har": "hardiness",
-    "agi":  "agility",   "ag":  "agility",
-    "cha":  "charisma",  "ch":  "charisma",
-    "int":  "intelligence",
-    "str":  "strength",  "stre": "strength",
-    # Full names
-    "hardiness": "hardiness", "agility": "agility", "charisma": "charisma",
-    "intelligence": "intelligence", "strength": "strength",
+    "str":  "strength",  "stre": "strength",  "strength": "strength",
+    "dex":  "dex",       "de":   "dex",        "dexterity": "dex",
+    "con":  "con",       "co":   "con",        "constitution": "con",
+    "int":  "intelligence",                     "intelligence": "intelligence",
+    "wis":  "wis",       "wi":   "wis",        "wisdom": "wis",
+    "cha":  "charisma",  "ch":   "charisma",   "charisma": "charisma",
 }
 
 def _marie_total_attitude(character) -> int:
@@ -695,7 +694,7 @@ def run_marie_shop(character) -> None:
 
     old_val = getattr(character, actual_stat)
     setattr(character, actual_stat, old_val + 1)
-    if actual_stat == "hardiness":
+    if actual_stat == "con":
         character.hp = min(character.hp + 2, character.hp_max)
 
     print(tc(outcome, "npc"))
@@ -1728,7 +1727,7 @@ def menu_characters():
                 ch     = Character.load(name)
                 status = "Beginner" if ch.is_beginner else "Veteran"
                 print(tc(f" {i}. {ch.name:<20}", "title") +
-                      tc(f" H:{ch.hardiness} A:{ch.agility} ", "stat") +
+                      tc(f" STR:{ch.strength} DEX:{ch.dex} CON:{ch.con} ", "stat") +
                       tc(status, "desc"))
         else:
             tprint(" No characters yet.", "desc")

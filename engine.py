@@ -168,11 +168,12 @@ class Engine:
         self.player = Player(
             name=character.name,
             room_id=world.start_room,
-            hardiness=character.hardiness,
-            agility=character.agility,
-            charisma=character.charisma,
-            intelligence=character.intelligence,
             strength=character.strength,
+            dex=character.dex,
+            con=character.con,
+            intelligence=character.intelligence,
+            wis=character.wis,
+            charisma=character.charisma,
             hp=character.hp_max,
             mana=character.mana_max,
             gold=character.gold,
@@ -765,7 +766,7 @@ class Engine:
                     self.character.equipped[slot] = a.name
         # Pass player's current stats so equipment bonuses show on the sheet
         effective = {s: getattr(self.player, s)
-                     for s in ('hardiness', 'agility', 'charisma', 'intelligence', 'strength')}
+                     for s in ('strength', 'dex', 'con', 'intelligence', 'wis', 'charisma')}
         print(f"\033[1;33m{self.character.stat_summary(effective_stats=effective)}\033[0m")
 
     # ── Inventory & Equipment ─────────────────────────────────────────────────
@@ -1338,9 +1339,9 @@ class Engine:
 
     def _cast_heal(self, target_name: str = None) -> None:
         """
-        Heal spell: 1D10 + Intelligence bonus HP restoration.
+        Heal spell: 1D10 + WIS bonus HP restoration (WIS governs divine/healing magic).
         """
-        healing = max(1, random.randint(1, 10) + self.player.intelligence_bonus)
+        healing = max(1, random.randint(1, 10) + self.player.wis_bonus)
         old_hp = self.player.hp
         self.player.hp = min(self.player.hp + healing, self.player.hp_max)
         actual_healing = self.player.hp - old_hp
@@ -1349,7 +1350,7 @@ class Engine:
 
     def _cast_speed(self, target_name: str = None) -> None:
         """
-        Speed spell: Double agility for 11-20 combat rounds.
+        Speed spell: Double DEX for 11-20 combat rounds.
         """
         # Roll duration
         duration = 10 + random.randint(1, 10)  # 11-20
@@ -1397,96 +1398,104 @@ class Engine:
 
     # ── COMBAT SYSTEM (WITH WEAPON PROFICIENCIES) ───────────────────────────────
 
+    # Weapon types that use ranged combat rules (DEX to hit, no STR damage bonus)
+    RANGED_WEAPON_TYPES = {"bow", "crossbow", "sling", "dart", "thrown"}
+
     def cmd_attack(self, noun: str) -> None:
         """
         ATTACK <monster>
-        With weapon proficiencies, critical hits (5%), and fumbles (4%).
+        D&D-style initiative (DEX vs flat d6), ranged/melee split,
+        weapon proficiencies, critical hits (5%), fumbles (4%).
         """
         if not noun:
             print(self.tc("Attack what?", "error"))
             return
-        
+
         monsters = self.world.monsters_in_room(self.player.room_id)
         monster = self.world.find_monster_by_name(noun, monsters)
-        
+
         if not monster:
             print(self.tc(f"You don't see a {noun} here.", "error"))
             return
-        
+
         if not monster.is_alive:
             print(self.tc(f"The {monster.name} is already dead.", "error"))
             return
-        
-        # ── Get weapon and proficiency ────────────────────────────────────────
-        
+
+        # ── Get weapon, type, and proficiency ────────────────────────────────
+
         weapon = self.player.equipped_weapon(self.world)
         weapon_type = "unarmed" if not weapon else weapon.weapon_type
         weapon_prof = self.player.weapon_proficiencies.get(weapon_type, 0) if weapon_type else 0
-        
-        # ── Roll for hit ──────────────────────────────────────────────────────
-        
-        agility_bonus = self.player.agility_effective_bonus
+        is_ranged = weapon is not None and weapon_type in self.RANGED_WEAPON_TYPES
+
+        # ── Initiative (D&D-style: 1d6 + DEX bonus vs 1d6 flat) ─────────────
+
+        player_init  = random.randint(1, 6) + self.player.dex_effective_bonus
+        monster_init = random.randint(1, 6)
+        monster_acts_first = monster_init > player_init  # ties go to player
+
+        if monster_acts_first:
+            print(self.tc(
+                f"{monster.name} seizes initiative! "
+                f"({monster_init} vs your {player_init})", "warn"))
+            self.monster_round(monster)
+            if not self.player.is_alive or not monster.is_alive:
+                return
+        else:
+            if player_init > monster_init:
+                print(self.tc(
+                    f"You seize initiative! "
+                    f"({player_init} vs {monster_init})", "hit"))
+
+        # ── Roll for hit (DEX governs both melee and ranged) ─────────────────
+
+        dex_bonus  = self.player.dex_effective_bonus
         monster_ac = monster.armor_class
 
-        # Hit chance = 50 + agility_bonus + weapon_proficiency - monster_ac
-        hit_chance = max(5, min(95, 50 + agility_bonus + weapon_prof - monster_ac))
-        hit_roll = random.randint(1, 100)
-        
-        is_hit = hit_roll <= hit_chance
-        
-        # ── Check for FUMBLE (4% chance on ANY attack) ────────────────────────
-        
+        hit_chance = max(5, min(95, 50 + dex_bonus + weapon_prof - monster_ac))
+        hit_roll   = random.randint(1, 100)
+        is_hit     = hit_roll <= hit_chance
+
+        # ── Check for FUMBLE (4% chance on any attack) ───────────────────────
+
         if random.randint(1, 100) <= 4:
-            # FUMBLE!
             fumble_roll = random.randint(1, 100)
-            
             if fumble_roll <= 35:
-                # Recover (no effect)
-                print(self.tc(f"You fumble the attack but recover!", "warn"))
-                self.monster_round(monster)
-                return
+                print(self.tc("You fumble the attack but recover!", "warn"))
             elif fumble_roll <= 75:
-                # Drop weapon
                 print(self.tc(f"You drop your {weapon.name if weapon else 'weapon'}!", "error"))
                 if weapon:
                     self.player.unequip_artifact(weapon, self.world)
-                self.monster_round(monster)
-                return
             elif fumble_roll <= 95:
-                # Break weapon
-                print(self.tc(f"Your weapon breaks!", "error"))
+                print(self.tc("Your weapon breaks!", "error"))
                 if weapon:
                     self.player.unequip_artifact(weapon, self.world)
                     weapon.room_id = self.player.room_id
-                
-                # 50% chance also injures player
                 if random.randint(1, 100) <= 50:
                     damage = random.randint(1, 4)
                     self.player.hp -= damage
                     print(self.tc(f"The broken weapon cuts you for {damage} damage!", "dmg"))
-                
-                self.monster_round(monster)
-                return
             elif fumble_roll <= 99:
-                # Hit self
                 damage = random.randint(2, 6)
                 self.player.hp -= damage
                 print(self.tc(f"You accidentally hit yourself for {damage} damage!", "error"))
-                self.monster_round(monster)
-                return
             else:
-                # Kill self
                 self.player.hp = 0
-                print(self.tc(f"You fatally wound yourself!", "die"))
+                print(self.tc("You fatally wound yourself!", "die"))
                 return
-        
+            if not monster_acts_first:
+                self.monster_round(monster)
+            return
+
         # ── Normal attack resolution ──────────────────────────────────────────
-        
+
         if not is_hit:
             print(self.tc(f"You miss the {monster.name}.", "warn"))
-            self.monster_round(monster)
+            if not monster_acts_first:
+                self.monster_round(monster)
             return
-        
+
         # ── HIT! Roll damage ──────────────────────────────────────────────────
 
         if weapon:
@@ -1494,52 +1503,46 @@ class Engine:
         else:
             base_damage = roll(self.player.damage_dice, self.player.damage_sides)
 
-        # Add Agility and Strength bonuses to damage
-        base_damage += self.player.agility_effective_bonus
-        base_damage += self.player.strength_bonus
+        # STR bonus for melee and unarmed; ranged uses weapon dice only
+        if not is_ranged:
+            base_damage += self.player.strength_bonus
         base_damage = max(1, base_damage)
-        
-        # ── Check for CRITICAL HIT (5% chance on successful hit) ──────────────
-        
-        damage = base_damage
+
+        # ── Check for CRITICAL HIT (5% chance on successful hit) ─────────────
+
+        damage      = base_damage
         ignore_armor = False
-        
+
         if random.randint(1, 100) <= 5:
-            # CRITICAL HIT!
             crit_roll = random.randint(1, 100)
-            
             if crit_roll <= 50:
-                # Ignore armor (full damage)
-                print(self.tc(f"CRITICAL HIT! You bypass the armor!", "hit"))
+                print(self.tc("CRITICAL HIT! You bypass the armor!", "hit"))
                 ignore_armor = True
             elif crit_roll <= 85:
-                # 1.5× damage
                 damage = int(damage * 1.5)
                 print(self.tc(f"CRITICAL HIT! {damage} damage!", "hit"))
             elif crit_roll <= 95:
-                # 2× damage
                 damage = damage * 2
                 print(self.tc(f"CRITICAL HIT! {damage} damage!", "hit"))
             elif crit_roll <= 99:
-                # 3× damage
                 damage = damage * 3
                 print(self.tc(f"CRITICAL HIT! {damage} damage!", "hit"))
             else:
-                # BUG-08 fix: Instant Kill (1%)
                 print(self.tc(f"INSTANT KILL! A perfect strike fells {monster.name}!", "hit"))
                 monster.hp = 0
 
         # ── Apply armor reduction ─────────────────────────────────────────────
-        
+
         if not ignore_armor:
             damage = max(1, damage - monster_ac)
-        
-        # ── Apply damage ──────────────────────────────────────────────────────
-        
-        monster.hp -= damage
-        print(self.tc(f"You hit {monster.name} for {damage} damage!", "dmg"))
 
-        # ── TrollsFire bonus fire damage (bypasses armor) ─────────────────────
+        # ── Apply damage ──────────────────────────────────────────────────────
+
+        monster.hp -= damage
+        attack_label = "shoot" if is_ranged else "hit"
+        print(self.tc(f"You {attack_label} {monster.name} for {damage} damage!", "dmg"))
+
+        # ── TrollsFire bonus fire damage (bypasses armor) ────────────────────
 
         if self.player.trollsfire_active:
             weapon = self.player.equipped_weapon(self.world)
@@ -1553,27 +1556,20 @@ class Engine:
         if monster.hp <= 0:
             print(self.tc(f"{monster.name} {monster.death_message}", "win"))
             monster.is_alive = False
-
-            # Track kills and fire defeat hook
             self.player.combat_kills += 1
             self.on_monster_defeated(monster.id)
-
-            # Gain XP
             xp_value = monster.xp_value or (monster.hp_max * 10)
             self.player.xp += xp_value
             print(self.tc(f"You gain {xp_value} XP!", "heal"))
-
-            # Drop loot
             if monster.loot_id:
                 loot = self.world.artifacts.get(monster.loot_id)
                 if loot:
                     loot.room_id = self.player.room_id
                     print(self.tc(f"{monster.name} drops {loot.name}!", "item"))
-
             return
-        
+
         # ── Weapon proficiency growth (only on successful hit) ────────────────
-        
+
         if weapon_type:
             failure_chance = 100 - weapon_prof
             if random.randint(1, 100) < failure_chance:
@@ -1581,7 +1577,7 @@ class Engine:
                 self.player.weapon_proficiencies[weapon_type] = old_prof + 1
                 new_prof = self.player.weapon_proficiencies[weapon_type]
                 print(self.tc(f"Your {weapon_type} proficiency increased: {old_prof}% → {new_prof}%", "success"))
-        
+
         # ── Followers attack ──────────────────────────────────────────────────
 
         self._follower_combat_turn(monster)
@@ -1589,10 +1585,11 @@ class Engine:
         if not monster.is_alive:
             return
 
-        # ── Monster attacks back ──────────────────────────────────────────────
+        # ── Monster attacks back (only if monster hasn't gone yet this round) ─
 
-        print(self.tc(f"{monster.name} {monster.health_desc()}", "sys"))
-        self.monster_round(monster)
+        if not monster_acts_first:
+            print(self.tc(f"{monster.name} {monster.health_desc()}", "sys"))
+            self.monster_round(monster)
 
     def cmd_attack_safe(self, noun: str) -> None:
         """cmd_attack with pre-flight validation."""
@@ -1636,7 +1633,7 @@ class Engine:
         if followers_here and random.randint(1, 100) <= 30:
             self._monster_attacks_followers(monster)
         else:
-            hit_chance = 50 - self.player.agility_effective_bonus - self.player.armor_class(self.world)
+            hit_chance = 50 - self.player.dex_effective_bonus - self.player.armor_class(self.world)
             if random.randint(1, 100) > hit_chance:
                 print(self.tc(f"{monster.name} misses you.", "sys"))
             else:
