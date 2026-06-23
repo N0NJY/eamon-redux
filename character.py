@@ -381,7 +381,9 @@ class Character:
 
         print(tc("\n  ═" * 36 + "═", "border"))
         print(tc("  CHARACTER CREATION", "title"))
-        print(tc("  ═" * 36 + "═\n", "border"))
+        print(tc("  ═" * 36 + "═", "border"))
+        print(tc("  All six stats are rolled 3d6. Reroll as many times as you like.", "desc"))
+        print(tc("  Type ? at the prompt to see what each stat does.\n", "desc"))
 
         # ── Name ─────────────────────────────────────────────────────────────────
         while True:
@@ -399,6 +401,43 @@ class Character:
                 continue
 
             break
+
+        def _print_stat_help():
+            _W = 58
+            def _h(t=""): return tc(f"  │  {t:<{_W}.{_W}}│", "sys")
+            print()
+            print(tc(f"  ┌{'─'*(_W+2)}┐", "border"))
+            print(tc(f"  │  {'STAT REFERENCE':<{_W}}│", "title"))
+            print(tc(f"  ├{'─'*(_W+2)}┤", "border"))
+            print(_h("STR  Strength"))
+            print(_h("     Melee damage bonus: (STR−10)÷2"))
+            print(_h("     Carry capacity: STR × 10 gronds"))
+            print(_h("     STR 14 → +2 damage, 140 gronds carry"))
+            print(_h())
+            print(_h("DEX  Dexterity"))
+            print(_h("     Hit chance (melee & ranged): (DEX−10)÷2"))
+            print(_h("     AC defence vs. monsters: same bonus"))
+            print(_h("     Initiative: 1d6 + (DEX−10)÷2  vs  monster 1d6"))
+            print(_h("     Speed spell doubles DEX for 11−20 rounds"))
+            print(_h())
+            print(_h("CON  Constitution"))
+            print(_h("     HP = CON × 2   (CON 14 → 28 HP)"))
+            print(_h())
+            print(_h("INT  Intelligence"))
+            print(_h("     Mana pool = INT × 2   (INT 14 → 28 mana)"))
+            print(_h("     Blast spell damage bonus: (INT−10)÷2"))
+            print(_h())
+            print(_h("WIS  Wisdom"))
+            print(_h("     Heal spell bonus: (WIS−10)÷2 HP per cast"))
+            print(_h("     Saving throw vs. magic/fear:"))
+            print(_h("       50% base + (WIS−10)÷2 × 5%"))
+            print(_h())
+            print(_h("CHA  Charisma"))
+            print(_h("     Shop discounts (CHA ≥ 15) or surcharges (CHA ≤ 8)"))
+            print(_h("     Marie Laveau attitude mod (+1 at ≥16, −1 at ≤7)"))
+            print(_h("     No effect in combat"))
+            print(tc(f"  └{'─'*(_W+2)}┘", "border"))
+            print()
 
         # ── Stat rolling loop ────────────────────────────────────────────────────
         roll_number = 1
@@ -444,10 +483,13 @@ class Character:
             print(tc("  └─────────────────────────────────────────────────┘", "border"))
             print()
 
-            response = prompt_bool("Keep these stats?", default=False)
-            if response:
+            print(tc("  (Type ? to see what each stat does)", "desc"))
+            choice = safe_input("Keep these stats? [y/N/?]").strip().lower()
+            if choice in ("y", "yes"):
                 break
-
+            elif choice in ("?", "help", "h"):
+                _print_stat_help()
+                continue  # re-show current roll
             roll_number += 1
             print(tc("  Re-rolling...", "sys"))
 

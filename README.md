@@ -157,22 +157,20 @@ Spell prices scale with character level.
 
 ## Characters
 
-### Classes
+There are no classes. Any character can use any weapon, wear any armor, and learn any spell. Stats determine effectiveness.
 
-| Class | Strengths | Notes |
-| ----- | --------- | ----- |
-| **Fighter** | STR bonus to melee damage, all weapons usable | No spellcasting; weapon-focused |
-| **Sorcerer** | INT bonus to spell power, mana pool | Limited melee; spell-focused |
+### Stats (3d6 each, reroll freely at creation)
 
-### Stats (3d6, reroll freely at creation)
+| Stat | Abbreviation | Effect |
+| ---- | ------------ | ------ |
+| Strength | STR | Melee damage bonus `(STR−10)÷2`; carry capacity `STR × 10 gronds` |
+| Dexterity | DEX | Hit chance, AC defence, initiative bonus `(DEX−10)÷2`; Speed spell doubles DEX |
+| Constitution | CON | HP pool: `CON × 2` |
+| Intelligence | INT | Mana pool: `INT × 2`; Blast spell damage bonus `(INT−10)÷2` |
+| Wisdom | WIS | Heal spell bonus `(WIS−10)÷2`; saving throw bonus vs. magic/fear `(WIS−10)÷2 × 5%` |
+| Charisma | CHA | Shop discounts/surcharges; Marie Laveau NPC attitude |
 
-| Stat | Effect |
-| ---- | ------ |
-| **Hardiness** | HP = Hardiness × 2; carry capacity = Hardiness × 10 gronds |
-| **Agility** | Hit/dodge bonus: (Agility − 10) ÷ 2; affects combat rolls and dodge chance |
-| **Strength** | Fighter melee damage bonus: (Strength − 10) ÷ 2 |
-| **Intelligence** | Sorcerer spell bonus and mana pool: INT × 2 |
-| **Charisma** | NPC reactions and merchant interactions (stat tracked; full effects adventure-dependent) |
+Stat bonus formula throughout: `(stat − 10) ÷ 2`, rounded down (same as D&D 3e/d20).
 
 ---
 
@@ -227,7 +225,7 @@ Spell prices scale with character level.
 | `HEALTH` | `HP` | Show health, mana, equipped weapon, armor, and gold |
 | `REST` | `RES` | Recover 25% HP and mana (blocked by hostile monsters) |
 
-### Magic (Sorcerer only)
+### Magic (any character — visit Aldric to learn spells)
 
 | Command | Aliases | Description |
 | ------- | ------- | ----------- |
@@ -487,7 +485,8 @@ The engine checks the player's `followers` list. Custom logic can extend this vi
 **Weapons:** Each character tracks proficiency for unarmed, axe, bow, club, spear, and sword. Proficiency:
 - Starts at weapon-specific values (e.g., club: +20%, bow: -10%)
 - Grows by 1% on each successful hit
-- Affects hit chance: `hit_chance = 50 + agility_bonus + weapon_prof - monster_ac`
+- Affects hit chance: `hit_chance = 50 + dex_bonus + weapon_prof - monster_ac`
+- Ranged weapons (bow, crossbow, etc.) use DEX to hit but add no stat bonus to damage
 
 **Spells:** Each spell has a proficiency percentage (25-75% when learned). Casting:
 - Applies **spell fatigue** — effective proficiency is halved after each cast (50%, 25%, 12.5%, etc.)

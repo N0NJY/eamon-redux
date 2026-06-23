@@ -71,58 +71,80 @@ When you start the game with `python3 tavern.py`, you arrive at the Main Hall of
 
 ### Rolling Stats
 
-All five stats are rolled randomly using three six-sided dice (3d6). After seeing the results, you may keep them or reroll as many times as you like — there is no limit. When you are satisfied, confirm to save your character.
+All six stats are rolled randomly using three six-sided dice (3d6). After seeing the results, you may keep them or reroll as many times as you like — there is no limit. When you are satisfied, confirm to save your character.
 
 **What 3d6 means:** Three six-sided dice are rolled and added together. The result is between 3 (all ones) and 18 (all sixes). Most results fall in the 9–12 range — consider any stat above 14 excellent and any below 8 challenging.
 
-There are no classes in Eamon Redux. Every character can use any weapon, wear any armor, and learn any spell. Your stats determine how effective you are — a high Strength makes you hit harder, a high Intelligence makes your spells more powerful.
+There are no classes in Eamon Redux. Every character can use any weapon, wear any armor, and learn any spell. Your stats determine how effective you are — a high STR makes you hit harder, a high INT powers your offensive spells, a high WIS improves healing and resistance to magic.
+
+**During character creation, type `?` at the "Keep these stats?" prompt to display a full stat reference.**
 
 ---
 
 ## Character Stats
 
-Every character has five core statistics. These are set at creation and do not change during normal play, though future adventures may offer ways to increase them.
+Every character has six core statistics, following the classic D&D model. These are set at creation and persist across adventures. Marie Laveau in the Main Hall can raise them for a steep fee.
 
-### Hardiness
+The **stat bonus formula** used throughout the game is: `(stat − 10) ÷ 2`, rounded down. A stat of 10 gives no bonus (+0). A stat of 14 gives +2. A stat of 18 gives +4. A stat of 8 gives −1.
 
-Hardiness is your physical toughness and endurance. It has two effects:
+### STR — Strength
 
-- **Hit Points (HP)** = Hardiness × 2. A character with Hardiness 12 has 24 maximum HP.
-- **Carry Capacity** = Hardiness × 10 gronds. The same character can carry 120 gronds of weight.
+Strength is raw physical muscle. It affects how hard you hit in melee combat and how much you can carry.
 
-Weight in Eamon Redux is measured in **gronds**. A rusty sword might weigh 3 gronds; a full coat of chainmail might weigh 6. If you try to pick up something that would exceed your carry limit, you'll be told it's too heavy.
+- **Melee Damage Bonus** = (STR − 10) ÷ 2. Added to every melee weapon damage roll.  
+  STR 14 → +2 damage per hit. STR 18 → +4 damage per hit.
+- **Carry Capacity** = STR × 10 gronds. STR 12 → 120 gronds. STR 16 → 160 gronds.
 
-### Agility
+Weight in Eamon Redux is measured in **gronds**. A rusty sword might weigh 3 gronds; a coat of chainmail might weigh 6. Exceeding your carry limit prevents picking up anything more.
 
-Agility governs your quickness in combat. A high Agility gives you a better chance to land blows and a better chance to dodge incoming ones.
+> STR does **not** affect ranged weapons (bows, crossbows). Ranged attacks use weapon dice only.
 
-- **Combat Bonus** = (Agility − 10) ÷ 2, rounded down. Added to your damage rolls and hit chance.
-- **Dodge Chance** = Combat Bonus × 5%. An Agility of 16 gives a +3 combat bonus and a 15% chance to dodge incoming attacks.
+### DEX — Dexterity
 
-### Strength
+Dexterity governs speed, reflexes, and accuracy. It is the primary combat stat for both attack and defence.
 
-Strength represents raw physical power and muscle.
+- **Hit Chance Bonus** = (DEX − 10) ÷ 2. Added to your hit roll for both melee and ranged attacks.
+- **AC Defence** = (DEX − 10) ÷ 2. Subtracted from the monster's chance to hit you (alongside your armour).
+- **Initiative Bonus** = (DEX − 10) ÷ 2. Added to your initiative roll at the start of each combat round.
+- **Speed Spell** — doubles your current DEX for 11–20 rounds, dramatically improving hit chance and initiative.
 
-- **Damage Bonus** = (Strength − 10) ÷ 2, rounded down. Added to all melee weapon damage. A character with Strength 16 deals an extra 3 damage per hit.
+DEX 16 → +3 to hit, +3 AC, +3 initiative. With Speed active: effectively DEX 32, +11 to all three.
 
-### Intelligence
+### CON — Constitution
 
-Intelligence governs magical aptitude and mental sharpness.
+Constitution is your physical endurance and toughness.
 
-- **Mana Pool** = Intelligence × 2. This is how much spell energy you have.
-- **Spell Bonus** = (Intelligence − 10) ÷ 2. Added to spell damage and healing rolls.
+- **Hit Points (HP)** = CON × 2. CON 10 → 20 HP. CON 16 → 32 HP.
 
-A character with Intelligence 14 has a +2 spell bonus and a mana pool of 28 points.
+That is its only mechanical effect — but it is a critical one. A character with high CON survives more punishment and needs to heal less often.
 
-### Charisma
+### INT — Intelligence
 
-Charisma is a measure of personality, appearance, and social grace. It affects how NPCs react to your character and the prices merchants offer.
+Intelligence governs magical aptitude and the strength of offensive spells.
 
-A Charisma of 10 is average. Above 10 gives a positive reaction bonus; below 10 gives a penalty. Specific effects:
+- **Mana Pool** = INT × 2. INT 12 → 24 mana. INT 16 → 32 mana.
+- **Blast Spell Bonus** = (INT − 10) ÷ 2. Added to Blast damage.
 
-- **Weapon and spell shops** — high Charisma earns a small random discount (roughly 5–15%); very low Charisma adds a surcharge of similar size.
-- **Marie Laveau** — Charisma ≥ 16 shifts her attitude one step in your favour; Charisma ≤ 7 shifts it one step against you.
-- **Adventure NPCs** — reactions are adventure-dependent.
+INT does **not** affect healing magic (that is WIS). Focus INT if you want to cast more often and deal more damage with Blast.
+
+### WIS — Wisdom
+
+Wisdom governs intuition, spiritual attunement, and resilience to supernatural threats.
+
+- **Heal Spell Bonus** = (WIS − 10) ÷ 2. Added to HP restored by the Heal spell.
+- **Saving Throw Bonus** = (WIS − 10) ÷ 2 × 5%. Added to your base 50% chance to resist monster special attacks (fear, paralysis, charm, magic).
+
+WIS 14 → +2 Heal bonus, +10% saving throws. A wise character heals more effectively and shrugs off debilitating effects more readily.
+
+### CHA — Charisma
+
+Charisma is personality, appearance, and social grace. It affects NPC reactions and merchant pricing.
+
+- **Weapon and spell shops** — CHA ≥ 15 earns a random 5–15% discount; CHA ≤ 8 adds a 5–10% surcharge.
+- **Marie Laveau** — CHA ≥ 16 shifts her attitude one step in your favour; CHA ≤ 7 shifts it one step against you.
+- **Adventure NPCs** — reactions are adventure-dependent and may gate dialogue, recruitment, or quests.
+
+CHA has no effect in combat.
 
 ---
 
@@ -193,25 +215,54 @@ Stat bonuses from rings persist across save/load and carry over into new adventu
 
 ### How Combat Works
 
-Combat proceeds in **rounds**. When you type `ATTACK <monster>`, one full round takes place: you strike the monster, then (if it survives) the monster strikes back.
+Combat proceeds in **rounds**. When you type `ATTACK <monster>`, one full round takes place:
+
+1. **Initiative** is rolled to determine who acts first.
+2. **You attack** (unless the monster won initiative and you didn't survive).
+3. **The monster counterattacks** (unless you won initiative and it didn't survive, or it already attacked in step 1).
 
 Hostile monsters also attack at the end of most other actions — picking things up, opening containers — so staying in a room with an angry enemy is always dangerous. Neutral monsters will fight back if you attack them, but won't initiate combat.
+
+### Initiative
+
+At the start of each combat round, both sides roll for initiative:
+
+```
+Player Initiative  = 1d6 + DEX Bonus
+Monster Initiative = 1d6 (flat)
+```
+
+Higher roll acts first. Ties go to the player. If the monster wins, it strikes before your attack — you could be killed before you swing. High DEX is your best protection against this.
+
+**Example:** DEX 16 (+3 bonus). You roll 4 + 3 = 7. Monster rolls 5. You go first.  
+**Example:** DEX 8 (−1 bonus). You roll 3 − 1 = 2. Monster rolls 4. Monster strikes first.
 
 ### The Attack Roll
 
 When you attack, the game calculates your **hit chance**:
 
 ```
-Hit Chance = 50 + Agility Bonus + Weapon Proficiency - Monster AC
+Hit Chance = 50 + DEX Bonus + Weapon Proficiency − Monster AC
 ```
 
-Clamped to a minimum of 5% and maximum of 95%.
+Clamped to a minimum of 5% and maximum of 95%. DEX governs hit chance for **both melee and ranged** attacks.
 
-**Example:** You have Agility +2, sword proficiency +15%, and the monster has AC 2.
+**Example:** DEX +2, sword proficiency +15%, monster AC 2.
 ```
-Hit Chance = 50 + 2 + 15 - 2 = 65%
+Hit Chance = 50 + 2 + 15 − 2 = 65%
 ```
 You hit on a roll of 65 or lower.
+
+### Ranged vs. Melee
+
+Bows and other ranged weapons (crossbow, sling, dart, thrown) use DEX for hit chance but add **no stat bonus to damage** — you deal weapon dice only. Melee weapons add your STR bonus to damage.
+
+| Type | Hit Stat | Damage |
+|---|---|---|
+| Melee (sword, axe, etc.) | DEX bonus | Weapon dice + STR bonus |
+| Ranged (bow, crossbow, etc.) | DEX bonus | Weapon dice only |
+
+A high-DEX, low-STR character is a natural archer: hitting reliably but not hitting hard in melee.
 
 ### Fumbles (4% Chance on Any Attack)
 
@@ -225,15 +276,19 @@ Every attack has a 4% chance of a **fumble**:
 | Hit Yourself | 4% | You accidentally swing at yourself for 2d6 damage. |
 | Fatal Wound | 1% | You fatally wound yourself. Adventure ends. |
 
-Even while fumbling, the monster still gets a free attack.
+If the monster already attacked this round (it won initiative), a fumble ends your turn without a monster counterattack.
 
 ### Normal Hit and Damage
 
+**Melee:**
 ```
-Damage = Weapon Dice + Agility Bonus + Strength Bonus - Monster AC
+Damage = Weapon Dice + STR Bonus − Monster AC  (minimum 1)
 ```
 
-Minimum 1 damage always gets through.
+**Ranged:**
+```
+Damage = Weapon Dice − Monster AC  (minimum 1)
+```
 
 ### Critical Hits (5% Chance on Successful Hit)
 
@@ -269,13 +324,15 @@ Some followers are **non-combatants** (like a rescued prisoner). They travel wit
 
 ### All Characters Can Cast Spells
 
-There are no spell restrictions in Eamon Redux. Any character can learn and cast any spell. Your Intelligence determines your mana pool and your spell effectiveness.
+There are no spell restrictions in Eamon Redux. Any character can learn and cast any spell. INT determines your mana pool and offensive spell power; WIS determines your healing power and resistance to hostile magic.
 
 To learn spells, visit **Aldric the Mage** in the Magic, Potions and Sundries shop (Common Room → East). You can also find spellbooks in adventures.
 
 ### Mana
 
 Casting spells costs **mana**. Your mana pool is Intelligence × 2. If you do not have enough mana for a spell, the cast fails and no mana is spent.
+
+Your mana pool is `INT × 2`. If you do not have enough mana for a spell, the cast fails and no mana is spent.
 
 Mana recovers by:
 - **REST** command — recovers a portion of your pool and eases spell fatigue
@@ -315,7 +372,7 @@ BLAST           — cast at current combat target
 CAST BLAST rat  — target a specific monster
 ```
 
-**Cost:** 3 mana | **Damage:** 1d6 + Intelligence bonus (bypasses armor)
+**Cost:** 3 mana | **Damage:** 1d6 + INT bonus (bypasses armor)
 
 #### HEAL
 
@@ -326,11 +383,11 @@ HEAL
 CAST HEAL
 ```
 
-**Cost:** 2 mana | **Effect:** Restore 1d10 + Intelligence bonus HP
+**Cost:** 2 mana | **Effect:** Restore 1d10 + WIS bonus HP
 
 #### SPEED
 
-Doubles your Agility for 11–20 combat rounds, which affects hit chance, dodge chance, and damage output. Fades with a message when it expires.
+Doubles your DEX for 11–20 combat rounds. Since DEX governs hit chance, initiative, and AC defence, this is a powerful all-round combat buff. Fades with a message when it expires.
 
 ```
 SPEED
@@ -508,7 +565,7 @@ EQUIPMENT   — show all equipment slots (also: EQ)
 CHAR        — full character sheet (also: STATUS, SHEET, V)
 ```
 
-Your carrying capacity is Hardiness × 10 gronds.
+Your carrying capacity is STR × 10 gronds.
 
 ---
 
@@ -686,10 +743,10 @@ Aldric the Mage operates the magic shop east of the Common Room. He sells all fo
 
 | Spell | Cost | Effect |
 |---|---|---|
-| Power  | 100g  | Adventure-specific effect |
-| Heal   | 500g  | 1d10 HP restored |
-| Blast  | 1000g | 1d6 damage, bypasses armor |
-| Speed  | 4000g | Double Agility for 11–20 rounds |
+| Power  | 100g  | Adventure-specific effect (1 mana) |
+| Heal   | 500g  | 1d10 + WIS bonus HP restored (2 mana) |
+| Blast  | 1000g | 1d6 + INT bonus damage, bypasses armor (3 mana) |
+| Speed  | 4000g | Double DEX for 11–20 rounds (5 mana) |
 
 Spells are not cheap — plan accordingly. Charisma ≥ 15 earns a random 5–15% discount; Charisma ≤ 8 adds a 5–10% surcharge.
 
@@ -744,7 +801,7 @@ Directional shortcuts also work: typing `S` from the Main Hall foyer goes south,
 
 ### Marie Laveau — The Witch
 
-Marie Laveau's chamber is north of the Common Room. For a steep fee (2500–5000 gold, chosen randomly), she will attempt to raise one of your five stats by 1 point. She will never raise a stat by more than 1 per visit.
+Marie Laveau's chamber is north of the Common Room. For a steep fee (2500–5000 gold, chosen randomly), she will attempt to raise one of your six stats by 1 point. She will never raise a stat by more than 1 per visit.
 
 The key word is *attempt*. Marie keeps track of how she feels about you — her **attitude** ranges from -3 (hostile) to +3 (devoted). Her attitude is shaped by:
 
@@ -1161,7 +1218,7 @@ See the README.md "For Developers" section for details on the handler architectu
 
 Eamon was created by Donald Brown and first published in 1980 for the Apple II. It was one of the first games to separate the game engine from the adventure data, allowing anyone to design and share new adventures. Hundreds of adventures were created by the Eamon community.
 
-Eamon Redux is a spiritual successor — rebuilt from scratch in Python, with a modern stat system, a classless character system, persistent characters, a proficiency-based magic system, critical hits and fumbles in combat, diagonal movement, and a modular adventure format. The soul of the original is the same: a world where you can go anywhere, fight anything, and tell your own story.
+Eamon Redux is a spiritual successor — rebuilt from scratch in Python, with a D&D-inspired six-stat system (STR/DEX/CON/INT/WIS/CHA), a classless character system, persistent characters, a proficiency-based magic system with mana and fatigue, D&D-style initiative in combat, critical hits and fumbles, diagonal movement, and a modular adventure format. The soul of the original is the same: a world where you can go anywhere, fight anything, and tell your own story.
 
 The Common Room of the Main Hall — still called the Saunter Inn in the game — is a nod to the AppleVenture BBS, where adventurers once gathered in a virtual tavern of the same name.
 
