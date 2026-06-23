@@ -273,7 +273,7 @@ def list_resumable_games(character_name: str) -> Dict[str, List[Tuple[int, str, 
                     
                     meta = {
                         'timestamp': data.get('timestamp'),
-                        'room': data.get('player', {}).get('current_room'),
+                        'room': data.get('player', {}).get('room_id'),
                         'hp': data.get('player', {}).get('hp'),
                     }
                     games[adv_name].append((slot, filename, meta))
