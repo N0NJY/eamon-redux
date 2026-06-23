@@ -1903,32 +1903,44 @@ class Engine:
 
         save_game_slotted(self.character.name, adv_name, player_state, world_state)
 
-    def cmd_load(self, noun: str) -> None:
-        """Load a saved game from a slot."""
-        adv_name = os.path.basename(self.adventure_path.rstrip("/")) if self.adventure_path else "unknown"
-
-        data = load_game_slotted(self.character.name, adv_name)
-        if not data:
-            return
-
+    def _apply_save_data(self, data: dict) -> None:
+        """Restore player and world state from a save dict, handling stat bonuses correctly."""
         ps = data.get("player", {})
         ws = data.get("world", {})
 
-        self.player.room_id                 = ps.get("room_id", self.player.room_id)
-        self.player.hp                      = ps.get("hp", self.player.hp)
-        self.player.mana                    = ps.get("mana", self.player.mana)
-        self.player.gold                    = ps.get("gold", self.player.gold)
-        self.player.xp                      = ps.get("xp", self.player.xp)
-        self.player.level                   = ps.get("level", self.player.level)
-        self.player.spell_proficiencies     = ps.get("spell_proficiencies", self.player.spell_proficiencies)
-        self.player.weapon_proficiencies    = ps.get("weapon_proficiencies", self.player.weapon_proficiencies)
-        self.player.equipped                = ps.get("equipped", self.player.equipped)
-        self.player.spell_fatigue_multiplier = ps.get("spell_fatigue_multiplier", self.player.spell_fatigue_multiplier)
-        self.player.spell_locked            = ps.get("spell_locked", self.player.spell_locked)
-        self.player.speed_active            = ps.get("speed_active", False)
-        self.player.speed_rounds_remaining  = ps.get("speed_rounds_remaining", 0)
-        self.player.quest_flags             = ps.get("quest_flags", {})
+        # Reverse bonuses from any equipment applied at startup, then clear equipped
+        for slot, aid in list(self.player.equipped.items()):
+            if aid is not None:
+                a = self.world.artifacts.get(aid)
+                if a:
+                    self.player._apply_stat_bonuses(a, reverse=True)
+        self.player.equipped = {}
 
+        # Restore scalar player state
+        self.player.room_id                  = ps.get("room_id", self.player.room_id)
+        self.player.hp                       = ps.get("hp", self.player.hp)
+        self.player.mana                     = ps.get("mana", self.player.mana)
+        self.player.gold                     = ps.get("gold", self.player.gold)
+        self.player.xp                       = ps.get("xp", self.player.xp)
+        self.player.level                    = ps.get("level", self.player.level)
+        self.player.spell_proficiencies      = ps.get("spell_proficiencies", self.player.spell_proficiencies)
+        self.player.weapon_proficiencies     = ps.get("weapon_proficiencies", self.player.weapon_proficiencies)
+        self.player.spell_fatigue_multiplier = ps.get("spell_fatigue_multiplier", self.player.spell_fatigue_multiplier)
+        self.player.spell_locked             = ps.get("spell_locked", self.player.spell_locked)
+        self.player.speed_active             = ps.get("speed_active", False)
+        self.player.speed_rounds_remaining   = ps.get("speed_rounds_remaining", 0)
+        self.player.quest_flags              = ps.get("quest_flags", {})
+
+        # Restore equipped items and re-apply their stat bonuses
+        for slot, aid in ps.get("equipped", {}).items():
+            if aid is not None:
+                aid = int(aid)
+                a = self.world.artifacts.get(aid)
+                if a:
+                    self.player.equipped[slot] = aid
+                    self.player._apply_stat_bonuses(a)
+
+        # Restore world state
         for mid_str, mstate in ws.get("monsters", {}).items():
             mid = int(mid_str)
             if mid in self.world.monsters:
@@ -1942,6 +1954,13 @@ class Engine:
             if aid in self.world.artifacts:
                 self.world.artifacts[aid].room_id = astate.get("room_id")
 
+    def cmd_load(self, noun: str) -> None:
+        """Load a saved game from a slot."""
+        adv_name = os.path.basename(self.adventure_path.rstrip("/")) if self.adventure_path else "unknown"
+        data = load_game_slotted(self.character.name, adv_name)
+        if not data:
+            return
+        self._apply_save_data(data)
         print(self.tc("Game loaded.", "sys"))
         self.look()
 
@@ -1995,22 +2014,31 @@ class Engine:
 
 # ── Game Runner ───────────────────────────────────────────────────────────────
 
-def run_adventure(character, adventure_path: str, savefile: str = "") -> int:
+def run_adventure(character, adventure_path: str, save_data: dict = None) -> int:
     """
     Run an adventure with the given character.
+    save_data: if provided, resume from that save instead of starting fresh.
     Returns: 0=quit, 1=won, 2=died
     """
     world = World.load(adventure_path)
     engine = Engine(world, character, adventure_path=adventure_path)
-    
-    # Intro
+
     print()
     print(engine.tc(world.title, "title"))
     print(engine.tc(f"by {world.author}", "sys"))
     print(engine.tc("─" * 72, "exits"))
-    print(engine.tc(wrap(world.intro), "intro"))
+
+    if save_data:
+        # Resume — skip intro, restore saved state, show current room
+        engine._apply_save_data(save_data)
+        print(engine.tc("(Resumed from save)", "sys"))
+    else:
+        # Fresh start — show intro
+        if world.intro:
+            print(engine.tc(wrap(world.intro), "intro"))
+
     print()
-    
+
     # Initial look
     engine.look()
     

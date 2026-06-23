@@ -1690,11 +1690,8 @@ def menu_load_save(character) -> None:
                 adv_path = adv["path"]; break
     if not adv_path:
         tprint(f" Adventure path not found for: {adventure}", "error"); return
-    safe_name = character.name.lower().replace(" ", "_")
-    safe_adv  = adventure.lower().replace(" ", "_")
-    savefile  = f"{safe_name}_{safe_adv}_slot{slot}"
     tprint(f"\n Resuming: {adventure}\n", "sys")
-    result = _launch_engine(character, adv_path, savefile)
+    result = _launch_engine(character, adv_path, save_data=save_data)
     _handle_engine_return(character, result, adv_path, adv_name=adventure, is_beginner_adv=False)
 
 # ── Main Hall exploration loop ────────────────────────────────────────────────
@@ -1822,9 +1819,9 @@ def choose_adventure(character, adventures: list):
 
 # ── Engine launch & return ────────────────────────────────────────────────────
 
-def _launch_engine(character, adv_path: str, savefile: str = ""):
+def _launch_engine(character, adv_path: str, save_data: dict = None):
     from engine import run_adventure
-    return run_adventure(character, adv_path, savefile)
+    return run_adventure(character, adv_path, save_data=save_data)
 
 def _handle_engine_return(character, result, adv_path: str,
                           adv_name: str = "", is_beginner_adv: bool = False) -> None:
