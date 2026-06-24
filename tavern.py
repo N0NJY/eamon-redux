@@ -1598,7 +1598,16 @@ def _read_manual() -> None:
     # ── Strip markdown syntax for terminal display ──────────────────────────
     def _render(text: str) -> str:
         lines = []
+        in_code_block = False
         for line in text.splitlines():
+            # Code fences — toggle and skip the fence line itself
+            if line.strip().startswith("```"):
+                in_code_block = not in_code_block
+                continue
+            if in_code_block:
+                lines.append(tc("    " + line, "sys"))
+                continue
+
             # Headings
             m = _re.match(r"^(#{1,4})\s+(.*)", line)
             if m:
