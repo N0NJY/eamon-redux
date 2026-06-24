@@ -2137,4 +2137,17 @@ def run_adventure(character, adventure_path: str, save_data: dict = None) -> int
             continue
 
 if __name__ == "__main__":
-    print(c(C.ERROR, "Run via tavern.py"))
+    import sys as _sys
+    if len(_sys.argv) < 2:
+        print(c(C.ERROR, "Usage: python3 engine.py <adventure_path>  (test mode)"))
+        _sys.exit(1)
+    _adv_path = _sys.argv[1]
+    # Build a disposable test character with average stats
+    from character import Character as _Char
+    _test_char = _Char(
+        name="Test Hero", strength=12, dex=12, con=12,
+        intelligence=12, wis=12, charisma=12,
+        hp=24, gold=500,
+    )
+    print(c(C.SYS, "[TEST MODE — disposable character, progress not saved]"))
+    run_adventure(_test_char, _adv_path)

@@ -1,0 +1,25 @@
+[
+  {
+    "id": 1,
+    "name": "Tomb Entrance",
+    "description": "You stand at the entrance to the Tomb of the Dark Wizard. Ancient stone blocks line the walls, carved with warnings in a forgotten tongue. A heavy iron door to the south leads deeper into the tomb. A torch bracket on the wall holds a single unlit torch.",
+    "brief_description": "Tomb entrance. Iron door south.",
+    "exits": {
+      "north": "EXIT_TAVERN",
+      "south": 2
+    },
+    "is_dark": false,
+    "first_visit": true
+  },
+  {
+    "id": 2,
+    "name": "The Burial Chamber",
+    "description": "You are in the burial chamber of the Dark Wizard. Stone sarcophagi line the walls, and the air reeks of ancient death. In the center of the room rests a glittering treasure chest. Something stirs in the darkness.",
+    "brief_description": "Dark burial chamber. Treasure and danger here.",
+    "exits": {
+      "north": 1
+    },
+    "is_dark": true,
+    "first_visit": true
+  }
+]

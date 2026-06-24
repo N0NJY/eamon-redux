@@ -1,0 +1,49 @@
+[
+  {
+    "id": 1,
+    "name": "torch",
+    "description": "A crude but serviceable torch in an iron wall bracket.",
+    "room_id": 1,
+    "artifact_type": "light",
+    "weight": 2,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "heal_amount": 0,
+    "value": 5,
+    "is_quest_item": false,
+    "synonyms": [
+      "lantern",
+      "wall torch"
+    ],
+    "flags": {}
+  },
+  {
+    "id": 2,
+    "name": "golden skull",
+    "description": "A solid gold skull, encrusted with rubies and emeralds. The Dark Wizard's most prized possession.",
+    "room_id": 2,
+    "artifact_type": "generic",
+    "weight": 10,
+    "is_container": false,
+    "is_open": false,
+    "contents": [],
+    "read_text": null,
+    "damage_dice": 1,
+    "damage_sides": 4,
+    "armor_class": 0,
+    "heal_amount": 0,
+    "value": 500,
+    "is_quest_item": false,
+    "synonyms": [
+      "skull",
+      "gold skull",
+      "treasure"
+    ],
+    "flags": {}
+  }
+]

@@ -1,0 +1,25 @@
+[
+  {
+    "id": 1,
+    "name": "Tomb Guardian",
+    "description": "A skeletal warrior in rusted armor rises from the shadows, its eye sockets burning with unholy green fire.",
+    "room_id": 2,
+    "attitude": "hostile",
+    "hp": 20,
+    "damage_dice": 1,
+    "damage_sides": 8,
+    "armor_class": 2,
+    "loot_id": 0,
+    "death_message": "It crumbles to dust with a hollow rattle.",
+    "dialogue": "",
+    "heal_amount": 0,
+    "heal_cost": 0,
+    "synonyms": [
+      "skeleton",
+      "guardian",
+      "undead"
+    ],
+    "xp_value": 0,
+    "flags": {}
+  }
+]
