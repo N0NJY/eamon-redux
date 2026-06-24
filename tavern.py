@@ -1549,6 +1549,9 @@ def _execute_main_hall_command(cmd: str, noun: str, character, room) -> Optional
     if cmd == "help":
         show_main_hall_help(); return None
 
+    if cmd in ("manual", "man", "rules"):
+        _read_manual(); return None
+
     if cmd == "adventure":
         return "BOARD"
 
@@ -1575,6 +1578,116 @@ def _temporarily_leave_universe(character) -> None:
     character.save()
 
 # ── Help ──────────────────────────────────────────────────────────────────────
+
+def _read_manual() -> None:
+    """Interactive manual reader — parses MANUAL.md into sections by ## heading."""
+    import re as _re
+    import os as _os
+
+    manual_path = _os.path.join(
+        _os.path.dirname(_os.path.abspath(__file__)),
+        "documentation", "MANUAL.md"
+    )
+    if not _os.path.exists(manual_path):
+        tprint(" Manual not found. Expected: documentation/MANUAL.md", "error")
+        return
+
+    with open(manual_path, encoding="utf-8") as _f:
+        raw = _f.read()
+
+    # ── Strip markdown syntax for terminal display ──────────────────────────
+    def _render(text: str) -> str:
+        lines = []
+        for line in text.splitlines():
+            # Headings
+            m = _re.match(r"^(#{1,4})\s+(.*)", line)
+            if m:
+                depth = len(m.group(1))
+                title = m.group(2)
+                if depth == 1:
+                    lines.append(tc(f" {'═'*70}", "border"))
+                    lines.append(tc(f"  {title}", "title"))
+                    lines.append(tc(f" {'═'*70}", "border"))
+                elif depth == 2:
+                    lines.append(tc(f"\n  ── {title} {'─'*(65-len(title))}", "border"))
+                elif depth == 3:
+                    lines.append(tc(f"\n  {title}", "title"))
+                else:
+                    lines.append(tc(f"  {title}", "sys"))
+                continue
+            # Tables — keep as-is
+            if line.startswith("|"):
+                lines.append(tc("  " + line, "desc"))
+                continue
+            # Horizontal rules
+            if _re.match(r"^-{3,}$", line.strip()):
+                lines.append(tc(f"  {'─'*70}", "border"))
+                continue
+            # Strip inline markdown: **bold**, _italic_, `code`
+            line = _re.sub(r"\*\*(.+?)\*\*", r"\1", line)
+            line = _re.sub(r"\*(.+?)\*",     r"\1", line)
+            line = _re.sub(r"_(.+?)_",       r"\1", line)
+            line = _re.sub(r"`(.+?)`",        r"\1", line)
+            # Indent all body text
+            if line.strip():
+                lines.append(tc("  " + line, "desc"))
+            else:
+                lines.append("")
+        return "\n".join(lines)
+
+    # ── Split into sections by ## heading ──────────────────────────────────
+    section_pattern = _re.compile(r"^## .+", _re.MULTILINE)
+    splits   = [(m.start(), m.group()) for m in section_pattern.finditer(raw)]
+    sections = []
+    for i, (start, heading) in enumerate(splits):
+        end  = splits[i + 1][0] if i + 1 < len(splits) else len(raw)
+        body = raw[start:end].strip()
+        title = heading[3:].strip()
+        sections.append((title, body))
+
+    # ── Pager ──────────────────────────────────────────────────────────────
+    def _page(text: str) -> None:
+        lines  = text.splitlines()
+        total  = len(lines)
+        chunk  = 22
+        pos    = 0
+        while pos < total:
+            for line in lines[pos:pos + chunk]:
+                print(line)
+            pos += chunk
+            if pos < total:
+                raw_in = input(tc(
+                    f"  [Enter=more  q=back to contents  {pos}/{total} lines]  ",
+                    "prompt"
+                )).strip().lower()
+                if raw_in in ("q", "quit", "b", "back"):
+                    return
+
+    # ── Main loop ──────────────────────────────────────────────────────────
+    while True:
+        print()
+        print(tc(" ╔══════════════════════════════════════════════════════╗", "border"))
+        print(tc(" ║         EAMON REDUX — ADVENTURER'S MANUAL           ║", "title"))
+        print(tc(" ╚══════════════════════════════════════════════════════╝", "border"))
+        print(tc(" Type a section number to read it, or Q to close.", "sys"))
+        print()
+        for i, (title, _) in enumerate(sections, 1):
+            print(tc(f"  {i:>2}. {title}", "desc"))
+        print()
+        choice = input(tc(" Section [1-{}/Q]: ".format(len(sections)), "prompt")).strip()
+        if not choice or choice.lower() in ("q", "quit", "exit"):
+            break
+        try:
+            n = int(choice)
+            if 1 <= n <= len(sections):
+                rendered = _render(sections[n - 1][1])
+                print()
+                _page(rendered)
+            else:
+                tprint(f" Enter a number between 1 and {len(sections)}.", "error")
+        except ValueError:
+            tprint(" Enter a number or Q.", "error")
+
 
 def show_main_hall_help() -> None:
     print()
@@ -1615,6 +1728,7 @@ def show_main_hall_help() -> None:
         ("ADVENTURE / A",       "Go to the adventure board (guild hall)"),
         ("RESUME",              "Resume a saved adventure"),
         ("LEAVE / QUIT",        "Temporarily Leave the Universe (save and exit)"),
+        ("MANUAL / MAN",        "Read the Adventurer's Manual"),
         ("HELP / ?",            "This message"),
     ]
     for c, desc in cmds:
