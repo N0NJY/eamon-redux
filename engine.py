@@ -1995,36 +1995,70 @@ class Engine:
 
     def cmd_help(self) -> None:
         """Show available commands."""
+        def _hdr(label: str) -> None:
+            print(self.tc(f"\n  {label}", "sys"))
+        def _row(cmd: str, desc: str) -> None:
+            print(self.tc(f"    {cmd:<30}", "title") + self.tc(desc, "desc"))
+        def _line(text: str) -> None:
+            print(self.tc(f"    {text}", "desc"))
+
         print()
-        print(self.tc("ADVENTURE COMMANDS", "title"))
-        print()
-        print(self.tc("Movement", "sys"))
-        print(self.tc("  N S E W U D  NE NW SE SW  GO <dir>  FLEE / RUN", "help"))
-        print()
-        print(self.tc("Interaction", "sys"))
-        print(self.tc("  LOOK  EXAMINE <thing>  READ <item>", "help"))
-        print(self.tc("  TALK TO <npc>  SAY <words>  SMILE  FREE <creature>", "help"))
-        print()
-        print(self.tc("Inventory", "sys"))
-        print(self.tc("  INVENTORY  GET <item>  DROP <item>  GIVE <item> TO <npc>", "help"))
-        print(self.tc("  PUT <item> IN <container>  USE <item>  LIGHT <item>", "help"))
-        print(self.tc("  EAT <food>  DRINK <potion>  OPEN/CLOSE <item>", "help"))
-        print()
-        print(self.tc("Equipment", "sys"))
-        print(self.tc("  EQUIP / WEAR / READY <item>  REMOVE <item>  EQUIPMENT", "help"))
-        print()
-        print(self.tc("Combat", "sys"))
-        print(self.tc("  ATTACK / FIGHT / KILL / HIT <monster>", "help"))
-        print()
-        print(self.tc("Magic", "sys"))
-        print(self.tc("  CAST <spell> [target]  SPELLS", "help"))
-        print(self.tc("  BLAST  HEAL  SPEED  POWER  (shortcut — no CAST needed)", "help"))
-        print()
-        print(self.tc("Status", "sys"))
-        print(self.tc("  HEALTH  REST  CHAR (character sheet)", "help"))
-        print()
-        print(self.tc("Game", "sys"))
-        print(self.tc("  SAVE  LOAD / RESTORE  QUIT  HELP", "help"))
+        print(self.tc(" ─── Adventure Commands ───────────────────────────────────────────────", "exits"))
+
+        _hdr("Movement")
+        _line("N  S  E  W  UP  DOWN  NE  NW  SE  SW")
+        _row("GO <direction>",            "Move explicitly")
+        _row("FLEE / RUN",                "Attempt to escape combat")
+
+        _hdr("Exploration")
+        _row("LOOK / L",                  "Describe the current room")
+        _row("VERBOSE / BRIEF",           "Full descriptions every visit / short after first")
+        _row("EXAMINE / X <thing>",       "Examine an item, monster, or feature")
+        _row("READ <item>",               "Read a scroll, book, or sign")
+
+        _hdr("Interaction")
+        _row("TALK TO <npc>",             "Speak to an NPC")
+        _row("SAY <words>",               "Say something aloud")
+        _row("SMILE",                     "Smile at the nearest NPC")
+        _row("FREE <creature>",           "Free a bound captive")
+        _row("GIVE <item> TO <npc>",      "Give an item to an NPC")
+
+        _hdr("Inventory")
+        _row("INVENTORY / I",             "List carried items")
+        _row("GET <item>",                "Pick up an item")
+        _row("GET ALL",                   "Pick up everything in the room")
+        _row("DROP <item>",               "Drop a carried item")
+        _row("PUT <item> IN <container>", "Place an item inside a container")
+        _row("OPEN / CLOSE <item>",       "Open or close a container or door")
+        _row("USE <item>",                "Use an item")
+        _row("EAT <food>",               "Eat a food item")
+        _row("DRINK <potion>",            "Drink a potion")
+        _row("LIGHT <item>",              "Light a torch or lamp")
+
+        _hdr("Equipment")
+        _row("EQUIPMENT / EQ",            "View equipped items")
+        _row("EQUIP / WEAR <item>",       "Equip a weapon, armour, or accessory")
+        _row("UNEQUIP / REMOVE",          "Remove the equipped item")
+
+        _hdr("Combat")
+        _row("ATTACK / FIGHT <monster>",  "Attack a monster (KILL, HIT also work)")
+
+        _hdr("Magic")
+        _row("CAST <spell> [target]",     "Cast a spell")
+        _row("BLAST / HEAL / SPEED / POWER",  "Cast directly — no CAST needed")
+        _row("SPELLS",                    "List known spells and proficiencies")
+
+        _hdr("Status")
+        _row("HEALTH / HP",               "Quick health summary")
+        _row("CHARACTER / CHAR / V",      "Full character sheet")
+        _row("REST",                      "Rest to recover (where available)")
+
+        _hdr("Game")
+        _row("SAVE",                      "Save progress")
+        _row("LOAD / RESTORE",            "Load a saved game")
+        _row("QUIT",                      "Quit the adventure")
+        _row("HELP / ?",                  "This message")
+
         print()
 
     def cmd_quit(self) -> int:
