@@ -37,6 +37,9 @@ ARTIFACT_TYPE_MAP = {
     13: "generic",    # dead body / loot placeholder
 }
 
+# EDX types that are always immovable scenery — never carriable
+_IMMOVABLE_TYPES = {8, 10, 12, 13}
+
 # EDX weapon_type integer → Eamon Redux weapon type string
 WEAPON_TYPE_MAP = {
     1: "axe",
@@ -160,14 +163,25 @@ def convert_artifacts(artifact_recs: list) -> tuple[list, list]:
         # Armor class
         ac = f.get("armor_class") or 0
 
+        raw_weight = max(0, f.get("weight") or 0)
+        raw_value  = f.get("value") or 0
+
+        # Immovable if: always-scenery EDX type, OR weightless/valueless generic
+        # (doors, dead bodies, bound captives, fixtures that shouldn't be carried)
+        immovable = (
+            edx_type in _IMMOVABLE_TYPES
+            or (edx_type in (0, 1) and raw_weight == 0 and raw_value == 0)
+        )
+
         artifact = {
             "id":            aid,
             "name":          f["name"],
             "description":   f["description"],
             "artifact_type": atype,
             "room_id":       room_id,
-            "weight":        max(0, f.get("weight") or 0),
-            "value":         f.get("value") or 0,
+            "weight":        999 if immovable else raw_weight,
+            "value":         raw_value,
+            "is_quest_item": immovable,
             "heal_amount":   hp,
             "armor_class":   ac,
             "damage_dice":   int(dice)  if dice  is not None else 1,
