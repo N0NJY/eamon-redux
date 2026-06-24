@@ -151,6 +151,7 @@ TAVERN_COMMANDS = {
     "leave":     {"aliases": ["le", "exit", "bye", "outside"],       "min_chars": 2, "category": "control"},
     "help":      {"aliases": ["h", "?"],                              "min_chars": 1, "category": "control"},
     "quit":      {"aliases": ["q"],                                   "min_chars": 1, "category": "control"},
+    "manual":    {"aliases": ["man", "rules"],                        "min_chars": 3, "category": "control"},
 }
 
 
