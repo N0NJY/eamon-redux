@@ -6,3 +6,6 @@ characters/*.json
 stored_games/*.json
 backup.sh
 push.sh
+eamon_redux_tavern_map.png
+equipment_bonuses_guide.md
+input_hardening_guide.md
