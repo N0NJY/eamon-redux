@@ -1699,49 +1699,70 @@ def _read_manual() -> None:
 
 
 def show_main_hall_help() -> None:
+    def _hdr(label: str) -> None:
+        print(tc(f"\n  {label}", "sys"))
+    def _row(cmd: str, desc: str) -> None:
+        print(tc(f"    {cmd:<28}", "title") + tc(desc, "desc"))
+    def _line(text: str) -> None:
+        print(tc(f"    {text}", "desc"))
+
     print()
-    print(tc(" ─── Main Hall Commands ───────────────────────────────", "border"))
-    cmds = [
-        ("N/S/E/W/NE/SW/...",   "Move between rooms"),
-        ("GO <direction>",      "Move explicitly"),
-        ("LOOK / L",            "Describe current room (always full)"),
-        ("VERBOSE",             "Full room descriptions on every visit"),
-        ("BRIEF",               "Short descriptions after first visit"),
-        ("EXAMINE / X <thing>", "Examine an item, NPC, or room feature"),
-        ("READ <item>",         "Read a scroll, book, or sign"),
-        ("DROP <item>",         "Drop a carried item on the floor"),
-        ("GET <item>",          "Pick up an item from the floor"),
-        ("USE <item>",          "Use an item (drink potion, equip weapon, etc.)"),
-        ("EAT <item>",          "Eat a food item"),
-        ("DRINK <item>",        "Drink a potion"),
-        ("HEALTH / HP",         "Quick health and gold summary"),
-        ("REST",                "Rest at the inn to restore HP"),
-        ("LIGHT <item>",        "Light a torch or lamp"),
-        ("TALK TO <name>",      "Speak to the NPC in this room"),
-        ("GIVE <item> TO <npc>","Give an item to an NPC (gifts for Marie)"),
-        ("BUY / SELL",          "Open the shop in your current room"),
-        ("MARCUS / CAVIELLI",   "Cavielli's Weapons Shoppe (east of Main Hall)"),
-        ("ALDRIC / WIZARD",     "Aldric's Magic shop (common room → east)"),
-        ("MARIE / WITCH",       "Marie Laveau's chamber (common room → north)"),
-        ("BANK",                "The Main Hall Bank (west of Main Hall)"),
-        ("DEPOSIT <amount>",    "Deposit gold at the bank"),
-        ("WITHDRAW <amount>",   "Withdraw gold from the bank"),
-        ("BALANCE",             "Check your bank balance"),
-        ("INVENTORY / I",       "List carried items"),
-        ("EQUIPMENT / EQ",      "View and manage equipped items"),
-        ("EQUIP <item>",        "Equip a carried weapon, armour, or accessory"),
-        ("UNEQUIP",             "Remove an equipped item"),
-        ("CHARACTER / V",       "Full character sheet"),
-        ("SPELLS",              "Known spells and proficiencies"),
-        ("SAVE",                "Save character to disk"),
-        ("ADVENTURE / A",       "Go to the adventure board (guild hall)"),
-        ("RESUME",              "Resume a saved adventure"),
-        ("LEAVE / QUIT",        "Temporarily Leave the Universe (save and exit)"),
-        ("MANUAL / MAN",        "Read the Adventurer's Manual"),
-        ("HELP / ?",            "This message"),
-    ]
-    for c, desc in cmds:
-        print(tc(f" {c:<26}", "title") + tc(desc, "desc"))
+    print(tc(" ─── Main Hall Commands ───────────────────────────────────────────────", "border"))
+
+    _hdr("Navigation")
+    _line("N  S  E  W  NE  NW  SE  SW  UP  DOWN")
+    _row("GO <direction>",            "Move explicitly")
+    _row("LOOK / L",                  "Describe the current room")
+    _row("VERBOSE / BRIEF",           "Full descriptions every visit / short after first")
+
+    _hdr("Exploration")
+    _row("EXAMINE / X <thing>",       "Examine an item, NPC, or room feature")
+    _row("READ <item>",               "Read a scroll, book, or sign")
+    _row("TALK TO <name>",            "Speak to an NPC")
+    _row("GIVE <item> TO <npc>",      "Give an item to an NPC")
+
+    _hdr("Inventory")
+    _row("INVENTORY / I",             "List carried items")
+    _row("GET <item>",                "Pick up an item")
+    _row("DROP <item>",               "Drop a carried item")
+    _row("USE <item>",                "Use an item")
+    _row("EAT <item>",                "Eat a food item")
+    _row("DRINK <item>",              "Drink a potion")
+    _row("LIGHT <item>",              "Light a torch or lamp")
+
+    _hdr("Equipment")
+    _row("EQUIPMENT / EQ",            "View equipped items")
+    _row("EQUIP <item>",              "Equip a weapon, armour, or accessory")
+    _row("UNEQUIP",                   "Remove the equipped item")
+
+    _hdr("Character")
+    _row("CHARACTER / V",             "Full character sheet")
+    _row("SPELLS",                    "Known spells and proficiencies")
+    _row("HEALTH / HP",               "Quick health and gold summary")
+    _row("REST",                      "Rest at the inn to restore HP")
+
+    _hdr("Shopping")
+    _row("BUY / SELL",                "Open the shop in your current room")
+    _row("MARCUS / CAVIELLI",         "Cavielli's Weapons Shoppe (east)")
+    _row("ALDRIC / WIZARD",           "Aldric's Magic shop (common room → east)")
+    _row("MARIE / WITCH",             "Marie Laveau's chamber (common room → north)")
+
+    _hdr("Bank")
+    _row("BANK",                      "The Main Hall Bank (west)")
+    _row("DEPOSIT <amount>",          "Deposit gold")
+    _row("WITHDRAW <amount>",         "Withdraw gold")
+    _row("BALANCE",                   "Check your balance")
+
+    _hdr("Adventures")
+    _row("ADVENTURE / A",             "Go to the adventure board")
+    _row("RESUME",                    "Resume a saved adventure")
+
+    _hdr("Game")
+    _row("SAVE",                      "Save character to disk")
+    _row("LEAVE / QUIT",              "Save and exit")
+    _row("MANUAL / MAN",              "Read the Adventurer's Manual")
+    _row("HELP / ?",                  "This message")
+
     print()
 
 # ── Save game management ──────────────────────────────────────────────────────
