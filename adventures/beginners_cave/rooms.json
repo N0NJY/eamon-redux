@@ -170,26 +170,26 @@
   {
     "id": 22,
     "name": "You are at the top of a stairway. (W/D)",
-    "description": "You are at an unremarkable stone landing at the top of a flight of stairs. A single torch is bolted to the wall. A tunnel heads back west. It looks very dark down there...",
-    "brief_description": "Top of stairs. Tunnel west, dark stairway down.",
+    "description": "You are at an unremarkable stone landing at the top of a flight of stairs. A single torch is bolted to the wall in an iron bracket — you could GET it and LIGHT it before heading down. The tunnel leads back west. It looks very dark down there...",
+    "brief_description": "Top of stairs. Wall torch here. Tunnel west, dark stairway down.",
     "exits": {"west": 21, "down": 23},
     "is_dark": false
   },
   {
     "id": 23,
     "name": "You are at the bottom of a stairway. (E/U)",
-    "description": "You are at an unremarkable stone landing at the bottom of a flight of stairs. A light can be seen at the top and a very dim light can be seen down the tunnel to the east.",
-    "brief_description": "Bottom of stairs. Light above, dim tunnel east.",
+    "description": "You are at the bottom of a flight of stone stairs. Without a light, you can see nothing except a faint glow from the landing above.",
+    "brief_description": "Bottom of dark stairway. Exit up (lit) or east (dark).",
     "exits": {"east": 24, "up": 22},
-    "is_dark": false
+    "is_dark": true
   },
   {
     "id": 24,
     "name": "You are in an east/west tunnel.",
-    "description": "You are in a very rough tunnel carved out of a series of natural caverns. Dim light can be seen in both directions.",
-    "brief_description": "Rough natural cavern tunnel. Dim light E/W.",
+    "description": "A rough tunnel carved through natural rock, running east and west. Without a light source, you cannot see your hand in front of your face.",
+    "brief_description": "Dark natural cavern tunnel. Exits E/W.",
     "exits": {"east": 25, "west": 23},
-    "is_dark": false
+    "is_dark": true
   },
   {
     "id": 25,

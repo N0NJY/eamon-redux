@@ -448,5 +448,19 @@
       "wall text",
       "message"
     ]
+  },
+  {
+    "id": 31,
+    "name": "torch",
+    "description": "A sturdy wall torch in an iron bracket. You could take it and light it to see in the dark passages below.",
+    "room_id": 22,
+    "artifact_type": "light",
+    "weight": 2,
+    "value": 5,
+    "synonyms": [
+      "wall torch",
+      "iron torch",
+      "lantern"
+    ]
   }
 ]

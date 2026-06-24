@@ -67,6 +67,7 @@ class Artifact:
     weapon_type: Optional[str] = None  # for weapons: axe, bow, club, spear, sword
     stat_bonuses: dict = field(default_factory=dict)  # e.g. {"intelligence": 2}
     flags: dict = field(default_factory=dict)
+    lit: bool = False  # True when this LIGHT artifact is burning
 
     def matches(self, word: str) -> bool:
         word = word.lower()
@@ -90,6 +91,8 @@ class Artifact:
             d["weapon_type"] = self.weapon_type
         if self.stat_bonuses:
             d["stat_bonuses"] = self.stat_bonuses
+        if self.lit:
+            d["lit"] = True
         return d
 
     @staticmethod
@@ -110,6 +113,7 @@ class Artifact:
             weapon_type=d.get("weapon_type"),
             stat_bonuses=d.get("stat_bonuses", {}),
             flags=d.get("flags", {}),
+            lit=d.get("lit", False),
         )
 
 

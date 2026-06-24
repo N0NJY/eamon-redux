@@ -423,6 +423,14 @@ class Engine:
                 print(self.tc(f"{target.name} has fallen!", "die"))
                 self.player.followers = [f for f in self.player.followers if f.is_alive]
 
+    def _has_light(self) -> bool:
+        """True if the current room is illuminated — not dark, or player/room has a lit light source."""
+        room = self.world.get_room(self.player.room_id)
+        if not room or not room.is_dark:
+            return True
+        sources = self.world.artifacts_carried() + self.world.artifacts_in_room(self.player.room_id)
+        return any(a.artifact_type == ArtifactType.LIGHT and a.lit for a in sources)
+
     def look(self, brief: bool = False) -> None:
         """Display current room. brief=True shows short description if available."""
         room = self.world.get_room(self.player.room_id)
@@ -431,6 +439,15 @@ class Engine:
             return
 
         print()
+
+        if room.is_dark and not self._has_light():
+            print(self.tc("*** Pitch Dark ***", "room"))
+            print(self.tc("─" * 72, "exits"))
+            print(self.tc("It is pitch dark. You cannot see anything.", "desc"))
+            print(self.tc("(If you are carrying a torch or lantern, type LIGHT TORCH to use it.)", "sys"))
+            print()
+            return
+
         print(self.tc(room.name, "room"))
         print(self.tc("─" * 72, "exits"))
         if brief and room.brief_description:
@@ -1811,7 +1828,7 @@ class Engine:
                 print(self.tc(f"You're not sure how to use the {artifact.name}.", "sys"))
 
     def cmd_light(self, noun: str) -> None:
-        """Light a torch, lamp, or light-source artifact."""
+        """Light or extinguish a torch, lamp, or other light-source artifact."""
         if not noun:
             print(self.tc("Light what?", "error"))
             return
@@ -1823,9 +1840,21 @@ class Engine:
         if artifact.artifact_type != ArtifactType.LIGHT:
             print(self.tc(f"The {artifact.name} can't be lit.", "error"))
             return
+
+        if artifact.lit:
+            handled = self.call_hook("on_extinguish", artifact.name.lower())
+            artifact.lit = False
+            if not handled:
+                print(self.tc(f"You extinguish the {artifact.name}.", "sys"))
+            return
+
         handled = self.call_hook("on_light", artifact.name.lower())
+        artifact.lit = True
         if not handled:
             print(self.tc(f"You light the {artifact.name}.", "spell"))
+        room = self.world.get_room(self.player.room_id)
+        if room and room.is_dark:
+            self.look()
 
     def cmd_trollsfire(self) -> None:
         """TROLLSFIRE — toggle flame on/off if equipped; burns player if only carried."""
@@ -1893,7 +1922,7 @@ class Engine:
                 for mid, m in self.world.monsters.items()
             },
             "artifacts": {
-                str(aid): {"room_id": a.room_id}
+                str(aid): {"room_id": a.room_id, "lit": a.lit}
                 for aid, a in self.world.artifacts.items()
             },
         }
@@ -1950,6 +1979,7 @@ class Engine:
             aid = int(aid_str)
             if aid in self.world.artifacts:
                 self.world.artifacts[aid].room_id = astate.get("room_id")
+                self.world.artifacts[aid].lit = astate.get("lit", False)
 
     def cmd_load(self, noun: str) -> None:
         """Load a saved game from a slot."""
