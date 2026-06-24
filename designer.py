@@ -298,7 +298,7 @@ ALL_ARTIFACT_TYPES = [
 ]
 
 WEAPON_TYPES = ["sword", "axe", "club", "spear", "bow", "(other/none)"]
-STATS        = ["hardiness", "agility", "strength", "intelligence", "charisma"]
+STATS        = ["strength", "dex", "con", "intelligence", "wis", "charisma"]
 FOLLOWER_TYPES = ["stat", "chance", "trade", "combat", "alignment", "quest"]
 
 
