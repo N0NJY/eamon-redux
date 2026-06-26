@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """
 Adventurer's Gate — animated parchment scroll banner.
+
+The scroll starts wound up at the top and unrolls downward line by
+line.  The bottom roller only appears when the scroll is fully open.
+
 Run standalone:  python3 banner.py
-Import into tavern.py later via:  from banner import scroll_open
+Import later via:  from banner import scroll_open
 """
 
 import sys
@@ -10,29 +14,39 @@ import time
 
 # ── Colors ────────────────────────────────────────────────────────────
 _GOLD  = "\033[1;33m"   # bright yellow  — title
-_AMBER = "\033[0;33m"   # yellow/amber   — scroll body, rods, caps
+_AMBER = "\033[0;33m"   # yellow/amber   — rods, borders
 _CYAN  = "\033[0;36m"   # cyan           — tagline
 _DIM   = "\033[0;37m"   # dim white      — subtitle / credits
 _RESET = "\033[0m"
 
-PAD = "  "    # left indent — gives the scroll some breathing room
-W   = 68      # inner content width (between the | sides)
+PAD = "  "   # left margin — gives the scroll breathing room
+W   = 68     # inner content width
 
 # ── Scroll part builders ──────────────────────────────────────────────
 #
-#   ,____W____,       ← cap_top   (rigid top edge of top rod)
-#   )====W=====(      ← rod_top   (the rolled cylinder at the top)
-#   |    W     |      ← blank     (open parchment)
-#   |  content |      ← center    (text line, centered in W)
-#   |  ~~~~~~  |      ← rule      (decorative parchment crease)
-#   (====W=====)      ← rod_bot   (the rolled cylinder at the bottom)
-#   `~~~~W~~~~~'      ← cap_bot   (trailing edge of bottom rod)
+#  The finished scroll looks like:
+#
+#   ,____W____,    ← cap_top   rigid edge of the top roller
+#   )====W====(    ← rod_top   the top wooden roller (cylinder)
+#   |    W     |   ← blank     open parchment
+#   |  content |   ← center    a line of text, centred
+#   |  ~~~~~~  |   ← rule      decorative crease across the parchment
+#   (====W====)    ← rod_bot   the bottom roller
+#   `~~~~W~~~~'    ← cap_bot   trailing edge of bottom roller
+#
+#  During animation, the paper still being unrolled is shown as:
+#
+#   )~~~~W~~~~(    ← rolling   the curled paper edge still spooling out
 
 def _cap_top() -> str:
     return f"{_AMBER}{PAD},{'_' * W},{_RESET}"
 
 def _rod_top() -> str:
     return f"{_AMBER}{PAD}){'=' * W}({_RESET}"
+
+def _rolling() -> str:
+    """The curled paper edge visible while the scroll is still unrolling."""
+    return f"{_AMBER}{PAD}){_DIM}{'~' * W}{_AMBER}({_RESET}"
 
 def _blank() -> str:
     return f"{_AMBER}{PAD}|{_RESET}{' ' * W}{_AMBER}|{_RESET}"
@@ -55,82 +69,80 @@ def _cap_bot() -> str:
 
 # ── Scroll contents ───────────────────────────────────────────────────
 #
-#  The ANCHOR is the first line revealed — the scroll unrolls outward
-#  from that point.  Putting the title at ANCHOR means it appears
-#  first; the rods and caps roll in from above and below.
+#  TOP (stays fixed while content rolls out below):
+#    cap_top  rod_top
 #
-#   0   cap_top
-#   1   rod_top
-#   2   blank
-#   3   TITLE          ← ANCHOR
-#   4   blank
-#   5   rule  (~~~~~)
-#   6   blank
-#   7   tagline
-#   8   blank
-#   9   subtitle
-#  10   copyright
-#  11   blank
-#  12   rod_bot
-#  13   cap_bot
+#  CONTENT (unrolls line by line):
+#    blank  title  blank  rule  blank  tagline  blank  subtitle  copyright  blank
+#
+#  BOTTOM (appears only when fully unrolled):
+#    rod_bot  cap_bot
 
-ANCHOR = 3
-
-BANNER = [
-    _cap_top(),                                                        #  0
-    _rod_top(),                                                        #  1
-    _blank(),                                                          #  2
-    _center("A D V E N T U R E R ' S   G A T E", _GOLD),            #  3  ANCHOR
-    _blank(),                                                          #  4
-    _rule(),                                                           #  5
-    _blank(),                                                          #  6
-    _center("Where Legend Begins and Gold Changes Hands", _CYAN),     #  7
-    _blank(),                                                          #  8
-    _center("A D&D / Eamon Adventure Engine", _DIM),                  #  9
-    _center("(C) 2026, Rick Donaldson", _DIM),                        # 10
-    _blank(),                                                          # 11
-    _rod_bot(),                                                        # 12
-    _cap_bot(),                                                        # 13
+_TOP = [
+    _cap_top(),
+    _rod_top(),
 ]
+
+_CONTENT = [
+    _blank(),
+    _center("A D V E N T U R E R ' S   G A T E", _GOLD),
+    _blank(),
+    _rule(),
+    _blank(),
+    _center("Where Legend Begins and Gold Changes Hands", _CYAN),
+    _blank(),
+    _center("A D&D / Eamon Adventure Engine", _DIM),
+    _center("(C) 2026, Rick Donaldson", _DIM),
+    _blank(),
+]
+
+_BOTTOM = [
+    _rod_bot(),
+    _cap_bot(),
+]
+
+BANNER = _TOP + _CONTENT + _BOTTOM   # full static version
 
 # ── Animation ─────────────────────────────────────────────────────────
 
-def scroll_open(pause_on_title: float = 0.45, step_delay: float = 0.09) -> None:
+def scroll_open() -> None:
     """
-    Unroll the scroll from the title outward.
-
-    pause_on_title  — seconds to hold on the gold title line alone
-    step_delay      — seconds between each expansion step
+    Print the top roller, then unroll content line by line downward.
+    The curled-paper indicator ( )~~~( ) sits below the content until
+    the scroll is fully open, then the bottom roller snaps into place.
     """
-    total = len(BANNER)
-    top   = ANCHOR
-    bot   = ANCHOR
 
-    # ── Title appears first ────────────────────────────────────────────
-    print(BANNER[ANCHOR])
+    # ── Print the fixed top of the scroll ─────────────────────────────
+    for line in _TOP:
+        print(line)
     sys.stdout.flush()
-    time.sleep(pause_on_title)
+    time.sleep(0.35)   # brief pause — the scroll is about to drop
 
-    lines_shown = 1
+    # ── Show the initial curled-paper edge ────────────────────────────
+    rolling = _rolling()
+    print(rolling)
+    sys.stdout.flush()
 
-    # ── Scroll unrolls one line at a time in each direction ────────────
-    while top > 0 or bot < total - 1:
-        new_top = max(0, top - 1)
-        new_bot = min(total - 1, bot + 1)
+    # ── Unroll each content line ───────────────────────────────────────
+    #  Speed: starts slow (stiff parchment), eases faster as it gains momentum
+    delays = [0.14, 0.13, 0.11, 0.09, 0.08, 0.07, 0.07, 0.07, 0.07, 0.08]
 
-        # Return cursor to the top of what's already on screen
-        sys.stdout.write(f"\033[{lines_shown}A")
+    for i, line in enumerate(_CONTENT):
+        time.sleep(delays[i] if i < len(delays) else 0.08)
+
+        # Overwrite the rolling indicator with the new content line,
+        # then print a fresh rolling indicator below it
+        sys.stdout.write("\033[1A\033[2K")
+        print(line)
+        print(rolling)
         sys.stdout.flush()
 
-        for i in range(new_top, new_bot + 1):
-            sys.stdout.write("\033[2K")
-            print(BANNER[i])
-
-        lines_shown = new_bot - new_top + 1
-        top = new_top
-        bot = new_bot
-        sys.stdout.flush()
-        time.sleep(step_delay)
+    # ── Snap the bottom roller into place ─────────────────────────────
+    time.sleep(0.30)   # brief pause before the scroll locks open
+    sys.stdout.write("\033[1A\033[2K")
+    for line in _BOTTOM:
+        print(line)
+    sys.stdout.flush()
 
     print()
 
