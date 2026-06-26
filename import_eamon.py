@@ -116,10 +116,15 @@ def convert_rooms(room_recs: list, exit_recs: list) -> list:
         })
     return rooms
 
-def convert_artifacts(artifact_recs: list) -> tuple[list, list]:
-    """Returns (artifacts, warnings)."""
-    artifacts = []
-    warnings  = []
+def convert_artifacts(artifact_recs: list) -> tuple[list, list, dict]:
+    """Returns (artifacts, warnings, monster_loot_map).
+
+    monster_loot_map: {monster_id: artifact_id} for artifacts whose
+    monster_id field is set — consumed by convert_monsters to wire loot.
+    """
+    artifacts        = []
+    warnings         = []
+    monster_loot_map = {}   # monster_id → artifact_id
 
     for rec in sorted(artifact_recs, key=lambda r: r["fields"]["artifact_id"]):
         f   = rec["fields"]
@@ -133,13 +138,11 @@ def convert_artifacts(artifact_recs: list) -> tuple[list, list]:
             wt_code = f.get("weapon_type")
             weapon_type = WEAPON_TYPE_MAP.get(wt_code, "sword")
 
-        # Placement
-        room_id = f.get("room_id")
-        if f.get("monster_id") and not room_id:
-            warnings.append(
-                f"  Artifact #{aid} '{f['name']}' belongs to monster #{f['monster_id']} "
-                f"— set as monster loot manually."
-            )
+        # Placement — auto-wire monster loot; only warn for containers/captives
+        room_id    = f.get("room_id")
+        monster_id = f.get("monster_id")
+        if monster_id and not room_id:
+            monster_loot_map[monster_id] = aid
         if f.get("container_id") and not room_id:
             warnings.append(
                 f"  Artifact #{aid} '{f['name']}' is inside container #{f['container_id']} "
@@ -194,9 +197,9 @@ def convert_artifacts(artifact_recs: list) -> tuple[list, list]:
 
         artifacts.append(artifact)
 
-    return artifacts, warnings
+    return artifacts, warnings, monster_loot_map
 
-def convert_monsters(monster_recs: list) -> tuple[list, list]:
+def convert_monsters(monster_recs: list, monster_loot_map: dict) -> tuple[list, list]:
     """Returns (monsters, warnings)."""
     monsters = []
     warnings = []
@@ -214,7 +217,7 @@ def convert_monsters(monster_recs: list) -> tuple[list, list]:
 
         attitude = ATTITUDE_MAP.get(f.get("friendliness", "hostile"), "hostile")
 
-        monsters.append({
+        entry = {
             "id":           mid,
             "name":         f["name"],
             "description":  f["description"],
@@ -228,7 +231,10 @@ def convert_monsters(monster_recs: list) -> tuple[list, list]:
             "xp":           f.get("hardiness", 10),
             "dialogue":     "",
             "death_message": "",
-        })
+        }
+        if mid in monster_loot_map:
+            entry["loot_id"] = monster_loot_map[mid]
+        monsters.append(entry)
 
     return monsters, warnings
 
@@ -270,13 +276,13 @@ def import_adventure(src_path: str, slug: str | None = None,
         adv_meta["start_room"] = rooms[0]["id"]
 
     # ── Artifacts ─────────────────────────────────────────────────────────────
-    artifacts, art_warnings = convert_artifacts(
+    artifacts, art_warnings, monster_loot_map = convert_artifacts(
         groups.get("adventure.artifact", [])
     )
 
     # ── Monsters ──────────────────────────────────────────────────────────────
     monsters, mon_warnings = convert_monsters(
-        groups.get("adventure.monster", [])
+        groups.get("adventure.monster", []), monster_loot_map
     )
 
     # ── Write files ───────────────────────────────────────────────────────────
