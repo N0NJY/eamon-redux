@@ -89,7 +89,7 @@ _CONTENT = [
     _blank(),
     _rule(),
     _blank(),
-    _center("Where Legend Begins and Gold Changes Hands", _CYAN),
+    _center("Where Heroes are made, and Legends begin", _CYAN),
     _blank(),
     _center("A D&D / Eamon Adventure Engine", _DIM),
     _center("(C) 2026, Rick Donaldson", _DIM),
