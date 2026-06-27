@@ -85,7 +85,7 @@ _TOP = [
 
 _CONTENT = [
     _blank(),
-    _center("A D V E N T U R E R ' S   G A T E", _GOLD),
+    _center("T H E   A D V E N T U R E R ' S   G A T E", _GOLD),
     _blank(),
     _rule(),
     _blank(),
