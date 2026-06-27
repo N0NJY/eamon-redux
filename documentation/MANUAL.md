@@ -1,14 +1,14 @@
-# Eamon Redux — Adventurer's Manual
+# The Adventurer's Gate — Player's Manual
 
 *"Slaying monsters and looting keeps for fun and profit."*
 
 ---
 
-## Welcome to Eamon Redux
+## Welcome to The Adventurer's Gate
 
-Eamon Redux is a text adventure engine inspired by the classic Eamon system originally created by Donald Brown for the Apple II in 1980. Like the original, it combines interactive fiction with a fantasy role-playing game. You create a character, journey through adventures, fight monsters, collect loot, and solve puzzles using plain English commands.
+The Adventurer's Gate is a text adventure engine inspired by the classic Eamon system originally created by Donald Brown for the Apple II in 1980, blended with the mechanics of Advanced Dungeons & Dragons. Like the original, it combines interactive fiction with a fantasy role-playing game. You create a character, journey through adventures, fight monsters, collect loot, and solve puzzles using plain English commands.
 
-Unlike the original, Eamon Redux runs in Python on any modern system, stores all adventure data as readable JSON files, and features a **classless character system** — any character can learn any spell, use any weapon, and develop any skill over time. All adventures begin and end at the **Main Hall of the Free Adventurers**, where your character is stored between sessions, loot can be sold, new adventures are chosen, and a handful of memorable NPCs will help — or hinder — your progress.
+The game runs in Python on any modern system, stores all adventure data as readable JSON files, and features a **classless character system** — any character can learn any spell, use any weapon, and develop any skill over time. All adventures begin and end at the **Main Hall of the Free Adventurers**, where your character is stored between sessions, loot can be sold, new adventures are chosen, and a handful of memorable NPCs will help — or hinder — your progress.
 
 ---
 
@@ -16,7 +16,7 @@ Unlike the original, Eamon Redux runs in Python on any modern system, stores all
 
 ### Installation
 
-1. Download or clone the Eamon Redux repository
+1. Download or clone The Adventurer's Gate repository
 2. Open a terminal/command prompt
 3. Navigate to the Eamon directory
 4. Type: `python3 tavern.py`
@@ -75,7 +75,7 @@ All six stats are rolled randomly using three six-sided dice (3d6). After seeing
 
 **What 3d6 means:** Three six-sided dice are rolled and added together. The result is between 3 (all ones) and 18 (all sixes). Most results fall in the 9–12 range — consider any stat above 14 excellent and any below 8 challenging.
 
-There are no classes in Eamon Redux. Every character can use any weapon, wear any armor, and learn any spell. Your stats determine how effective you are — a high STR makes you hit harder, a high INT powers your offensive spells, a high WIS improves healing and resistance to magic.
+There are no classes in The Adventurer's Gate. Every character can use any weapon, wear any armor, and learn any spell. Your stats determine how effective you are — a high STR makes you hit harder, a high INT powers your offensive spells, a high WIS improves healing and resistance to magic.
 
 **During character creation, type `?` at the "Keep these stats?" prompt to display a full stat reference.**
 
@@ -95,7 +95,7 @@ Strength is raw physical muscle. It affects how hard you hit in melee combat and
   STR 14 → +2 damage per hit. STR 18 → +4 damage per hit.
 - **Carry Capacity** = STR × 10 gronds. STR 12 → 120 gronds. STR 16 → 160 gronds.
 
-Weight in Eamon Redux is measured in **gronds**. A rusty sword might weigh 3 gronds; a coat of chainmail might weigh 6. Exceeding your carry limit prevents picking up anything more.
+Weight is measured in **gronds**. A rusty sword might weigh 3 gronds; a coat of chainmail might weigh 6. Exceeding your carry limit prevents picking up anything more.
 
 > STR does **not** affect ranged weapons (bows, crossbows). Ranged attacks use weapon dice only.
 
@@ -205,7 +205,10 @@ REMOVE ring     — remove it; bonus reversed
 
 A ring's effect is printed when you equip it: "You equip the gold ring. (+2 Intelligence)."
 
-**Cursed rings** apply a penalty to a stat and **cannot be removed** — the `REMOVE` command will tell you the ring is cursed. You will need a special item or location to lift the curse.
+**Cursed rings** apply a penalty to a stat and **cannot be removed normally** — the `UNEQUIP` command will tell you the item is cursed. To lift a curse you have two options:
+
+- **Marie Laveau** can remove the curse in her chamber (north of the Common Room) for a fee of 500–1500 gold. Talk to her and ask about the curse.
+- **Aldric** sells a *Curse Breaker* scroll in his Magic shop (east of the Common Room). Carry it in your pack, then `USE CURSE BREAKER` — it removes the curse from whatever item you have equipped and is consumed in the process.
 
 Stat bonuses from rings persist across save/load and carry over into new adventures as long as you are wearing the ring when the adventure ends.
 
@@ -324,7 +327,7 @@ Some followers are **non-combatants** (like a rescued prisoner). They travel wit
 
 ### All Characters Can Cast Spells
 
-There are no spell restrictions in Eamon Redux. Any character can learn and cast any spell. INT determines your mana pool and offensive spell power; WIS determines your healing power and resistance to hostile magic.
+There are no spell restrictions. Any character can learn and cast any spell. INT determines your mana pool and offensive spell power; WIS determines your healing power and resistance to hostile magic.
 
 To learn spells, visit **Aldric the Mage** in the Magic, Potions and Sundries shop (Common Room → East). You can also find spellbooks in adventures.
 
@@ -693,7 +696,7 @@ EQUIPMENT       — show all five slots and what is currently in each (also: EQ)
 
 Items marked **[EQUIPPED]** in your inventory are active. Equipped status carries over into adventures — if you equip chainmail in the tavern, you begin your next adventure already wearing it.
 
-Cursed items cannot be unequipped from the tavern any more than they can from inside an adventure.
+Cursed items cannot be unequipped from the tavern any more than they can from inside an adventure. See **Marie Laveau** or buy a **Curse Breaker** from Aldric to remove them.
 
 ---
 
@@ -834,6 +837,14 @@ She values items by their sell price:
 | 50–199g | +1 this session | none |
 | 10–49g | no bonus | none (she notes the effort) |
 | under 10g | -1 this session | -1 permanent (she is insulted) |
+
+**Curse removal** — if you are carrying a cursed item you cannot unequip, Marie can lift the curse for a fee of 500–1500 gold (set randomly each visit):
+
+```
+TALK TO MARIE    — then choose curse removal from her menu
+```
+
+She will only remove curses if her attitude toward you is neutral (0) or better. If she dislikes you, bring a gift first.
 
 ### The Main Hall Bank
 
@@ -1012,7 +1023,7 @@ python3 designer.py adventures/my_adventure
 
 ### Importing Adventures from Eamon Deluxe
 
-The original Eamon community produced hundreds of adventures for the Eamon Deluxe (EDX) web system, stored as Django fixture JSON files. The importer converts these into Eamon Redux format automatically.
+The original Eamon community produced hundreds of adventures for the Eamon Deluxe (EDX) web system, stored as Django fixture JSON files. The importer converts these into The Adventurer's Gate format automatically.
 
 **From the designer startup menu**, choose `I. Import from Eamon Deluxe (EDX) JSON`. You will be prompted for:
 
@@ -1029,7 +1040,7 @@ python3 import_eamon.py <source.json> [adventure_slug]
 
 **What gets imported automatically:**
 
-| EDX data | Eamon Redux result |
+| EDX data | Adventurer's Gate result |
 |---|---|
 | Adventure title, intro text, author | `adventure.json` metadata |
 | Rooms (name, description, `is_dark`) | `rooms.json` — exits resolved from the separate roomexit records |

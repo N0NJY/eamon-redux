@@ -232,6 +232,15 @@ ALDRIC_POTIONS = [
     {"name": "mystery scroll",        "artifact_type": "readable", "weight": 0, "heal_amount": 0,  "armor_class": 0, "damage_dice": 1, "damage_sides": 4, "value": 5,  "price": 20, "desc": "Faded writing"},
 ]
 
+# Always stocked — not in the random rotation
+ALDRIC_CURSE_BREAKER = {
+    "name": "curse breaker", "artifact_type": "readable", "weight": 0,
+    "heal_amount": 0, "armor_class": 0, "damage_dice": 1, "damage_sides": 4,
+    "value": 50, "price": 200,
+    "desc": "Lifts a curse from any equipped item. Consumed on use.",
+    "flags": {"curse_breaker": True},
+}
+
 _SHOP_SELL_VALUES = {
     item["name"]: item["value"]
     for pool in (MARCUS_CORE, MARCUS_RANDOM_POOL, ALDRIC_POTIONS)
@@ -543,6 +552,63 @@ def _marie_give_gift(item, character) -> None:
         print(tc(' "Take it back. And think very carefully about your next visit."', "npc"))
     character.save()
 
+def _marie_remove_curse(character) -> None:
+    """Marie lifts a curse from an equipped item for a fee."""
+    carried = _load_carried(character)
+    cursed_slot = None
+    cursed_name = None
+    for slot, name in character.equipped.items():
+        if not name:
+            continue
+        item = _find_item_by_name(name, carried)
+        if item and getattr(item, "flags", {}).get("cursed"):
+            cursed_slot = slot
+            cursed_name = name
+            break
+
+    if not cursed_slot:
+        print(tc(' Marie tilts her head. "Marie senses no curse upon you, cher."', "npc"))
+        return
+
+    att  = _marie_total_attitude(character)
+    if att < 0:
+        print(tc(f' Marie glances at your {cursed_name} and smiles thinly.', "desc"))
+        print(tc(' "Oh, Marie sees it. But you have not earned her favour."', "npc"))
+        print(tc(' "Bring a worthy gift, and then we shall speak of curses."', "npc"))
+        return
+
+    cost = random.randint(500, 1500)
+    print()
+    print(tc(f' Marie\'s eyes fall on your {cursed_name}. She nods slowly.', "desc"))
+    print(tc(f' "Yes... the old magic clings to it. Marie can sever it."', "npc"))
+    print(tc(f' "For {cost} gold, the curse will be gone before you leave this room."', "npc"))
+    print()
+
+    if tinput(f" Pay {cost}g to lift the curse? (y/n): ").lower() != "y":
+        print(tc(' "Come back when you are ready," Marie says without looking up.', "npc"))
+        return
+
+    if character.gold < cost:
+        print(tc(f' "You do not have {cost}g. Marie cannot work for promises."', "npc"))
+        return
+
+    character.gold -= cost
+    print()
+    print(tc(' Marie takes your hand and closes her eyes. Her lips move without sound.', "desc"))
+    print(tc(' The air shimmers. Something cold passes through the room and is gone.', "desc"))
+    print()
+
+    item = _find_item_by_name(cursed_name, carried)
+    if item and hasattr(item, "flags"):
+        item.flags["cursed"] = False
+        _save_carried(character, carried)
+    character.equipped[cursed_slot] = None
+    character.save()
+
+    print(tc(f' "It is done," Marie says quietly. "The {cursed_name} is free. And so are you."', "npc"))
+    tprint(f" The curse is lifted. {cursed_name.capitalize()} has been unequipped.", "sys")
+
+
 def run_marie_shop(character) -> None:
     """Marie Laveau's stat-raising service."""
     att = _marie_total_attitude(character)
@@ -566,7 +632,7 @@ def run_marie_shop(character) -> None:
     print()
     print(tc(f"  Gold: {character.gold}g  |  Bank: {character.bank_balance}g", "sys"))
     print(tc("  Enter a stat name to request an increase, GIVE <item> to offer a gift,", "desc"))
-    print(tc("  or DONE to leave.", "desc"))
+    print(tc("  CURSE to have a cursed item removed, or DONE to leave.", "desc"))
     print()
 
     raw = tinput(" > ").strip().lower()
@@ -577,6 +643,10 @@ def run_marie_shop(character) -> None:
 
     if raw.startswith("give "):
         _marie_give_gift_by_name(raw[5:].strip(), character)
+        return
+
+    if raw in ("curse", "remove curse", "uncurse", "lift curse"):
+        _marie_remove_curse(character)
         return
 
     stat = _STAT_ALIASES.get(raw)
@@ -925,6 +995,14 @@ def run_aldric_shop(character) -> None:
                   tc(item.get("desc", ""), "desc") +
                   tc(limit, "error"))
 
+        # Curse Breaker — always available
+        cb = ALDRIC_CURSE_BREAKER
+        cb_idx = item_offset + len(extras) + 1
+        print(tc(f" {cb_idx:>3}. ", "border") +
+              tc(f"{cb['name']:<28}", "title") +
+              tc(f" {cb['price']:>4}g  ", "sys") +
+              tc(cb["desc"], "desc"))
+
         print()
         learned = [k for k, v in character.spell_proficiencies.items() if v is not None]
         print(tc(f" Gold: {character.gold}g  |  Known: {', '.join(learned) if learned else 'none'}", "stat"))
@@ -968,7 +1046,8 @@ def run_aldric_shop(character) -> None:
             try:
                 idx = int(raw[2:]) - 1
                 all_items = [(k, v, "spell") for k, v in available_spells] + \
-                            [(i, i, "item")  for i in extras]
+                            [(i, i, "item")  for i in extras] + \
+                            [(cb, cb, "item") for cb in [ALDRIC_CURSE_BREAKER]]
                 if not (0 <= idx < len(all_items)):
                     tprint(" Invalid number.", "error"); continue
                 key, val, kind = all_items[idx]
@@ -1230,6 +1309,12 @@ def _cmd_tavern_use(noun: str, character, room) -> None:
     if not target:
         tprint(f" You don't have or see a '{noun}' here.", "error"); return
     atype = getattr(target, "artifact_type", "")
+
+    # Curse Breaker — special readable that lifts a curse
+    if getattr(target, "flags", {}).get("curse_breaker") or target.name == "curse breaker":
+        _use_curse_breaker(target, character, carried)
+        return
+
     if atype == "potion":
         _cmd_tavern_drink(target.name, character)
     elif atype == "food":
@@ -1242,6 +1327,40 @@ def _cmd_tavern_use(noun: str, character, room) -> None:
         _cmd_tavern_light(target.name, character, room)
     else:
         tprint(f" You're not sure how to use the {target.name} here.", "desc")
+
+
+def _use_curse_breaker(scroll, character, carried) -> None:
+    """Consume a Curse Breaker scroll to remove a curse from any equipped item."""
+    cursed_slot = None
+    cursed_name = None
+    for slot, name in character.equipped.items():
+        if not name:
+            continue
+        item = _find_item_by_name(name, carried)
+        if item and getattr(item, "flags", {}).get("cursed"):
+            cursed_slot = slot
+            cursed_name = name
+            break
+
+    if not cursed_slot:
+        tprint(" You have no cursed items equipped. The scroll remains unused.", "warn")
+        return
+
+    print(tc(f" You unroll the scroll and read the inscription aloud.", "desc"))
+    print(tc(f' The words burn with silver light and fade. The curse on your {cursed_name} shatters.', "desc"))
+
+    # Remove the curse flag and unequip
+    item = _find_item_by_name(cursed_name, carried)
+    if item and hasattr(item, "flags"):
+        item.flags["cursed"] = False
+        _save_carried(character, carried)
+    character.equipped[cursed_slot] = None
+    character.save()
+
+    # Consume the scroll
+    carried = [a for a in carried if a.name != scroll.name]
+    _save_carried(character, carried)
+    tprint(f" The curse breaker scroll crumbles to ash. {cursed_name.capitalize()} is now unequipped.", "sys")
 
 
 def _cmd_tavern_eat(noun: str, character) -> None:
