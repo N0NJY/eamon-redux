@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Optional
 from save_system import list_resumable_games, load_game as load_game_slotted
 from command_parser import parse_command
+from banner import scroll_open as _scroll_open
 
 # ── Colors ────────────────────────────────────────────────────────────────────
 
@@ -173,25 +174,7 @@ MAIN_HALL_ROOMS = {
 }
 
 # ── Banner ────────────────────────────────────────────────────────────────────
-
-BANNER = """
-╔══════════════════════════════════════════════════════════════════════╗
-║                                                                      ║
-║ ███████╗  █████╗   ███╗ ███╗   ██████╗  ██╗    ██╗                   ║
-║ ██╔════╝ ██╔══██╗ ████╗ ████║ ██╔═══██╗ ████╗  ██║                   ║
-║ █████╗   ███████║ ██╔████╔██║ ██║   ██║ ██╔██╗ ██║                   ║
-║ ██╔══╝   ██╔══██║ ██║╚██╔╝██║ ██║   ██║ ██║╚██╗██║                   ║
-║ ███████╗ ██║  ██║ ██║ ╚═╝ ██║ ╚██████╔╝ ██║ ╚████║                   ║
-║ ╚══════╝  ╚═╝ ╚═╝ ╚═╝     ╚═╝  ╚═════╝  ╚═╝  ╚═══╝                   ║
-║                                                                      ║
-║     R E D U X  A D V E N T U R E  E N G I N E                        ║
-║                                                                      ║
-║        (C) 2026, Rick Donaldson                                      ║
-╠══════════════════════════════════════════════════════════════════════╣
-║     ~ Main Hall of the Free Adventurers ~                            ║
-║   Where legends begin, and gold changes hands freely                 ║
-╚══════════════════════════════════════════════════════════════════════╝
-"""
+# Animated scroll banner — see banner.py.  Called in run_tavern().
 
 # ── Item valuation ────────────────────────────────────────────────────────────
 
@@ -1676,7 +1659,7 @@ def _read_manual() -> None:
     while True:
         print()
         print(tc(" ╔══════════════════════════════════════════════════════╗", "border"))
-        print(tc(" ║         EAMON REDUX — ADVENTURER'S MANUAL           ║", "title"))
+        print(tc(" ║       THE ADVENTURER'S GATE — PLAYER'S MANUAL       ║", "title"))
         print(tc(" ╚══════════════════════════════════════════════════════╝", "border"))
         print(tc(" Type a section number to read it, or Q to close.", "sys"))
         print()
@@ -1993,7 +1976,7 @@ def _handle_engine_return(character, result, adv_path: str,
 # ── Main loop ─────────────────────────────────────────────────────────────────
 
 def run_tavern() -> None:
-    print(tc(BANNER, "title"))
+    _scroll_open()
 
     character = menu_characters()
     if character is None:

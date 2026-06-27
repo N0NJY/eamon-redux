@@ -1216,12 +1216,50 @@ See the README.md "For Developers" section for details on the handler architectu
 
 ## A Note on the Original
 
-Eamon was created by Donald Brown and first published in 1980 for the Apple II. It was one of the first games to separate the game engine from the adventure data, allowing anyone to design and share new adventures. Hundreds of adventures were created by the Eamon community.
+### Where It All Began
 
-Eamon Redux is a spiritual successor — rebuilt from scratch in Python, with a D&D-inspired six-stat system (STR/DEX/CON/INT/WIS/CHA), a classless character system, persistent characters, a proficiency-based magic system with mana and fatigue, D&D-style initiative in combat, critical hits and fumbles, diagonal movement, and a modular adventure format. The soul of the original is the same: a world where you can go anywhere, fight anything, and tell your own story.
+Eamon was created by Donald Brown and first published in 1980 for the Apple II. It was one of the first games to separate the adventure engine from the adventure data — meaning anyone could design and share a new dungeon without touching the core program. The Eamon community ran with that idea and produced hundreds of adventures over the following decade, all playable with the same persistent character you built up over time.
 
-The Common Room of the Main Hall — still called the Saunter Inn in the game — is a nod to the AppleVenture BBS, where adventurers once gathered in a virtual tavern of the same name.
+### The BBS Years
+
+Before the internet, players connected to each other through Bulletin Board Systems — BBSes — over phone lines at 300 or 1200 baud. Two of those systems left a deep mark on this game:
+
+**AppleVenture ][** and **Starport** were Apple II-based BBSes where adventurers gathered in an online common room called the Saunter Inn. From there you could download and play Eamon adventures, trade tips on Wizardry and Ultima, work through the puzzles of Zork, and swap saves with other players. The games that defined that era — Wizardry I–V, Ultima I–VIII, Zork and its sequels, and Eamon itself — all shared a shelf on those systems, and the players who grew up on them carried that sensibility forward.
+
+The Main Hall of the Free Adventurers in this game — and the Saunter Inn common room within it — is a direct nod to those boards. The spirit is the same: a gathering place between adventures, where your character persists, your gold accumulates, and the next dungeon is always one command away.
+
+### The Eamon / D&D Mashup
+
+The Adventurer's Gate is a spiritual successor to Eamon, rebuilt from scratch in Python — but it takes the original concept one step further by blending it with the mechanics of Advanced Dungeons & Dragons.
+
+The original Eamon used a simple three-stat system (Hardiness, Agility, Charisma). The Adventurer's Gate replaces that with the full D&D six-stat model:
+
+| Stat | Governs |
+|---|---|
+| STR | Carry weight, melee damage bonus |
+| DEX | Hit chance, initiative, ranged combat |
+| CON | Hit points at creation |
+| INT | Spell learning, BLAST damage bonus |
+| WIS | HEAL bonus, spell fatigue recovery |
+| CHA | NPC reactions, follower recruitment |
+
+Combat uses D&D-style initiative rolls (1d6 + DEX bonus), attack rolls with weapon proficiency bonuses, armour class, critical hits at 5%, and fumbles at 4%. Magic uses a mana pool rather than spell slots, with fatigue that scales on proficiency — the more you've practiced a spell, the less it costs you.
+
+The adventure format is unchanged from Eamon's original vision: rooms, artifacts, monsters, and a win condition, all in plain data files anyone can edit. The designer program lets you build new adventures without writing a line of code.
+
+### What's the Same, What's Different
+
+| | Original Eamon | The Adventurer's Gate |
+|---|---|---|
+| Stats | Hardiness / Agility / Charisma | STR / DEX / CON / INT / WIS / CHA |
+| Magic | Spell percentages, no resource | Mana pool + fatigue |
+| Combat | Simple hit roll | Initiative, AC, proficiency, crits |
+| Adventures | BASIC programs + data files | JSON data + Python engine |
+| Designer | Separate BASIC program | Built-in Python designer |
+| Platform | Apple II | Any system with Python 3 |
+
+The soul of the original is unchanged: a world where you can go anywhere, fight anything, recruit followers, free captives, and tell your own story — with the same character across every adventure you ever play.
 
 ---
 
-*Eamon Redux — Python edition. No Apple II required.*
+*The Adventurer's Gate — a D&D / Eamon mashup. No Apple II required, but one is welcome.*
